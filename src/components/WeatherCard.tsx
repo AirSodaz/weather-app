@@ -1,0 +1,132 @@
+import React, { memo } from 'react';
+import { FaSun, FaCloud, FaCloudRain, FaSnowflake, FaWind, FaTint } from 'react-icons/fa';
+import { WeatherData } from '../services/weatherApi';
+import { motion } from 'framer-motion';
+
+interface WeatherCardProps {
+    weather: WeatherData;
+    onClick: (weather: WeatherData) => void;
+    onContextMenu: (e: React.MouseEvent, weather: WeatherData) => void;
+    draggable?: boolean;
+    onDragStart?: (e: React.DragEvent<HTMLDivElement>, index: number) => void;
+    onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
+    onDragEnter?: (e: React.DragEvent<HTMLDivElement>, index: number) => void;
+    onDragLeave?: (e: React.DragEvent<HTMLDivElement>) => void;
+    onDrop?: (e: React.DragEvent<HTMLDivElement>, index: number) => void;
+    onDragEnd?: (e: React.DragEvent<HTMLDivElement>) => void;
+    isDragging?: boolean;
+    isDragOver?: boolean;
+    index: number;
+    layoutId?: string;
+}
+
+const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ condition, className = "text-5xl" }) => {
+    const c = condition.toLowerCase();
+    if (c.includes('sunny') || c.includes('clear')) {
+        return <FaSun className={`${className} text-amber-300 animate-spin-slow`} />;
+    }
+    if (c.includes('rain') || c.includes('drizzle') || c.includes('thunder')) {
+        return <FaCloudRain className={`${className} text-blue-300 animate-float`} />;
+    }
+    if (c.includes('snow') || c.includes('sleet') || c.includes('blizzard')) {
+        return <FaSnowflake className={`${className} text-white animate-float`} />;
+    }
+    return <FaCloud className={`${className} text-gray-200 animate-float`} />;
+};
+
+const WeatherCard: React.FC<WeatherCardProps> = memo(({
+    weather,
+    onClick,
+    onContextMenu,
+    draggable,
+    onDragStart,
+    onDragOver,
+    onDragEnter,
+    onDragLeave,
+    onDrop,
+    onDragEnd,
+    isDragging,
+    isDragOver,
+    index,
+    layoutId
+}) => {
+    return (
+        <motion.div
+            layoutId={layoutId}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{
+                layout: { duration: 0.3, delay: 0 }, // Instant start for shared element transition
+                opacity: { duration: 0.3, delay: index * 0.1 },
+                y: { duration: 0.3, delay: index * 0.1 }
+            }}
+            draggable={draggable}
+            onClick={() => onClick(weather)}
+            onContextMenu={(e) => onContextMenu(e, weather)}
+            onDragStart={(e: any) => onDragStart && onDragStart(e, index)}
+            onDragOver={(e: any) => onDragOver && onDragOver(e)}
+            onDragEnter={(e: any) => onDragEnter && onDragEnter(e, index)}
+            onDragLeave={(e: any) => onDragLeave && onDragLeave(e)}
+            onDrop={(e: any) => onDrop && onDrop(e, index)}
+            onDragEnd={(e: any) => onDragEnd && onDragEnd(e)}
+            className={`
+                relative glass-card rounded-3xl p-6 
+                cursor-pointer
+                hover:shadow-2xl
+                group
+                will-change-transform
+                transition-transform duration-300 ease-out
+                hover:scale-[1.02] hover:-translate-y-1
+                active:scale-[0.98]
+                ${isDragging ? 'dragging' : ''}
+                ${isDragOver ? 'drag-over' : ''}
+            `}
+        >
+            {/* Main Content */}
+            <div className="flex justify-between items-start mb-6">
+                <div>
+                    <h2 className="text-2xl font-bold tracking-tight mb-1 text-white group-hover:text-white/90 transition-colors">
+                        {weather.city}
+                    </h2>
+                    <p className="text-sm font-medium text-white/60 capitalize tracking-wide flex items-center gap-2">
+                        {weather.condition}
+                        {weather.sourceOverride && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/10">
+                                {weather.sourceOverride === 'openweathermap' ? 'OWM' :
+                                    weather.sourceOverride === 'weatherapi' ? 'WAPI' : 'QW'}
+                            </span>
+                        )}
+                    </p>
+                </div>
+                <div className="pl-4">
+                    <WeatherIcon condition={weather.condition} className="text-5xl drop-shadow-lg" />
+                </div>
+            </div>
+
+            {/* Temperature */}
+            <div className="mb-6">
+                <span className="text-7xl font-light tracking-tighter text-white">
+                    {Math.round(weather.temperature)}°
+                </span>
+            </div>
+
+            {/* Footer Metrics */}
+            <div className="flex items-center gap-6 pt-4 border-t border-white/10">
+                <div className="flex items-center gap-2 text-white/70">
+                    <FaTint className="text-blue-300/80" />
+                    <span className="text-sm font-medium">{weather.humidity}%</span>
+                </div>
+                <div className="flex items-center gap-2 text-white/70">
+                    <FaWind className="text-slate-300/80" />
+                    <span className="text-sm font-medium">{weather.windSpeed} km/h</span>
+                </div>
+            </div>
+
+            {/* Hover Shine Effect */}
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+        </motion.div>
+    );
+});
+
+export default WeatherCard;

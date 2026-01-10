@@ -1,0 +1,502 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles for the app */
+html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    color: #ffffff;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #0f172a; /* Fallback dark bg */
+}
+
+/* 
+   ----------------------------------------
+   Modernized Weather Backgrounds 
+   Less saturated, more sophisticated gradients
+   ----------------------------------------
+*/
+
+/* Sunny/Clear: Warmer, softer gold/orange to blue shift */
+.bg-sunny {
+    --scroll-shift: 0deg;
+    --intensity: 0;
+    background: 
+        linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+        linear-gradient(
+            calc(160deg + var(--scroll-shift)),
+            #2563eb 0%,    /* Blue-600 */
+            #3b82f6 40%,    /* Blue-500 */
+            #eab308 80%,    /* Yellow-500 */
+            #ca8a04 100%    /* Yellow-600 */
+        );
+    transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Rainy/Thunder: Deep slate blues to indigo */
+.bg-rainy {
+    --scroll-shift: 0deg;
+    --intensity: 0;
+    background: linear-gradient(
+        calc(170deg + var(--scroll-shift)),
+        #1e293b 0%,    /* Slate-800 */
+        #334155 40%,    /* Slate-700 */
+        #475569 80%,    /* Slate-600 */
+        #64748b 100%    /* Slate-500 */
+    );
+    transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Snowy: Cool gray-blues, very clean */
+.bg-snowy {
+    --scroll-shift: 0deg;
+    --intensity: 0;
+    background: linear-gradient(
+        calc(160deg + var(--scroll-shift)),
+        #94a3b8 0%,    /* Slate-400 */
+        #cbd5e1 50%,    /* Slate-300 */
+        #e2e8f0 100%    /* Slate-200 */
+    );
+    transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Cloudy: Muted grays and desaturated blues */
+.bg-cloudy {
+    --scroll-shift: 0deg;
+    --intensity: 0;
+    background: linear-gradient(
+        calc(150deg + var(--scroll-shift)),
+        #475569 0%,    /* Slate-600 */
+        #64748b 50%,    /* Slate-500 */
+        #94a3b8 100%    /* Slate-400 */
+    );
+    transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Default/Night: Deep rich purples and blues */
+.bg-default {
+    --scroll-shift: 0deg;
+    --intensity: 0;
+    background: linear-gradient(
+        calc(150deg + var(--scroll-shift)),
+        #312e81 0%,    /* Indigo-900 */
+        #4338ca 50%,    /* Indigo-700 */
+        #6366f1 100%    /* Indigo-500 */
+    );
+    transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Background transition overlay */
+.weather-bg.bg-transition {
+    animation: weather-bg-change 1s ease-out;
+}
+
+@keyframes weather-bg-change {
+    0% { filter: brightness(1.1) saturate(1.1); }
+    100% { filter: brightness(1) saturate(1); }
+}
+
+/* 
+   ----------------------------------------
+   Refined Glassmorphism System
+   ----------------------------------------
+*/
+
+/* Base Glass: For general containers */
+.glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Card Glass: For interactive elements like cards */
+.glass-card {
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.2) 0%,
+        rgba(255, 255, 255, 0.05) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* Dark Glass: For modals, dropdowns, tooltips */
+/* Dark Glass: For modals, dropdowns, tooltips */
+.glass-dark {
+    background: rgba(10, 15, 30, 0.75); /* Slightly darker/richer */
+    backdrop-filter: blur(32px) saturate(180%);
+    -webkit-backdrop-filter: blur(32px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 
+        0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+        0 10px 15px -3px rgba(0, 0, 0, 0.3),
+        0 20px 25px -5px rgba(0, 0, 0, 0.5),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05); /* Inner gleam */
+}
+
+/*
+   ----------------------------------------
+   Animations & Transitions
+   ----------------------------------------
+*/
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+@keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slide-up-fade {
+    from { 
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pop-in {
+    0% { transform: scale(0.95); opacity: 0; }
+    40% { transform: scale(1.02); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-spin-slow { animation: spin-slow 12s linear infinite; }
+.animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
+.animate-pop-in { animation: pop-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+/* .animate-slide-up { animation: slide-up-fade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; } */ 
+/* Commented out as replaced by framer-motion, but keeping just in case. */
+.animate-slide-up { animation: slide-up-fade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* Staggered delays */
+.delay-75 { transition-delay: 75ms; }
+.delay-100 { transition-delay: 100ms; }
+.delay-150 { transition-delay: 150ms; }
+.delay-200 { transition-delay: 200ms; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 99px;
+    transition: background 0.2s;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Drag & Drop Styles */
+.dragging {
+    opacity: 0.6;
+    transform: scale(1.02);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2) !important;
+    cursor: grabbing !important;
+    z-index: 50;
+}
+
+.drag-over {
+    border: 2px dashed rgba(255,255,255,0.5) !important;
+    background: rgba(255,255,255,0.1);
+}
+
+/*
+   ----------------------------------------
+   Premium Menu System
+   ----------------------------------------
+*/
+
+/* Enhanced Menu Container */
+.menu-premium {
+    background: linear-gradient(
+        135deg,
+        rgba(15, 20, 40, 0.92) 0%,
+        rgba(25, 35, 60, 0.88) 100%
+    );
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    box-shadow: 
+        0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+        0 10px 20px -3px rgba(0, 0, 0, 0.25),
+        0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+}
+
+/* Menu Header */
+.menu-header {
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        transparent 100%
+    );
+}
+
+/* Menu Item */
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 16px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    text-align: left;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.menu-item:hover {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.05) 100%
+    );
+    color: #fff;
+}
+
+.menu-item:active {
+    background: rgba(255, 255, 255, 0.15);
+    transform: scale(0.98);
+}
+
+/* Menu Item Icon */
+.menu-item-icon {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: opacity 0.15s, transform 0.15s;
+}
+
+.menu-item:hover .menu-item-icon {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Active/Selected Menu Item */
+.menu-item-active {
+    background: linear-gradient(
+        90deg,
+        rgba(59, 130, 246, 0.2) 0%,
+        rgba(59, 130, 246, 0.05) 100%
+    );
+    color: #60a5fa;
+}
+
+.menu-item-active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 60%;
+    background: linear-gradient(180deg, #60a5fa, #3b82f6);
+    border-radius: 0 4px 4px 0;
+}
+
+/* Menu Divider */
+.menu-divider {
+    height: 1px;
+    margin: 6px 12px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 100%
+    );
+}
+
+/* Submenu Arrow */
+.menu-arrow {
+    margin-left: auto;
+    font-size: 10px;
+    opacity: 0.5;
+    transition: transform 0.15s, opacity 0.15s;
+}
+
+.menu-item:hover .menu-arrow {
+    transform: translateX(2px);
+    opacity: 0.8;
+}
+
+/* Submenu Container */
+.submenu-premium {
+    position: absolute;
+    background: linear-gradient(
+        135deg,
+        rgba(20, 25, 45, 0.95) 0%,
+        rgba(30, 40, 65, 0.92) 100%
+    );
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    box-shadow: 
+        0 4px 6px -1px rgba(0, 0, 0, 0.1), 
+        0 10px 20px -3px rgba(0, 0, 0, 0.25),
+        0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    min-width: 180px;
+}
+
+/* Menu Check Indicator */
+.menu-check {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    box-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
+}
+
+/* Dropdown Trigger Button */
+.dropdown-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+    background: linear-gradient(
+        135deg,
+        rgba(0, 0, 0, 0.25) 0%,
+        rgba(0, 0, 0, 0.15) 100%
+    );
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dropdown-trigger:hover {
+    background: linear-gradient(
+        135deg,
+        rgba(0, 0, 0, 0.35) 0%,
+        rgba(0, 0, 0, 0.25) 100%
+    );
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.dropdown-trigger:active {
+    transform: translateY(0);
+}
+
+.dropdown-arrow {
+    font-size: 10px;
+    opacity: 0.5;
+    transition: transform 0.2s;
+}
+
+.dropdown-trigger:hover .dropdown-arrow {
+    opacity: 0.8;
+}
+
+.dropdown-trigger[data-open="true"] .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+/* Context Menu Animation */
+@keyframes menu-appear {
+    0% {
+        opacity: 0;
+        transform: scale(0.92) translateY(-8px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes submenu-appear {
+    0% {
+        opacity: 0;
+        transform: translateX(-8px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-menu-in {
+    animation: menu-appear 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-submenu-in {
+    animation: submenu-appear 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Danger/Destructive Menu Item */
+.menu-item-danger:hover {
+    background: linear-gradient(
+        90deg,
+        rgba(239, 68, 68, 0.15) 0%,
+        rgba(239, 68, 68, 0.05) 100%
+    );
+    color: #fca5a5;
+}
+
+.menu-item-danger:hover .menu-item-icon {
+    color: #f87171;
+}
+
+.title-bar {
+    -webkit-app-region: drag;
+}
+.title-bar button {
+    -webkit-app-region: no-drag;
+}
+

@@ -1,0 +1,51 @@
+// Check if running in Electron with store available
+const isElectronStore = typeof window !== 'undefined' && window.store !== undefined;
+
+// Fallback to localStorage for browser environment
+const localStorageFallback = {
+    get: async (key: string) => {
+        try {
+            const value = localStorage.getItem(key);
+            return value ? JSON.parse(value) : null;
+        } catch {
+            return null;
+        }
+    },
+    set: async (key: string, value: any) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) {
+            console.error('Failed to save to localStorage:', e);
+        }
+    },
+    delete: async (key: string) => {
+        try {
+            localStorage.removeItem(key);
+        } catch (e) {
+            console.error('Failed to delete from localStorage:', e);
+        }
+    }
+};
+
+export const storage = {
+    get: async (key: string) => {
+        if (isElectronStore) {
+            return await window.store.get(key);
+        }
+        return localStorageFallback.get(key);
+    },
+    set: async (key: string, value: any) => {
+        if (isElectronStore) {
+            await window.store.set(key, value);
+        } else {
+            await localStorageFallback.set(key, value);
+        }
+    },
+    delete: async (key: string) => {
+        if (isElectronStore) {
+            await window.store.delete(key);
+        } else {
+            await localStorageFallback.delete(key);
+        }
+    }
+};

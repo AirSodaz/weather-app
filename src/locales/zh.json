@@ -1,0 +1,112 @@
+{
+    "appName": "天气小组件",
+    "settings": {
+        "title": "设置",
+        "language": "语言",
+        "weatherSource": "天气数据源",
+        "apiKey": "API 密钥",
+        "apiKeyPlaceholder": "请输入 OpenWeatherMap API 密钥",
+        "apiKeyHelp": "你可以从这里获取免费的 API 密钥",
+        "save": "保存设置",
+        "saving": "保存中...",
+        "openWeatherMap": "OpenWeatherMap",
+        "weatherapi": "WeatherAPI.com",
+        "qweather": "和风天气 (QWeather)",
+        "custom": "自定义源 (Custom)",
+        "apiUrl": "API 地址",
+        "apiUrlPlaceholder": "输入 API 基础地址",
+        "apiUrlHelp": "将附加参数 ?city={city}&key={apiKey} 进行调用",
+        "autoRefresh": "自动刷新间隔",
+        "autoRefreshOff": "关闭",
+        "autoRefreshMinutes": "{minutes} 分钟",
+        "startupView": "启动默认视图",
+        "startupViewHome": "主页",
+        "startupViewDetail": "上次查看的详情页",
+        "lastOpenedCity": "上次打开的城市",
+        "cityList": "城市列表",
+        "version": "版本",
+        "detailView": "自定义详细页面",
+        "detailViewHelp": "拖拽排序，取消勾选以隐藏。"
+    },
+    "detailSections": {
+        "hourly": "逐时预报",
+        "daily": "未来天气",
+        "airQuality": "空气质量",
+        "stats": "当前数据",
+        "sunrise": "日出日落"
+    },
+    "search": {
+        "placeholder": "添加城市...",
+        "error": "获取天气失败，请重试。",
+        "cityExists": "该城市已添加！",
+        "loading": "加载已保存的城市..."
+    },
+    "errors": {
+        "loadFailed": "切换源失败"
+    },
+    "switchSource": "切换数据源",
+    "useGlobalDefault": "使用全局默认源",
+    "selectSource": "选择数据源",
+    "default": "默认 (全局)",
+    "refresh": {
+        "button": "刷新",
+        "lastUpdate": "上次更新",
+        "justNow": "刚刚",
+        "minutesAgo": "{minutes} 分钟前",
+        "refreshing": "刷新中..."
+    },
+    "weather": {
+        "humidity": "湿度",
+        "wind": "风速",
+        "pressure": "气压",
+        "visibility": "能见度",
+        "feelsLike": "体感温度",
+        "hourlyForecast": "逐时预报",
+        "dailyForecast": "未来天气",
+        "airQuality": "空气质量",
+        "uvIndex": "紫外线指数",
+        "sunrise": "日出",
+        "sunset": "日落",
+        "yesterday": "昨天",
+        "today": "今天",
+        "tomorrow": "明天",
+        "source": "数据来源"
+    },
+    "date": {
+        "days": [
+            "周日",
+            "周一",
+            "周二",
+            "周三",
+            "周四",
+            "周五",
+            "周六"
+        ],
+        "relative": {
+            "today": "今天",
+            "tomorrow": "明天",
+            "yesterday": "昨天"
+        }
+    },
+    "aqi": {
+        "levels": [
+            "优",
+            "良",
+            "轻度污染",
+            "中度污染",
+            "重度污染",
+            "严重污染"
+        ],
+        "unknown": "未知"
+    },
+    "empty": {
+        "title": "还没有添加城市",
+        "subtitle": "在上方搜索城市开始使用"
+    },
+    "back": "返回",
+    "remove": "删除城市",
+    "contextMenu": {
+        "viewDetails": "查看详情",
+        "delete": "删除"
+    }
+}

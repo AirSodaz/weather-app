@@ -1,0 +1,112 @@
+{
+    "appName": "Weather Widget",
+    "settings": {
+        "title": "Settings",
+        "language": "Language",
+        "weatherSource": "Weather Source",
+        "apiKey": "API Key",
+        "apiKeyPlaceholder": "Enter your OpenWeatherMap API Key",
+        "apiKeyHelp": "You can get a free API key from",
+        "save": "Save Settings",
+        "saving": "Saving...",
+        "openWeatherMap": "OpenWeatherMap",
+        "weatherapi": "WeatherAPI.com",
+        "qweather": "QWeather",
+        "custom": "Custom (User Defined)",
+        "apiUrl": "API URL",
+        "apiUrlPlaceholder": "Enter API base URL",
+        "apiUrlHelp": "The URL will be called with ?city={city}&key={apiKey}",
+        "autoRefresh": "Auto Refresh Interval",
+        "autoRefreshOff": "Off",
+        "autoRefreshMinutes": "{minutes} minutes",
+        "startupView": "Startup View",
+        "startupViewHome": "Home",
+        "startupViewDetail": "Last Viewed (Detail)",
+        "lastOpenedCity": "Last opened city",
+        "cityList": "City list",
+        "version": "Version",
+        "detailView": "Detail View Customization",
+        "detailViewHelp": "Drag to reorder sections. Uncheck to hide."
+    },
+    "detailSections": {
+        "hourly": "Hourly Forecast",
+        "daily": "Future Weather",
+        "airQuality": "Air Quality",
+        "stats": "Current Stats",
+        "sunrise": "Sunrise & Sunset"
+    },
+    "search": {
+        "placeholder": "Add a city...",
+        "error": "Failed to fetch weather. Please try again.",
+        "cityExists": "City already added!",
+        "loading": "Loading saved locations..."
+    },
+    "errors": {
+        "loadFailed": "Failed to switch source"
+    },
+    "switchSource": "Switch Source",
+    "useGlobalDefault": "Use Global Default",
+    "selectSource": "Select Source",
+    "default": "Default (Global)",
+    "refresh": {
+        "button": "Refresh",
+        "lastUpdate": "Last updated",
+        "justNow": "just now",
+        "minutesAgo": "{minutes} min ago",
+        "refreshing": "Refreshing..."
+    },
+    "weather": {
+        "humidity": "Humidity",
+        "wind": "Wind",
+        "pressure": "Pressure",
+        "visibility": "Visibility",
+        "feelsLike": "Feels like",
+        "hourlyForecast": "Hourly Forecast",
+        "dailyForecast": "Future Weather",
+        "airQuality": "Air Quality",
+        "uvIndex": "UV Index",
+        "sunrise": "Sunrise",
+        "sunset": "Sunset",
+        "yesterday": "Yesterday",
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "source": "Data Source"
+    },
+    "date": {
+        "days": [
+            "Sun",
+            "Mon",
+            "Tue",
+            "Wed",
+            "Thu",
+            "Fri",
+            "Sat"
+        ],
+        "relative": {
+            "today": "Today",
+            "tomorrow": "Tomorrow",
+            "yesterday": "Yesterday"
+        }
+    },
+    "aqi": {
+        "levels": [
+            "Good",
+            "Fair",
+            "Moderate",
+            "Poor",
+            "Very Poor",
+            "Hazardous"
+        ],
+        "unknown": "Unknown"
+    },
+    "empty": {
+        "title": "No cities added yet.",
+        "subtitle": "Search for a city above to get started."
+    },
+    "back": "Back",
+    "remove": "Delete",
+    "contextMenu": {
+        "viewDetails": "View Details",
+        "delete": "Delete"
+    }
+}
