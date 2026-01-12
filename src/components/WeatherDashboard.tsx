@@ -7,7 +7,7 @@ import WeatherCard from './WeatherCard';
 import SettingsModal from './SettingsModal';
 import { storage } from '../utils/storage';
 import { useI18n } from '../contexts/I18nContext';
-import { formatRelativeTime } from '../utils/helpers';
+import { formatRelativeTime, getWeatherBackground } from '../utils/helpers';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 
 const dropdownVariants: Variants = {
@@ -39,21 +39,19 @@ interface ContextMenuState {
     subMenu?: 'source' | null;
 }
 
-// Helper function to get background class based on weather condition
-function getWeatherBackground(condition: string): string {
-    const c = condition.toLowerCase();
-    if (c.includes('sunny') || c.includes('clear') || c.includes('晴')) return 'bg-sunny';
-    if (c.includes('rain') || c.includes('drizzle') || c.includes('thunder') || c.includes('雨') || c.includes('雷')) return 'bg-rainy';
-    if (c.includes('snow') || c.includes('sleet') || c.includes('blizzard') || c.includes('雪') || c.includes('冰')) return 'bg-snowy';
-    if (c.includes('cloud') || c.includes('overcast') || c.includes('云') || c.includes('阴')) return 'bg-cloudy';
-    return 'bg-default';
+
+
+
+
+
+interface WeatherDashboardProps {
+    onBgChange?: (bgClass: string) => void;
+    bgContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
-
-
-
-const WeatherDashboard: React.FC = () => {
+const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgContainerRef }) => {
     const { t, currentLanguage } = useI18n();
+    const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
     const [searchCity, setSearchCity] = useState('');
     const [weatherList, setWeatherList] = useState<WeatherData[]>([]);
     const [selectedCity, setSelectedCity] = useState<WeatherData | null>(null);
@@ -70,10 +68,8 @@ const WeatherDashboard: React.FC = () => {
     const [showMenu, setShowMenu] = useState(false);
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-    const [bgTransition, setBgTransition] = useState(false);
-    const prevConditionRef = useRef<string>('default');
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const [scrollStyle, setScrollStyle] = useState<React.CSSProperties>({});
+    // const [scrollStyle, setScrollStyle] = useState<React.CSSProperties>({}); // Removed in favor of direct ref manipulation
     const [suggestions, setSuggestions] = useState<CityResult[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -98,7 +94,9 @@ const WeatherDashboard: React.FC = () => {
     // Handle browser back button
     useEffect(() => {
         const handlePopState = () => {
-            if (selectedCity) {
+            if (showSettings) {
+                setShowSettings(false);
+            } else if (selectedCity) {
                 // If we are showing detail, close it
                 setSelectedCity(null);
             }
@@ -106,7 +104,7 @@ const WeatherDashboard: React.FC = () => {
 
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
-    }, [selectedCity]);
+    }, [selectedCity, showSettings]);
 
     // Close suggestions when clicking outside
     useEffect(() => {
@@ -186,16 +184,13 @@ const WeatherDashboard: React.FC = () => {
         : 'default';
 
     // Trigger background transition animation when condition changes
+    // Notify parent of background change
     useEffect(() => {
         const currentBg = getWeatherBackground(dominantCondition);
-        const prevBg = getWeatherBackground(prevConditionRef.current);
-        if (currentBg !== prevBg) {
-            setBgTransition(true);
-            const timer = setTimeout(() => setBgTransition(false), 800);
-            return () => clearTimeout(timer);
+        if (onBgChange) {
+            onBgChange(currentBg);
         }
-        prevConditionRef.current = dominantCondition;
-    }, [dominantCondition]);
+    }, [dominantCondition, onBgChange]);
 
     // Persist lastRefreshTime
     useEffect(() => {
@@ -257,11 +252,11 @@ const WeatherDashboard: React.FC = () => {
         // Calculate color intensity modifier (0 to 1)
         const intensity = scrollPercent;
 
-        setScrollStyle({
-            '--scroll-shift': `${shiftAngle}deg`,
-            '--intensity': intensity,
-        } as React.CSSProperties);
-    }, []);
+        if (bgContainerRef && bgContainerRef.current) {
+            bgContainerRef.current.style.setProperty('--scroll-shift', `${shiftAngle}deg`);
+            bgContainerRef.current.style.setProperty('--intensity', String(intensity));
+        }
+    }, [bgContainerRef]);
 
     useEffect(() => {
         const container = scrollContainerRef.current;
@@ -710,8 +705,7 @@ const WeatherDashboard: React.FC = () => {
     return (
         <div
             ref={scrollContainerRef}
-            style={scrollStyle}
-            className={`flex-1 flex flex-col items-center overflow-y-auto text-white weather-bg ${getWeatherBackground(dominantCondition)} ${bgTransition ? 'bg-transition' : ''}`}
+            className="flex-1 flex flex-col items-center overflow-y-auto text-white"
         >
 
             {/* Header / Search Section */}
@@ -875,6 +869,7 @@ const WeatherDashboard: React.FC = () => {
                                     <button
                                         onClick={() => {
                                             setShowSettings(true);
+                                            window.history.pushState({ modal: 'settings' }, '', '');
                                             setShowMenu(false);
                                         }}
                                         className="w-full px-5 py-3 text-left text-base text-white hover:bg-white/10 flex items-center gap-3 transition-colors"
@@ -949,7 +944,10 @@ const WeatherDashboard: React.FC = () => {
                             onBack={() => window.history.back()}
                             onSourceChange={(source) => handleUpdateCitySource(selectedCity.city, source)}
                             onRefresh={refreshAllCities}
-                            onOpenSettings={() => setShowSettings(true)}
+                            onOpenSettings={() => {
+                                setShowSettings(true);
+                                window.history.pushState({ modal: 'settings' }, '', '');
+                            }}
                             sections={detailViewSections}
                         />
                     )
@@ -961,7 +959,7 @@ const WeatherDashboard: React.FC = () => {
                     <SettingsModal
                         key="settings-modal"
                         isOpen={showSettings}
-                        onClose={() => setShowSettings(false)}
+                        onClose={() => window.history.back()}
                         onSettingsChange={handleSettingsChange}
                     />
                 )}

@@ -124,6 +124,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = ({
     const [scrollStyle, setScrollStyle] = useState<React.CSSProperties>({});
     const [isScrolled, setIsScrolled] = useState(false);
     const [isReady, setIsReady] = useState(false);
+    const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
 
     // Optimized: Defer heavy content rendering by a single tick
     // This allows the initial shared layout animation frame to start immediately without jank
@@ -379,6 +380,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = ({
                 fixed inset-0 z-50 flex flex-col text-white overflow-y-auto 
                 weather-bg ${getWeatherBackground(weather.condition)}
                 will-change-transform
+                ${isTauri ? 'pt-12' : ''}
             `}
             style={{ WebkitOverflowScrolling: 'touch', ...scrollStyle }}
         >

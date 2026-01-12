@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.weather.app"
+    namespace = "com.airsodaz.weatherapp"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.weather.app"
+        applicationId "com.airsodaz.weatherapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

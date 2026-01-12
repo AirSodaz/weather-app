@@ -17,15 +17,17 @@
     "dev": "concurrently -k \"cross-env BROWSER=none npm run react:dev\" \"npm run electron:dev\"",
     "react:dev": "vite",
     "electron:dev": "wait-on tcp:5173 && tsc -p electron/tsconfig.json && electron .",
-    "build": "tsc -b && vite build && tsc -p electron/tsconfig.json",
-    "electron:build": "electron-builder",
+    "build": "tsc -b && vite build",
     "android:build": "npm run build && npx cap sync",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
+    "@emotion/is-prop-valid": "^1.4.0",
+    "@tauri-apps/api": "^1.5.0",
     "axios": "^1.6.0",
     "clsx": "^2.0.0",
     "electron-store": "^8.1.0",
@@ -36,6 +38,7 @@
     "tailwind-merge": "^2.2.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^1.5.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
@@ -43,7 +46,6 @@
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "electron": "^30.0.0",
-    "electron-builder": "^24.13.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
     "typescript": "^5.4.0",

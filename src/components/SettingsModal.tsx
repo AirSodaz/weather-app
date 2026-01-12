@@ -39,6 +39,7 @@ const modalVariants: Variants = {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettingsChange }) => {
     const { t, language, setLanguage } = useI18n();
+    const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
     const [localLanguage, setLocalLanguage] = useState(language);
     const [source, setSource] = useState<WeatherSource>('openweathermap');
     const [customUrl, setCustomUrl] = useState('');
@@ -174,9 +175,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md"
+            className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md ${isTauri ? 'pt-12' : ''}`}
+            onClick={onClose}
         >
             <motion.div
+                onClick={(e) => e.stopPropagation()}
                 variants={modalVariants}
                 className="glass-dark border-0 sm:border border-white/10 
                 rounded-none sm:rounded-3xl w-full h-full sm:h-auto sm:max-w-md sm:max-h-[90vh] 

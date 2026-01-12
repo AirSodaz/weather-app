@@ -1,6 +1,3 @@
-// Check if running in Electron with store available
-const isElectronStore = typeof window !== 'undefined' && window.store !== undefined;
-
 // Fallback to localStorage for browser environment
 const localStorageFallback = {
     get: async (key: string) => {
@@ -29,23 +26,12 @@ const localStorageFallback = {
 
 export const storage = {
     get: async (key: string) => {
-        if (isElectronStore) {
-            return await window.store.get(key);
-        }
         return localStorageFallback.get(key);
     },
     set: async (key: string, value: any) => {
-        if (isElectronStore) {
-            await window.store.set(key, value);
-        } else {
-            await localStorageFallback.set(key, value);
-        }
+        await localStorageFallback.set(key, value);
     },
     delete: async (key: string) => {
-        if (isElectronStore) {
-            await window.store.delete(key);
-        } else {
-            await localStorageFallback.delete(key);
-        }
+        await localStorageFallback.delete(key);
     }
 };
