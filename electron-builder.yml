@@ -10,7 +10,6 @@ files:
 win:
   target:
     - nsis
-    - portable
 
 nsis:
   artifactName: ${productName}-Setup-${version}.${ext}
@@ -20,10 +19,6 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: "Weather App"
   perMachine: true
-  runAfterFinish: true
-
-portable:
-  artifactName: ${productName}-Portable-${version}.${ext}
 mac:
   target:
     - dmg
