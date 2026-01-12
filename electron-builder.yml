@@ -11,8 +11,9 @@ win:
   target:
     - nsis
     - portable
-  artifactName: ${productName}-Setup-${version}.${ext}
+
 nsis:
+  artifactName: ${productName}-Setup-${version}.${ext}
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
@@ -20,6 +21,9 @@ nsis:
   shortcutName: "Weather App"
   perMachine: true
   runAfterFinish: true
+
+portable:
+  artifactName: ${productName}-Portable-${version}.${ext}
 mac:
   target:
     - dmg

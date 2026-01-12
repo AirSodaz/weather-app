@@ -95,6 +95,19 @@ const WeatherDashboard: React.FC = () => {
         loadAppConfig();
     }, []);
 
+    // Handle browser back button
+    useEffect(() => {
+        const handlePopState = () => {
+            if (selectedCity) {
+                // If we are showing detail, close it
+                setSelectedCity(null);
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [selectedCity]);
+
     // Close suggestions when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -458,6 +471,11 @@ const WeatherDashboard: React.FC = () => {
 
                         if (targetCity) {
                             setSelectedCity(targetCity);
+                            // Push state if we are restoring from a "fresh" start (not currently viewing a city)
+                            // This ensures that the back button works (returns to home) instead of exiting the app
+                            if (!selectedCity) {
+                                window.history.pushState({ city: targetCity.city }, '', '');
+                            }
                         }
                     }
                 }
@@ -629,6 +647,7 @@ const WeatherDashboard: React.FC = () => {
 
     const handleCardClick = useCallback((weather: WeatherData) => {
         setSelectedCity(weather);
+        window.history.pushState({ city: weather.city }, '', '');
     }, []);
 
     const handleCardContextMenu = useCallback((e: React.MouseEvent, weather: WeatherData) => {
@@ -927,7 +946,7 @@ const WeatherDashboard: React.FC = () => {
                             layoutId={`weather-card-${selectedCity.city}`}
                             weather={selectedCity}
                             lastRefreshTime={lastRefreshTime}
-                            onBack={() => setSelectedCity(null)}
+                            onBack={() => window.history.back()}
                             onSourceChange={(source) => handleUpdateCitySource(selectedCity.city, source)}
                             onRefresh={refreshAllCities}
                             onOpenSettings={() => setShowSettings(true)}
