@@ -22,25 +22,27 @@ interface WeatherDetailProps {
 }
 
 // Helper function to get background class based on weather condition
+// Helper function to get background class based on weather condition
 const getWeatherBackground = (condition: string): string => {
     const c = condition.toLowerCase();
-    if (c.includes('sunny') || c.includes('clear')) return 'bg-sunny';
-    if (c.includes('rain') || c.includes('drizzle') || c.includes('thunder')) return 'bg-rainy';
-    if (c.includes('snow') || c.includes('sleet') || c.includes('blizzard')) return 'bg-snowy';
-    if (c.includes('cloud') || c.includes('overcast')) return 'bg-cloudy';
+    if (c.includes('sunny') || c.includes('clear') || c.includes('晴')) return 'bg-sunny';
+    if (c.includes('rain') || c.includes('drizzle') || c.includes('thunder') || c.includes('雨') || c.includes('雷')) return 'bg-rainy';
+    if (c.includes('snow') || c.includes('sleet') || c.includes('blizzard') || c.includes('雪') || c.includes('冰')) return 'bg-snowy';
+    if (c.includes('cloud') || c.includes('overcast') || c.includes('云') || c.includes('阴')) return 'bg-cloudy';
     return 'bg-default';
 };
 
 // Get weather icon based on condition
+// Get weather icon based on condition
 const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ condition, className = "text-6xl" }) => {
     const c = condition.toLowerCase();
-    if (c.includes('sunny') || c.includes('clear')) {
+    if (c.includes('sunny') || c.includes('clear') || c.includes('晴')) {
         return <FaSun className={`${className} text-amber-300 animate-spin-slow`} />;
     }
-    if (c.includes('rain') || c.includes('drizzle') || c.includes('thunder')) {
+    if (c.includes('rain') || c.includes('drizzle') || c.includes('thunder') || c.includes('雨') || c.includes('雷')) {
         return <FaCloudRain className={`${className} text-blue-300 animate-float`} />;
     }
-    if (c.includes('snow') || c.includes('sleet') || c.includes('blizzard')) {
+    if (c.includes('snow') || c.includes('sleet') || c.includes('blizzard') || c.includes('雪') || c.includes('冰')) {
         return <FaSnowflake className={`${className} text-white animate-float`} />;
     }
     return <FaCloud className={`${className} text-gray-200 animate-float`} />;
@@ -94,6 +96,17 @@ const dropdownVariants: Variants = {
     exit: { opacity: 0, y: -5, scale: 0.95, transition: { duration: 0.15 } }
 };
 
+const sectionsContainerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            when: "beforeChildren"
+        }
+    }
+};
+
 const WeatherDetail: React.FC<WeatherDetailProps> = ({
     weather,
     lastRefreshTime,
@@ -112,9 +125,14 @@ const WeatherDetail: React.FC<WeatherDetailProps> = ({
     const [isScrolled, setIsScrolled] = useState(false);
     const [isReady, setIsReady] = useState(false);
 
-    // Optimized: Only render heavy content after the transition animation is complete
-    // This prevents frame drops during the shared element expansion
-    // useEffect removed in favor of onAnimationComplete
+    // Optimized: Defer heavy content rendering by a single tick
+    // This allows the initial shared layout animation frame to start immediately without jank
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsReady(true);
+        }, 50); // Small 50ms delay is imperceptible but allows animation momentum to start
+        return () => clearTimeout(timer);
+    }, []);
 
 
     // Helper to get localized day name
@@ -288,7 +306,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = ({
                             </div>
                             <div className="relative z-10">
                                 <span className="text-xs uppercase tracking-wider text-white/50 mb-1 block">{t.weather.wind}</span>
-                                <span className="text-2xl font-bold">{weather.windSpeed} km/h</span>
+                                <span className="text-2xl font-bold">{weather.windSpeed.toFixed(2)} km/h</span>
                             </div>
                         </div>
                         <div className="glass-card rounded-2xl p-5 flex flex-col items-start relative overflow-hidden group">
@@ -360,15 +378,9 @@ const WeatherDetail: React.FC<WeatherDetailProps> = ({
             className={`
                 fixed inset-0 z-50 flex flex-col text-white overflow-y-auto 
                 weather-bg ${getWeatherBackground(weather.condition)}
+                will-change-transform
             `}
             style={{ WebkitOverflowScrolling: 'touch', ...scrollStyle }}
-            onAnimationComplete={(definition) => {
-                // When the 'visible' animation completes, it means the card has finished expanding.
-                // Now it's safe to render the heavy lists (hourly/daily) without causing jank.
-                if (definition === 'visible') {
-                    setIsReady(true);
-                }
-            }}
         >
             {/* Header */}
             <div className="w-full flex items-center justify-between p-6 sticky top-0 z-50 transition-all duration-300">
@@ -560,14 +572,29 @@ const WeatherDetail: React.FC<WeatherDetailProps> = ({
             <div className="flex-1 flex flex-col items-center px-4 sm:px-6 pb-12 w-full max-w-4xl mx-auto">
                 {/* Main Weather Info */}
                 <motion.div variants={itemVariants} className="text-center mb-10 w-full">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-2 tracking-tight drop-shadow-md">{weather.city}</h1>
-                    <p className="text-lg font-medium text-white/80 capitalize mb-6 drop-shadow-sm">{weather.condition}</p>
+                    <motion.h1
+                        layoutId={`${layoutId}-city`}
+                        className="text-4xl md:text-5xl font-bold mb-2 tracking-tight drop-shadow-md"
+                    >
+                        {weather.city}
+                    </motion.h1>
+                    <motion.p
+                        layoutId={`${layoutId}-condition`}
+                        className="text-lg font-medium text-white/80 capitalize mb-6 drop-shadow-sm"
+                    >
+                        {weather.condition}
+                    </motion.p>
 
                     <div className="flex flex-col items-center justify-center mb-6">
-                        <WeatherIcon condition={weather.condition} className="text-8xl mb-4 drop-shadow-2xl" />
-                        <span className="text-9xl font-thin tracking-tighter leading-none ml-4 drop-shadow-lg">
+                        <motion.div layoutId={`${layoutId}-icon`}>
+                            <WeatherIcon condition={weather.condition} className="text-8xl mb-4 drop-shadow-2xl" />
+                        </motion.div>
+                        <motion.span
+                            layoutId={`${layoutId}-temp`}
+                            className="text-9xl font-thin tracking-tighter leading-none ml-4 drop-shadow-lg inline-block"
+                        >
                             {Math.round(weather.temperature)}°
-                        </span>
+                        </motion.span>
                     </div>
 
                     <div className="glass-card text-white/80 text-sm font-medium tracking-wide inline-block px-6 py-2 rounded-full border border-white/10">
@@ -576,13 +603,16 @@ const WeatherDetail: React.FC<WeatherDetailProps> = ({
                 </motion.div>
 
                 {/* Dynamic Sections */}
-                {isReady && effectiveSections.filter(s => s.visible).map(section => renderSection(section.id))}
-
-                {/* Loading Spacer for Animation smoothness */}
-                {!isReady && (
-                    <div className="w-full h-96 flex items-center justify-center">
-                        {/* Optional: Simple spinner or just blank space to let animation play freely */}
-                    </div>
+                {/* Dynamic Sections - Render only when ready */}
+                {isReady && (
+                    <motion.div
+                        variants={sectionsContainerVariants}
+                        initial="hidden"
+                        animate="visible"
+                        className="w-full"
+                    >
+                        {effectiveSections.filter(s => s.visible).map(section => renderSection(section.id))}
+                    </motion.div>
                 )}
 
                 {/* Source Display Footer */}

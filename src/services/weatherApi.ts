@@ -8,7 +8,26 @@ import { getSettings } from '../utils/config';
 
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
 const WEATHERAPI_BASE_URL = 'https://api.weatherapi.com/v1';
-const QWEATHER_BASE_URL = 'https://devapi.qweather.com/v7';
+
+const getQWeatherUrls = (customHost?: string) => {
+    // Priority: Custom Host (param) > Env Var > Default
+    let host = customHost || import.meta.env.VITE_QWEATHER_API_HOST;
+    if (host) {
+        // Remove protocol if present (http:// or https://)
+        host = host.replace(/^https?:\/\//, '');
+        // Remove trailing slash if present
+        host = host.replace(/\/$/, '');
+
+        return {
+            base: `https://${host}/v7`,
+            geo: `https://${host}/geo/v2`
+        };
+    }
+    return {
+        base: 'https://devapi.qweather.com/v7',
+        geo: 'https://geoapi.qweather.com/v2'
+    };
+};
 
 export interface HourlyForecast {
     time: string;
@@ -52,22 +71,33 @@ export interface WeatherData {
     airQuality?: AirQuality;
     source?: string;
     sourceOverride?: string;
+    lat: number;
+    lon: number;
 }
 
-const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh'): Promise<WeatherData> => {
-    console.log('Using OpenWeatherMap API', lang);
+const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh', coords?: { lat: number, lon: number }): Promise<WeatherData> => {
+    console.log('Using OpenWeatherMap API', lang, coords ? `with coords: ${coords.lat},${coords.lon}` : '');
     const apiLang = lang === 'zh' ? 'zh_cn' : 'en';
     // const locale = lang === 'zh' ? 'zh-CN' : 'en-US'; // Not needed for date formatting anymore if we use ISO
     const locale = 'en-US'; // Use fixed locale for standard date parsing, or better yet, construct ISO manually
+
+    const params: any = {
+        appid: apiKey,
+        units: 'metric',
+        lang: apiLang
+    };
+
+    if (coords) {
+        params.lat = coords.lat;
+        params.lon = coords.lon;
+    } else {
+        params.q = city;
+    }
+
     try {
         // Get current weather
         const response = await axios.get(`${OPENWEATHER_BASE_URL}/weather`, {
-            params: {
-                q: city,
-                appid: apiKey,
-                units: 'metric',
-                lang: apiLang
-            }
+            params: params
         });
 
         const data = response.data;
@@ -78,12 +108,7 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
 
         try {
             const forecastResponse = await axios.get(`${OPENWEATHER_BASE_URL}/forecast`, {
-                params: {
-                    q: city,
-                    appid: apiKey,
-                    units: 'metric',
-                    lang: apiLang
-                }
+                params: params
             });
 
             const forecastData = forecastResponse.data;
@@ -92,7 +117,7 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
             hourlyForecast = forecastData.list.slice(0, 8).map((item: any) => ({
                 time: new Date(item.dt * 1000).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
                 temperature: Math.round(item.main.temp),
-                condition: item.weather[0].main,
+                condition: item.weather[0].description,
                 icon: item.weather[0].icon
             }));
 
@@ -107,7 +132,7 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
                 if (!dailyMap.has(date)) {
                     dailyMap.set(date, {
                         temps: [],
-                        condition: item.weather[0].main,
+                        condition: item.weather[0].description,
                         icon: item.weather[0].icon,
                         dt: item.dt
                     });
@@ -160,7 +185,7 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
         return {
             city: data.name,
             temperature: Math.round(data.main.temp),
-            condition: data.weather[0].main,
+            condition: data.weather[0].description,
             humidity: data.main.humidity,
             windSpeed: data.wind.speed,
             feelsLike: Math.round(data.main.feels_like),
@@ -172,7 +197,9 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
             hourlyForecast,
             dailyForecast,
             airQuality,
-            source: 'OpenWeatherMap'
+            source: 'OpenWeatherMap',
+            lat: data.coord.lat,
+            lon: data.coord.lon
         };
     } catch (error: any) {
         console.error('API Error:', error.response?.data || error.message);
@@ -180,14 +207,18 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
     }
 };
 
-const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh'): Promise<WeatherData> => {
-    console.log('Using WeatherAPI.com', lang);
+const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh', coords?: { lat: number, lon: number }): Promise<WeatherData> => {
+    console.log('Using WeatherAPI.com', lang, coords ? `with coords: ${coords.lat},${coords.lon}` : '');
     const locale = lang === 'zh' ? 'zh-CN' : 'en-US';
+
+    // WeatherAPI supports "lat,lon" as q parameter
+    const query = coords ? `${coords.lat},${coords.lon}` : city;
+
     try {
         const response = await axios.get(`${WEATHERAPI_BASE_URL}/forecast.json`, {
             params: {
                 key: apiKey,
-                q: city,
+                q: query,
                 days: 7,
                 aqi: 'yes',
                 alerts: 'no',
@@ -229,7 +260,7 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
             const historyResponse = await axios.get(`${WEATHERAPI_BASE_URL}/history.json`, {
                 params: {
                     key: apiKey,
-                    q: city,
+                    q: query, // Use same query (coords or city) for history
                     dt: dt
                 }
             });
@@ -271,7 +302,9 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
                 o3: Math.round(current.air_quality?.o3 || 0),
                 no2: Math.round(current.air_quality?.no2 || 0)
             },
-            source: 'WeatherAPI.com'
+            source: 'WeatherAPI.com',
+            lat: data.location.lat,
+            lon: data.location.lon
         };
     } catch (error: any) {
         console.error('API Error:', error.response?.data || error.message);
@@ -279,14 +312,19 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
     }
 };
 
-const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh'): Promise<WeatherData> => {
-    console.log('Using QWeather API', lang);
+const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh', host?: string, coords?: { lat: number, lon: number }): Promise<WeatherData> => {
+    console.log('Using QWeather API', lang, host ? `with custom host: ${host}` : '', coords ? `with coords: ${coords.lat},${coords.lon}` : '');
     const locale = lang === 'zh' ? 'zh-CN' : 'en-US';
     try {
         // Need to lookup Location ID first
-        const geoResponse = await axios.get(`https://geoapi.qweather.com/v2/city/lookup`, {
+        const { base: qBaseUrl, geo: qGeoUrl } = getQWeatherUrls(host);
+
+        // QWeather geo API supports "lon,lat" (note order!) for location lookup
+        const locationQuery = coords ? `${coords.lon.toFixed(2)},${coords.lat.toFixed(2)}` : city;
+
+        const geoResponse = await axios.get(`${qGeoUrl}/city/lookup`, {
             params: {
-                location: city,
+                location: locationQuery,
                 key: apiKey,
                 lang: lang
             }
@@ -298,32 +336,38 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
 
         const locationId = geoResponse.data.location[0].id;
         const cityName = geoResponse.data.location[0].name;
+        const locationLat = parseFloat(geoResponse.data.location[0].lat);
+        const locationLon = parseFloat(geoResponse.data.location[0].lon);
 
-        // Parallel requests for weather data
-        const [nowRes, dailyRes, hourlyRes, airRes, sunRes] = await Promise.all([
-            axios.get(`${QWEATHER_BASE_URL}/weather/now`, { params: { location: locationId, key: apiKey, lang: lang } }),
-            axios.get(`${QWEATHER_BASE_URL}/weather/7d`, { params: { location: locationId, key: apiKey, lang: lang } }),
-            axios.get(`${QWEATHER_BASE_URL}/weather/24h`, { params: { location: locationId, key: apiKey, lang: lang } }),
-            axios.get(`${QWEATHER_BASE_URL}/air/now`, { params: { location: locationId, key: apiKey, lang: lang } }),
-            axios.get(`${QWEATHER_BASE_URL}/astronomy/sun`, { params: { location: locationId, key: apiKey, date: new Date().toISOString().substring(0, 10), lang: lang } })
-        ]);
+        // Parallel requests for weather data with error handling for optional components
+        const weatherRequests = [
+            axios.get(`${qBaseUrl}/weather/now`, { params: { location: locationId, key: apiKey, lang: lang } }),
+            axios.get(`${qBaseUrl}/weather/7d`, { params: { location: locationId, key: apiKey, lang: lang } }),
+            axios.get(`${qBaseUrl}/weather/24h`, { params: { location: locationId, key: apiKey, lang: lang } })
+        ];
+
+        // Core weather data (Must succeed)
+        const [nowRes, dailyRes, hourlyRes] = await Promise.all(weatherRequests);
+
+        // Optional data requests
+        const airPromise = axios.get(`${qBaseUrl}/air/now`, { params: { location: locationId, key: apiKey, lang: lang } });
+        const sunPromise = axios.get(`${qBaseUrl}/astronomy/sun`, { params: { location: locationId, key: apiKey, date: new Date().toISOString().substring(0, 10), lang: lang } });
+
+        const [airRes, sunRes] = await Promise.allSettled([airPromise, sunPromise]);
 
         const now = nowRes.data.now;
         const daily = dailyRes.data.daily;
         const hourly = hourlyRes.data.hourly;
-        const air = airRes.data.now;
-        const sun = sunRes.data;
 
-        // QWeather Icons mapping needs actual icon URLs or local assets. 
-        // For now using OpenWeatherMap icons or generic names? 
-        // Or we can rely on numbers and map them in frontend, but here we return strings.
-        // Let's just pass the icon code, assuming frontend handles it or we map common ones.
-        // Actually the current app uses some icon strings. 'cloud', 'sun' etc or OpenWeatherMap icon codes.
-        // Let's try to map some QWeather codes to OpenWeather-style descriptions or keep them simple.
-        // Ideally we should use the icon code provided by QWeather and handle it in UI.
-        // But to keep compatibility with current UI which might expect specific strings... 
-        // The WeatherCard.tsx probably uses weather icon component or image.
-        // Let's check WeatherCard.tsx later. For now, pass the condition text.
+        let air = null;
+        if (airRes.status === 'fulfilled' && airRes.value.data.code === '200') {
+            air = airRes.value.data.now;
+        }
+
+        let sun = null;
+        if (sunRes.status === 'fulfilled' && sunRes.value.data.code === '200') {
+            sun = sunRes.value.data;
+        }
 
         const hourlyForecast: HourlyForecast[] = hourly.filter((_: any, i: number) => i % 3 === 0).slice(0, 8).map((item: any) => ({
             time: new Date(item.fxTime).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
@@ -333,10 +377,8 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
         }));
 
         const dailyForecast: DailyForecast[] = daily.map((item: any) => {
-            // const date = new Date(item.fxDate);
             return {
                 date: item.fxDate, // YYYY-MM-DD
-                // dayName,
                 tempMin: parseInt(item.tempMin),
                 tempMax: parseInt(item.tempMax),
                 condition: item.textDay,
@@ -344,33 +386,43 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
             };
         });
 
-        return {
+        const weatherData: WeatherData = {
             city: cityName,
             temperature: parseInt(now.temp),
             condition: now.text,
             humidity: parseInt(now.humidity),
-            windSpeed: parseInt(now.windSpeed) / 3.6, // km/h to m/s. Wait, QWeather is km/h? yes.
+            windSpeed: parseInt(now.windSpeed) / 3.6, // km/h to m/s
             feelsLike: parseInt(now.feelsLike),
             pressure: parseInt(now.pressure),
             visibility: parseInt(now.vis),
-            uvIndex: 0, // Not in basic weather/now
-            sunrise: sun.sunrise,
-            sunset: sun.sunset,
+            uvIndex: 0,
             hourlyForecast,
             dailyForecast,
-            airQuality: {
+            source: 'QWeather',
+            lat: locationLat,
+            lon: locationLon
+        };
+
+        if (sun) {
+            weatherData.sunrise = sun.sunrise;
+            weatherData.sunset = sun.sunset;
+        }
+
+        if (air) {
+            weatherData.airQuality = {
                 aqi: parseInt(air.aqi),
-                // aqiLabel: air.category,
                 pm25: parseInt(air.pm2p5),
                 pm10: parseInt(air.pm10),
                 o3: parseInt(air.o3),
                 no2: parseInt(air.no2)
-            },
-            source: 'QWeather'
-        };
+            };
+        }
+
+        return weatherData;
 
     } catch (error: any) {
-        console.error('API Error:', error.response?.data || error.message);
+        console.error('API Error details:', error.response?.data);
+        console.error('API Error message:', error.message);
         throw new Error(`Failed to fetch from QWeather: ${error.response?.data?.code || error.message}`);
     }
 };
@@ -399,7 +451,7 @@ const fetchCustom = async (city: string, url: string, apiKey?: string, lang: 'zh
     }
 };
 
-export const getWeather = async (city: string, preferredSource?: string, lang: 'zh' | 'en' = 'zh'): Promise<WeatherData> => {
+export const getWeather = async (city: string, preferredSource?: string, lang: 'zh' | 'en' = 'zh', coords?: { lat: number, lon: number }): Promise<WeatherData> => {
     const settings = await getSettings();
     console.log('Current settings:', settings);
 
@@ -419,11 +471,11 @@ export const getWeather = async (city: string, preferredSource?: string, lang: '
 
         switch (sourceToUse) {
             case 'openweathermap':
-                return fetchOpenWeatherMap(city, apiKey, lang);
+                return fetchOpenWeatherMap(city, apiKey, lang, coords);
             case 'weatherapi':
-                return fetchWeatherAPI(city, apiKey, lang);
+                return fetchWeatherAPI(city, apiKey, lang, coords);
             case 'qweather':
-                return fetchQWeather(city, apiKey, lang);
+                return fetchQWeather(city, apiKey, lang, settings.qweatherHost, coords);
             default:
                 throw new Error('Unknown weather source');
         }
@@ -441,7 +493,7 @@ export interface CityResult {
     id?: string; // For QWeather
 }
 
-const searchOpenWeatherMap = async (query: string, apiKey: string): Promise<CityResult[]> => {
+const searchOpenWeatherMap = async (query: string, apiKey: string, lang: 'zh' | 'en' = 'zh'): Promise<CityResult[]> => {
     try {
         const response = await axios.get(`https://api.openweathermap.org/geo/1.0/direct`, {
             params: {
@@ -451,7 +503,7 @@ const searchOpenWeatherMap = async (query: string, apiKey: string): Promise<City
             }
         });
         return response.data.map((item: any) => ({
-            name: item.name,
+            name: item.local_names?.[lang] || item.local_names?.[lang === 'zh' ? 'zh_cn' : 'en'] || item.name,
             region: item.state,
             country: item.country,
             lat: item.lat,
@@ -484,9 +536,10 @@ const searchWeatherAPI = async (query: string, apiKey: string): Promise<CityResu
     }
 };
 
-const searchQWeather = async (query: string, apiKey: string, lang: 'zh' | 'en' = 'zh'): Promise<CityResult[]> => {
+const searchQWeather = async (query: string, apiKey: string, lang: 'zh' | 'en' = 'zh', host?: string): Promise<CityResult[]> => {
     try {
-        const response = await axios.get(`https://geoapi.qweather.com/v2/city/lookup`, {
+        const { geo: qGeoUrl } = getQWeatherUrls(host);
+        const response = await axios.get(`${qGeoUrl}/city/lookup`, {
             params: {
                 location: query,
                 key: apiKey,
@@ -508,6 +561,7 @@ const searchQWeather = async (query: string, apiKey: string, lang: 'zh' | 'en' =
     }
 };
 
+
 export const searchCities = async (query: string, lang: 'zh' | 'en' = 'zh'): Promise<CityResult[]> => {
     const settings = await getSettings();
     if (!settings.source || !settings.apiKeys[settings.source]) return [];
@@ -516,12 +570,44 @@ export const searchCities = async (query: string, lang: 'zh' | 'en' = 'zh'): Pro
 
     switch (settings.source) {
         case 'openweathermap':
-            return searchOpenWeatherMap(query, apiKey); // OWM search doesn't support lang clearly like others, but returns local names if available
+            return searchOpenWeatherMap(query, apiKey, lang);
         case 'weatherapi':
             return searchWeatherAPI(query, apiKey);
         case 'qweather':
-            return searchQWeather(query, apiKey, lang);
+            return searchQWeather(query, apiKey, lang, settings.qweatherHost);
         default:
             return [];
     }
 };
+
+export const verifyConnection = async (source: string, apiKey: string, lang: 'zh' | 'en' = 'zh', host?: string): Promise<boolean> => {
+    try {
+        let result: any[] = [];
+        const testQuery = 'Beijing'; // Standard test city
+
+        switch (source) {
+            case 'openweathermap':
+                result = await searchOpenWeatherMap(testQuery, apiKey, lang);
+                break;
+            case 'weatherapi':
+                result = await searchWeatherAPI(testQuery, apiKey);
+                break;
+            case 'qweather':
+                result = await searchQWeather(testQuery, apiKey, lang, host);
+                break;
+            case 'custom':
+                // For custom, we can't easily test without a URL, but we assume it works if we can fetch
+                // We'll skip for now or require URL
+                return true;
+            default:
+                throw new Error('Unknown source');
+        }
+
+        return result.length > 0;
+    } catch (e) {
+        console.error('Verification failed:', e);
+        return false;
+    }
+};
+
+

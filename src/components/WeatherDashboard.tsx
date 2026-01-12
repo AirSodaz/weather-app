@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getWeather, WeatherData, searchCities, CityResult } from '../services/weatherApi';
 import { getSettings, SectionConfig } from '../utils/config';
-import { FaCloud, FaSearch, FaTrash, FaCog, FaSync, FaInfoCircle, FaEllipsisV } from 'react-icons/fa';
+import { FaCloud, FaSearch, FaTrash, FaCog, FaSync, FaInfoCircle, FaEllipsisV, FaLocationArrow } from 'react-icons/fa';
 import WeatherDetail from './WeatherDetail';
 import WeatherCard from './WeatherCard';
 import SettingsModal from './SettingsModal';
@@ -27,6 +27,8 @@ const contextMenuVariants: Variants = {
 interface SavedCity {
     name: string;
     source?: string;
+    lat?: number;
+    lon?: number;
 }
 
 interface ContextMenuState {
@@ -38,14 +40,14 @@ interface ContextMenuState {
 }
 
 // Helper function to get background class based on weather condition
-const getWeatherBackground = (condition: string): string => {
+function getWeatherBackground(condition: string): string {
     const c = condition.toLowerCase();
-    if (c.includes('sunny') || c.includes('clear')) return 'bg-sunny';
-    if (c.includes('rain') || c.includes('drizzle') || c.includes('thunder')) return 'bg-rainy';
-    if (c.includes('snow') || c.includes('sleet') || c.includes('blizzard')) return 'bg-snowy';
-    if (c.includes('cloud') || c.includes('overcast')) return 'bg-cloudy';
+    if (c.includes('sunny') || c.includes('clear') || c.includes('晴')) return 'bg-sunny';
+    if (c.includes('rain') || c.includes('drizzle') || c.includes('thunder') || c.includes('雨') || c.includes('雷')) return 'bg-rainy';
+    if (c.includes('snow') || c.includes('sleet') || c.includes('blizzard') || c.includes('雪') || c.includes('冰')) return 'bg-snowy';
+    if (c.includes('cloud') || c.includes('overcast') || c.includes('云') || c.includes('阴')) return 'bg-cloudy';
     return 'bg-default';
-};
+}
 
 
 
@@ -79,10 +81,14 @@ const WeatherDashboard: React.FC = () => {
     const contextMenuRef = useRef<HTMLDivElement>(null); // Added ref for context menu
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
     const [isScrolled, setIsScrolled] = useState(false);
+    const lastSourceRef = useRef<string | null>(null);
 
     const loadAppConfig = async () => {
         const settings = await getSettings();
         setDetailViewSections(settings.detailViewSections || []);
+        if (lastSourceRef.current === null) {
+            lastSourceRef.current = settings.source;
+        }
     };
 
     useEffect(() => {
@@ -279,7 +285,8 @@ const WeatherDashboard: React.FC = () => {
                 data: weatherList
             });
         }
-    }, [weatherList, currentLanguage]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [weatherList]);
 
     useEffect(() => {
         loadSavedCities();
@@ -306,24 +313,28 @@ const WeatherDashboard: React.FC = () => {
         } catch (e) {
             console.error("Failed to load last refresh time", e);
         }
-
         // Try to load from cache first
         // Try to load from cache first
         try {
             const cache: any = await storage.get('weatherCache');
             // Check if cache format is valid and language matches
+            // Strict check: if cache language doesn't match current, treat as no cache
             if (cache && cache.data && Array.isArray(cache.data) && cache.lang === currentLanguage) {
                 cachedWeather = cache.data;
                 setWeatherList(cachedWeather as WeatherData[]);
+            } else if (!cache || !cache.lang || cache.lang !== currentLanguage) {
+                // Force refresh if language mismatch or cache is malformed/missing language info
+                // console.log('Cache language mismatch or missing, forcing refresh');
+                cachedWeather = null;
             } else if (Array.isArray(cache)) {
                 // Backward compatibility: Old cache format was just an array
-                // If we are here, language check failed or format is old.
-                // We treat it as valid data but potentially wrong language, so we don't use it directly
-                // or we use it but mark as stale immediately if we can.
-                // Simpler: Ignore old cache if we want strict language match.
-                // But for first load, maybe use it and let staleness check trigger refresh.
-                // Let's ignore it to force refresh for correct language.
-                console.log("Cache ignored due to language mismatch or old format");
+                // If simple array, assume it's valid but might be wrong language if we can't tell.
+                // But we should probably discard old format if we want strict language support.
+                // For now, let's assume it's invalid if we want to force language.
+                // cachedWeather = cache;
+                // Actually better to discard old cache to force correct language load
+                console.log("Cache ignored due to old format, forcing refresh for correct language.");
+                cachedWeather = null;
             }
         } catch (e) {
             console.error("Failed to load cache", e);
@@ -365,13 +376,16 @@ const WeatherDashboard: React.FC = () => {
                 const shouldFetch = !cachedWeather || isStale;
                 let finalList: WeatherData[] = cachedWeather || [];
 
+                let results: (WeatherData | null)[] | undefined;
+
                 if (shouldFetch) {
-                    const results = await Promise.all(
+                    results = await Promise.all(
                         savedData.map(async (item) => {
                             const cityName = typeof item === 'string' ? item : item.name;
                             const source = typeof item === 'string' ? undefined : item.source;
+                            const coords = typeof item === 'string' ? undefined : (item.lat && item.lon ? { lat: item.lat, lon: item.lon } : undefined);
                             try {
-                                const data = await getWeather(cityName, source, currentLanguage);
+                                const data = await getWeather(cityName, source, currentLanguage, coords);
                                 return { ...data, sourceOverride: source };
                             } catch (e) {
                                 console.error(`Failed to load weather for ${cityName}`, e);
@@ -386,6 +400,31 @@ const WeatherDashboard: React.FC = () => {
                         finalList = validResults;
                         setWeatherList(validResults);
                         setLastRefreshTime(new Date());
+
+                        // Sychronize saved city names with fetched names (e.g. localized names)
+                        let namesChanged = false;
+                        const newSavedData = savedData.map((item, index) => {
+                            // Find corresponding result. Note: results includes nulls, validResults does not.
+                            // We need to map by index from results
+                            const weatherData = results![index];
+                            if (weatherData && weatherData.city) {
+                                const currentName = typeof item === 'string' ? item : item.name;
+                                if (currentName !== weatherData.city) {
+                                    namesChanged = true;
+                                    if (typeof item === 'string') {
+                                        return weatherData.city;
+                                    } else {
+                                        return { ...item, name: weatherData.city };
+                                    }
+                                }
+                            }
+                            return item;
+                        });
+
+                        if (namesChanged) {
+                            console.log('Updating saved cities with localized names');
+                            storage.set('savedCities', newSavedData);
+                        }
                     }
                 }
 
@@ -394,7 +433,28 @@ const WeatherDashboard: React.FC = () => {
                     const lastViewed = await storage.get('lastViewedCity');
                     if (lastViewed) {
                         const lastCityName = typeof lastViewed === 'string' ? lastViewed : lastViewed.name;
-                        const targetCity = finalList.find(w => w.city === lastCityName);
+
+                        // Try to find by name first
+                        let targetCity = finalList.find(w => w.city === lastCityName);
+
+                        // If not found (e.g. name changed due to language switch), try to find by index
+                        if (!targetCity) {
+                            const savedIndex = savedData.findIndex(item => {
+                                const name = typeof item === 'string' ? item : item.name;
+                                return name === lastCityName;
+                            });
+
+                            if (savedIndex !== -1) {
+                                // If we have fresh resultsWithNulls, use that
+                                if (results && results[savedIndex]) {
+                                    targetCity = results[savedIndex] as WeatherData;
+                                }
+                                // Fallback: If using cache and lists align?
+                                else if (!results && finalList.length === savedData.length) {
+                                    targetCity = finalList[savedIndex];
+                                }
+                            }
+                        }
 
                         if (targetCity) {
                             setSelectedCity(targetCity);
@@ -426,12 +486,10 @@ const WeatherDashboard: React.FC = () => {
             const results = await Promise.all(
                 weatherList.map(async (weather) => {
                     try {
-                        // Use the existing sourceOverride if present in the weather object
-                        // We need to extend WeatherData interface or check how we store this.
-                        // Ideally checking 'sourceOverride' we just added.
-                        // Ideally checking 'sourceOverride' we just added.
                         const source = (weather as any).sourceOverride;
-                        const newData = await getWeather(weather.city, source, currentLanguage);
+                        // Use coords from weather data if available
+                        const coords = (weather.lat && weather.lon) ? { lat: weather.lat, lon: weather.lon } : undefined;
+                        const newData = await getWeather(weather.city, source, currentLanguage, coords);
                         return { ...newData, sourceOverride: source };
                     } catch (e) {
                         console.error(`Failed to refresh weather for ${weather.city}`, e);
@@ -441,6 +499,36 @@ const WeatherDashboard: React.FC = () => {
             );
             setWeatherList(results);
             setLastRefreshTime(new Date());
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
+    const refreshDefaultSourceCities = async () => {
+        if (weatherList.length === 0 || refreshing) return;
+
+        setRefreshing(true);
+        try {
+            const results = await Promise.all(
+                weatherList.map(async (weather) => {
+                    try {
+                        const source = (weather as any).sourceOverride;
+                        if (source) {
+                            // Don't refresh if source is manually set
+                            return weather;
+                        }
+                        const coords = (weather.lat && weather.lon) ? { lat: weather.lat, lon: weather.lon } : undefined;
+                        const newData = await getWeather(weather.city, undefined, currentLanguage, coords);
+                        return { ...newData, sourceOverride: undefined };
+                    } catch (e) {
+                        console.error(`Failed to refresh weather for ${weather.city}`, e);
+                        return weather;
+                    }
+                })
+            );
+            setWeatherList(results);
+            setLastRefreshTime(new Date());
+            await updateSavedCities(results);
         } finally {
             setRefreshing(false);
         }
@@ -496,7 +584,9 @@ const WeatherDashboard: React.FC = () => {
         // Map to SavedCity format
         const savedCities: SavedCity[] = list.map(w => ({
             name: w.city,
-            source: (w as any).sourceOverride
+            source: (w as any).sourceOverride,
+            lat: w.lat,
+            lon: w.lon
         }));
         await storage.set('savedCities', savedCities);
     };
@@ -504,7 +594,9 @@ const WeatherDashboard: React.FC = () => {
     const handleUpdateCitySource = async (city: string, source: string | undefined) => {
         setLoading(true);
         try {
-            const newData = await getWeather(city, source, currentLanguage);
+            const currentCity = weatherList.find(w => w.city === city);
+            const coords = (currentCity?.lat && currentCity?.lon) ? { lat: currentCity.lat, lon: currentCity.lon } : undefined;
+            const newData = await getWeather(city, source, currentLanguage, coords);
             const newList = weatherList.map(w =>
                 w.city === city
                     ? { ...newData, sourceOverride: source }
@@ -525,9 +617,14 @@ const WeatherDashboard: React.FC = () => {
         }
     };
 
-    const handleSettingsChange = () => {
+    const handleSettingsChange = async () => {
         setupAutoRefresh();
         loadAppConfig();
+        const settings = await getSettings();
+        if (lastSourceRef.current && lastSourceRef.current !== settings.source) {
+            await refreshDefaultSourceCities();
+        }
+        lastSourceRef.current = settings.source;
     };
 
     const handleCardClick = useCallback((weather: WeatherData) => {
@@ -599,8 +696,6 @@ const WeatherDashboard: React.FC = () => {
         >
 
             {/* Header / Search Section */}
-            {/* Header / Search Section */}
-            {/* Header / Search Section */}
             <div
                 className={`sticky top-0 z-50 w-full max-w-2xl flex items-center gap-3 transition-all duration-500 ease-in-out px-4 sm:px-0
                 ${isScrolled
@@ -619,9 +714,7 @@ const WeatherDashboard: React.FC = () => {
                             placeholder={t.search.placeholder}
                             className="bg-transparent border-none outline-none text-white placeholder-white/50 w-full text-base"
                             onFocus={() => {
-                                if (searchCity.trim().length >= 2 && suggestions.length > 0) {
-                                    setShowSuggestions(true);
-                                }
+                                setShowSuggestions(true);
                             }}
                         />
                         {searchCity && (
@@ -640,7 +733,7 @@ const WeatherDashboard: React.FC = () => {
                     {/* Suggestions Dropdown */}
                     <AnimatePresence>
                         {
-                            showSuggestions && suggestions.length > 0 && (
+                            (showSuggestions) && (
                                 <motion.div
                                     variants={dropdownVariants}
                                     initial="hidden"
@@ -648,6 +741,58 @@ const WeatherDashboard: React.FC = () => {
                                     exit="exit"
                                     className="absolute top-full left-0 right-0 mt-2 glass-card rounded-2xl overflow-hidden shadow-xl z-50 backdrop-blur-xl border border-white/10"
                                 >
+                                    {/* Current Location Option */}
+                                    <button
+                                        onClick={() => {
+                                            setShowSuggestions(false);
+                                            setLoading(true);
+                                            navigator.geolocation.getCurrentPosition(
+                                                async (position) => {
+                                                    try {
+                                                        const { latitude, longitude } = position.coords;
+                                                        // Use reverse geocoding or just fetch weather by coords
+                                                        // getWeather supports coords but we ideally want a city name to display initially
+                                                        // if we just pass coords, the API usually returns the city name which is great.
+
+                                                        // Check if already exists by fuzzy coord match? 
+                                                        // Actually, let's just fetch it. The existing check uses city name.
+                                                        // We'll rely on the returned city name from API to check duplicates after fetch if we want strictness,
+                                                        // but handleSearch logic does pre-check.
+                                                        // Let's modify handleSearch or just do it here inline for clarity.
+
+                                                        const data = await getWeather('', undefined, currentLanguage, { lat: latitude, lon: longitude });
+
+                                                        if (weatherList.some(w => w.city.toLowerCase() === data.city.toLowerCase())) {
+                                                            setError(t.search.cityExists);
+                                                        } else {
+                                                            const newList = [...weatherList, data];
+                                                            setWeatherList(newList);
+                                                            await updateSavedCities(newList);
+                                                            setLastRefreshTime(new Date());
+                                                        }
+                                                    } catch (err) {
+                                                        console.error("Geolocation weather fetch failed", err);
+                                                        setError(t.errors?.loadFailed || "Failed to load location");
+                                                    } finally {
+                                                        setLoading(false);
+                                                    }
+                                                },
+                                                (err) => {
+                                                    console.error("Geolocation error", err);
+                                                    setError("Location access denied or unavailable");
+                                                    setLoading(false);
+                                                },
+                                                { timeout: 10000 }
+                                            );
+                                        }}
+                                        className="w-full px-5 py-3 text-left hover:bg-white/10 text-white flex items-center gap-3 transition-colors border-b border-white/5 last:border-none"
+                                    >
+                                        <FaLocationArrow className="text-white/60" />
+                                        <div className="flex flex-col gap-0.5">
+                                            <span className="font-medium text-sm">{t.search?.currentLocation || "Use Current Location"}</span>
+                                        </div>
+                                    </button>
+
                                     {suggestions.map((item, index) => (
                                         <button
                                             key={`${item.name}-${item.lat}-${item.lon}-${index}`}

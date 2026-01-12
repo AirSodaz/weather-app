@@ -18,7 +18,14 @@ coverage
 # Production
 dist
 dist-electron
+dev-dist
 release
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
 
 # Misc
 .DS_Store

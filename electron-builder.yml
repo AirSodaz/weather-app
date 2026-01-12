@@ -2,6 +2,7 @@ appId: com.weather.app
 productName: Weather App
 directories:
   output: release
+  buildResources: public
 files:
   - dist/**/*
   - dist-electron/**/*

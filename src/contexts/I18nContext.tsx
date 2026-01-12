@@ -43,6 +43,7 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const loadLanguage = async () => {
         try {
             const savedLang = await storage.get('language');
+            console.log('Language loaded from storage:', savedLang);
             if (savedLang) {
                 setLanguageState(savedLang as Language);
             }
@@ -55,6 +56,7 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setLanguageState(lang);
         try {
             await storage.set('language', lang);
+            console.log('Language saved:', lang);
         } catch (e) {
             console.error('Failed to save language setting:', e);
         }

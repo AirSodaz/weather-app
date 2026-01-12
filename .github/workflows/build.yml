@@ -5,6 +5,8 @@ on:
     branches:
       - master
       - alpha
+    tags:
+      - 'v*'
     paths-ignore:
       - '**.md'
       - '**.spec.js'
@@ -39,7 +41,7 @@ jobs:
         run: npm run build
 
       - name: Electron Build
-        run: npm run electron:build -- --publish never
+        run: npm run electron:build -- --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

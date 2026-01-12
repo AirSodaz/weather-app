@@ -33,7 +33,7 @@ function createWindow() {
             minWidth: 320,
             minHeight: 400,
             autoHideMenuBar: true,
-            icon: path.join(process.env.VITE_PUBLIC as string, 'electron-vite.svg'),
+            icon: path.join(process.env.VITE_PUBLIC as string, 'pwa-icon.png'),
             webPreferences: {
                 preload: path.join(__dirname, 'preload.js'),
                 nodeIntegration: false,
@@ -56,12 +56,11 @@ function createWindow() {
             return { action: 'deny' };
         });
 
-        if (VITE_DEV_SERVER_URL) {
+        if (!app.isPackaged && VITE_DEV_SERVER_URL) {
             console.log('Loading URL:', VITE_DEV_SERVER_URL);
             win.loadURL(VITE_DEV_SERVER_URL)
         } else {
             console.log('Loading file');
-            // win.loadFile('dist/index.html')
             win.loadFile(path.join(process.env.DIST as string, 'index.html'))
         }
 
