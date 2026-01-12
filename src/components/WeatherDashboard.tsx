@@ -51,7 +51,6 @@ interface WeatherDashboardProps {
 
 const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgContainerRef }) => {
     const { t, currentLanguage } = useI18n();
-    const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
     const [searchCity, setSearchCity] = useState('');
     const [weatherList, setWeatherList] = useState<WeatherData[]>([]);
     const [selectedCity, setSelectedCity] = useState<WeatherData | null>(null);
