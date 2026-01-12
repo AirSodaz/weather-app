@@ -5,17 +5,20 @@
         "language": "语言",
         "weatherSource": "天气数据源",
         "apiKey": "API 密钥",
-        "apiKeyPlaceholder": "请输入 OpenWeatherMap API 密钥",
+        "apiKeyPlaceholder": "请输入 API 密钥",
         "apiKeyHelp": "你可以从这里获取免费的 API 密钥",
         "save": "保存设置",
         "saving": "保存中...",
         "openWeatherMap": "OpenWeatherMap",
         "weatherapi": "WeatherAPI.com",
         "qweather": "和风天气 (QWeather)",
-        "custom": "自定义源 (Custom)",
+        "custom": "自定义源",
         "apiUrl": "API 地址",
         "apiUrlPlaceholder": "输入 API 基础地址",
         "apiUrlHelp": "将附加参数 ?city={city}&key={apiKey} 进行调用",
+        "qweatherHost": "API 域名 (Host)",
+        "qweatherHostPlaceholder": "例如 api.qweather.com",
+        "qweatherHostHelp": "可选。留空则使用默认值 (devapi.qweather.com)。",
         "autoRefresh": "自动刷新间隔",
         "autoRefreshOff": "关闭",
         "autoRefreshMinutes": "{minutes} 分钟",
@@ -39,7 +42,8 @@
         "placeholder": "添加城市...",
         "error": "获取天气失败，请重试。",
         "cityExists": "该城市已添加！",
-        "loading": "加载已保存的城市..."
+        "loading": "加载已保存的城市...",
+        "currentLocation": "使用当前位置"
     },
     "errors": {
         "loadFailed": "切换源失败"

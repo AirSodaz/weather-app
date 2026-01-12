@@ -22,13 +22,13 @@ interface WeatherCardProps {
 
 const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ condition, className = "text-5xl" }) => {
     const c = condition.toLowerCase();
-    if (c.includes('sunny') || c.includes('clear')) {
+    if (c.includes('sunny') || c.includes('clear') || c.includes('晴')) {
         return <FaSun className={`${className} text-amber-300 animate-spin-slow`} />;
     }
-    if (c.includes('rain') || c.includes('drizzle') || c.includes('thunder')) {
+    if (c.includes('rain') || c.includes('drizzle') || c.includes('thunder') || c.includes('雨') || c.includes('雷')) {
         return <FaCloudRain className={`${className} text-blue-300 animate-float`} />;
     }
-    if (c.includes('snow') || c.includes('sleet') || c.includes('blizzard')) {
+    if (c.includes('snow') || c.includes('sleet') || c.includes('blizzard') || c.includes('雪') || c.includes('冰')) {
         return <FaSnowflake className={`${className} text-white animate-float`} />;
     }
     return <FaCloud className={`${className} text-gray-200 animate-float`} />;
@@ -86,10 +86,16 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
             {/* Main Content */}
             <div className="flex justify-between items-start mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight mb-1 text-white group-hover:text-white/90 transition-colors">
+                    <motion.h2
+                        layoutId={`${layoutId}-city`}
+                        className="text-2xl font-bold tracking-tight mb-1 text-white group-hover:text-white/90 transition-colors"
+                    >
                         {weather.city}
-                    </h2>
-                    <p className="text-sm font-medium text-white/60 capitalize tracking-wide flex items-center gap-2">
+                    </motion.h2>
+                    <motion.p
+                        layoutId={`${layoutId}-condition`}
+                        className="text-sm font-medium text-white/60 capitalize tracking-wide flex items-center gap-2"
+                    >
                         {weather.condition}
                         {weather.sourceOverride && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/10">
@@ -97,18 +103,23 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
                                     weather.sourceOverride === 'weatherapi' ? 'WAPI' : 'QW'}
                             </span>
                         )}
-                    </p>
+                    </motion.p>
                 </div>
                 <div className="pl-4">
-                    <WeatherIcon condition={weather.condition} className="text-5xl drop-shadow-lg" />
+                    <motion.div layoutId={`${layoutId}-icon`}>
+                        <WeatherIcon condition={weather.condition} className="text-5xl drop-shadow-lg" />
+                    </motion.div>
                 </div>
             </div>
 
             {/* Temperature */}
             <div className="mb-6">
-                <span className="text-7xl font-light tracking-tighter text-white">
+                <motion.span
+                    layoutId={`${layoutId}-temp`}
+                    className="text-7xl font-light tracking-tighter text-white inline-block"
+                >
                     {Math.round(weather.temperature)}°
-                </span>
+                </motion.span>
             </div>
 
             {/* Footer Metrics */}
@@ -119,7 +130,7 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
                 </div>
                 <div className="flex items-center gap-2 text-white/70">
                     <FaWind className="text-slate-300/80" />
-                    <span className="text-sm font-medium">{weather.windSpeed} km/h</span>
+                    <span className="text-sm font-medium">{weather.windSpeed.toFixed(2)} km/h</span>
                 </div>
             </div>
 

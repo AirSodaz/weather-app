@@ -1,6 +1,6 @@
 # Weather App
 
-A modern, beautiful, and highly responsive weather application built with **Electron**, **React**, and **Vite**. This application features a premium glassmorphism design, real-time weather updates, and detailed forecast information.
+A modern, beautiful, and highly responsive weather application built with **Tauri**, **React**, **Capacitor**, and **Vite**. This application features a premium glassmorphism design, real-time weather updates, and detailed forecast information. It supports Windows, macOS, Linux, and Android.
 
 [English](README.md) | [简体中文](README_zh-CN.md)
 
@@ -16,15 +16,21 @@ A modern, beautiful, and highly responsive weather application built with **Elec
   - Smooth animations powered by `framer-motion`
   - Glassmorphism aesthetic
   - Dynamic layouts
+- **Cross-Platform Support**:
+  - Desktop: Windows, macOS, Linux (via Tauri)
+  - Mobile: Android (via Capacitor)
+  - Web: PWA support for offline usage
 - **Localization**: Support for English and Chinese (Simplified).
 - **Customization**:
   - Per-city weather data source selection.
   - Startup view preferences (Dashboard vs. Last Viewed City).
   - Customizable detail view sections.
+  - Custom API Host support.
 
 ## Tech Stack
 
-- **Core**: [Electron](https://www.electronjs.org/), [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/)
+- **Core**: [Tauri](https://tauri.app/), [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/)
+- **Mobile**: [Capacitor](https://capacitorjs.com/)
 - **Build Tool**: [Vite](https://vitejs.dev/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **Animation**: [Framer Motion](https://www.framer.com/motion/)
@@ -36,6 +42,8 @@ A modern, beautiful, and highly responsive weather application built with **Elec
 ### Prerequisites
 
 Ensure you have [Node.js](https://nodejs.org/) installed on your machine.
+For Android development, you also need [Android Studio](https://developer.android.com/studio).
+For Tauri development, ensure you have the [prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites) installed for your OS.
 
 ### Installation
 
@@ -48,26 +56,47 @@ npm install
 
 ### Development
 
-To start the application in development mode (with hot-reload for both Renderer and Main processes):
+To start the application in development mode:
 
 ```bash
-npm run dev
+npm run tauri dev
 ```
 
 ### Building
 
-To build the application for production:
+#### Desktop (Tauri)
+
+To build the application for production (Windows, macOS, Linux):
 
 ```bash
-npm run build
+npm run tauri build
 ```
 
-The output will be in the `dist` and `dist-electron` directories.
+The output will be in the `src-tauri/target/release/bundle` directory.
+
+#### Android
+
+To build for Android:
+
+```bash
+npm run android:build
+```
+
+This will build the web assets and sync them with the Android project. You can then open the project in Android Studio using `npx cap open android`.
+
+## CI/CD
+
+Automated builds are configured using GitHub Actions for:
+- Windows
+- macOS
+- Ubuntu
+- Android
 
 ## Project Structure
 
 ```
-├── electron/        # Electron main project code
+├── src-tauri/       # Tauri main project code (Rust)
+├── android/         # Android native project code
 ├── src/            
 │   ├── components/  # React UI components
 │   ├── contexts/    # Context providers (Weather, Theme, etc.)

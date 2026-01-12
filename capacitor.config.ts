@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-    appId: 'com.weather.app',
+    appId: 'com.airsodaz.weatherapp',
     appName: 'Weather App',
     webDir: 'dist',
     server: {

@@ -5,7 +5,7 @@
         "language": "Language",
         "weatherSource": "Weather Source",
         "apiKey": "API Key",
-        "apiKeyPlaceholder": "Enter your OpenWeatherMap API Key",
+        "apiKeyPlaceholder": "Enter your API Key",
         "apiKeyHelp": "You can get a free API key from",
         "save": "Save Settings",
         "saving": "Saving...",
@@ -16,6 +16,9 @@
         "apiUrl": "API URL",
         "apiUrlPlaceholder": "Enter API base URL",
         "apiUrlHelp": "The URL will be called with ?city={city}&key={apiKey}",
+        "qweatherHost": "API Host",
+        "qweatherHostPlaceholder": "e.g. api.qweather.com",
+        "qweatherHostHelp": "Optional. Leave empty to use default (devapi.qweather.com).",
         "autoRefresh": "Auto Refresh Interval",
         "autoRefreshOff": "Off",
         "autoRefreshMinutes": "{minutes} minutes",
@@ -39,7 +42,8 @@
         "placeholder": "Add a city...",
         "error": "Failed to fetch weather. Please try again.",
         "cityExists": "City already added!",
-        "loading": "Loading saved locations..."
+        "loading": "Loading saved locations...",
+        "currentLocation": "Use Current Location"
     },
     "errors": {
         "loadFailed": "Failed to switch source"

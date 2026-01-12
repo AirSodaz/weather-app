@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings, getSettings, saveSettings, WeatherSource, SectionConfig } from '../utils/config';
+import { verifyConnection } from '../services/weatherApi';
 import { useI18n } from '../contexts/I18nContext';
 import {
     FaTimes, FaSave, FaCog, FaGlobe, FaKey, FaClock, FaDesktop,
-    FaSync, FaCloud, FaInfoCircle, FaGripLines, FaCheckSquare, FaSquare, FaList
+    FaSync, FaCloud, FaInfoCircle, FaGripLines, FaCheckSquare, FaSquare, FaList, FaGithub
 } from 'react-icons/fa';
 import packageJson from '../../package.json';
 import { motion, Variants } from 'framer-motion';
@@ -38,14 +39,18 @@ const modalVariants: Variants = {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettingsChange }) => {
     const { t, language, setLanguage } = useI18n();
+    const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
     const [localLanguage, setLocalLanguage] = useState(language);
     const [source, setSource] = useState<WeatherSource>('openweathermap');
     const [customUrl, setCustomUrl] = useState('');
+    const [qweatherHost, setQWeatherHost] = useState('');
     const [apiKeys, setApiKeys] = useState<{ [key in WeatherSource]?: string }>({});
     const [autoRefreshInterval, setAutoRefreshInterval] = useState(0);
     const [startupView, setStartupView] = useState<'home' | 'detail'>('detail');
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
     const [loading, setLoading] = useState(false);
+    const [testing, setTesting] = useState(false);
+    const [testResult, setTestResult] = useState<'success' | 'fail' | null>(null);
 
     // Drag and drop state
     const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
@@ -63,6 +68,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
         const settings = await getSettings();
         setSource(settings.source);
         setCustomUrl(settings.customUrl || '');
+        setQWeatherHost(settings.qweatherHost || '');
         setApiKeys(settings.apiKeys || {});
         setAutoRefreshInterval(settings.autoRefreshInterval || 0);
         setStartupView(settings.startupView || 'detail');
@@ -75,6 +81,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
         const newSettings: AppSettings = {
             source,
             customUrl,
+            qweatherHost,
             apiKeys,
             autoRefreshInterval,
             startupView,
@@ -92,6 +99,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
             ...prev,
             [source]: value
         }));
+        if (testResult) setTestResult(null);
+    };
+
+    const handleTestConnection = async () => {
+        const apiKey = apiKeys[source];
+        if (!apiKey) return;
+
+        setTesting(true);
+        setTestResult(null);
+
+        try {
+            const langParam = localLanguage === 'en' ? 'en' : 'zh';
+            const success = await verifyConnection(source, apiKey, langParam, qweatherHost);
+            setTestResult(success ? 'success' : 'fail');
+        } catch (e) {
+            setTestResult('fail');
+        } finally {
+            setTesting(false);
+        }
     };
 
     // Section Drag Handlers
@@ -149,9 +175,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md"
+            className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md ${isTauri ? 'pt-12' : ''}`}
+            onClick={onClose}
         >
             <motion.div
+                onClick={(e) => e.stopPropagation()}
                 variants={modalVariants}
                 className="glass-dark border-0 sm:border border-white/10 
                 rounded-none sm:rounded-3xl w-full h-full sm:h-auto sm:max-w-md sm:max-h-[90vh] 
@@ -254,6 +282,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                         </div>
                     )}
 
+                    {/* QWeather Host Input */}
+                    {source === 'qweather' && (
+                        <div className="space-y-3 animate-fade-in">
+                            <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
+                                <FaGlobe /> {t.settings.qweatherHost}
+                            </label>
+                            <input
+                                type="text"
+                                value={qweatherHost}
+                                onChange={(e) => setQWeatherHost(e.target.value)}
+                                placeholder={t.settings.qweatherHostPlaceholder}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/50 transition-colors placeholder-white/20 text-sm font-mono"
+                            />
+                            <p className="text-[10px] text-white/30">{t.settings.qweatherHostHelp}</p>
+                        </div>
+                    )}
+
                     {/* API Key Input */}
                     <div className="space-y-3 animate-fade-in">
                         <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
@@ -267,12 +312,35 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/50 transition-colors placeholder-white/20 text-sm font-mono tracking-widest"
                         />
                         {source !== 'custom' && (
-                            <p className="text-[10px] text-white/40 flex justify-between">
+                            <div className="flex justify-between items-center text-[10px] text-white/40 mt-1">
                                 <span>{t.settings.apiKeyHelp}</span>
-                                <a href={getApiKeyHelp()} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">
-                                    Get Key
-                                </a>
-                            </p>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={handleTestConnection}
+                                        disabled={testing || !apiKeys[source]}
+                                        className={`
+                                            flex items-center gap-1 transition-colors font-medium
+                                            ${testResult === 'success' ? 'text-green-400' :
+                                                testResult === 'fail' ? 'text-red-400' :
+                                                    'text-blue-400 hover:text-blue-300'}
+                                            ${testing ? 'opacity-50 cursor-not-allowed' : ''}
+                                        `}
+                                    >
+                                        {testing && <FaSync className="animate-spin" />}
+                                        {testResult === 'success' ? (
+                                            <span>Success</span>
+                                        ) : testResult === 'fail' ? (
+                                            <span>Failed</span>
+                                        ) : (
+                                            <span>Test Connection</span>
+                                        )}
+                                    </button>
+                                    <div className="w-px h-3 bg-white/10"></div>
+                                    <a href={getApiKeyHelp()} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">
+                                        Get Key
+                                    </a>
+                                </div>
+                            </div>
                         )}
                     </div>
 
@@ -387,9 +455,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
 
                 {/* Footer */}
                 <div className="p-6 pt-0 mt-2 flex justify-between items-center flex-shrink-0">
-                    <div className="text-white/20 text-[10px] font-mono">
+                    <a
+                        href="https://github.com/AirSodaz/weather-app"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white/20 hover:text-white/50 transition-colors text-[10px] font-mono flex items-center gap-2"
+                    >
+                        <FaGithub className="text-lg" />
                         v{packageJson.version}
-                    </div>
+                    </a>
                     <button
                         onClick={handleSave}
                         disabled={loading}
