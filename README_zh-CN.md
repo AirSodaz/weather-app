@@ -1,6 +1,6 @@
 # Weather App
 
-一个基于 **Electron**、**React** 和 **Vite** 构建的现代、美观且响应式极佳的天气应用。该应用采用高级的玻璃拟态设计，提供实时天气更新和详细的预报信息。
+一个基于 **Tauri**、**React**、**Capacitor** 和 **Vite** 构建的现代、美观且响应式极佳的天气应用。该应用采用高级的玻璃拟态设计，提供实时天气更新和详细的预报信息。支持 Windows、macOS、Linux 和 Android。
 
 [English](README.md) | [简体中文](README_zh-CN.md)
 
@@ -16,15 +16,21 @@
   - 由 `framer-motion` 驱动的流畅动画
   - 玻璃拟态美学
   - 动态布局
+- **跨平台支持**:
+  - 桌面: Windows, macOS, Linux (via Tauri)
+  - 移动: Android (via Capacitor)
+  - Web: 支持生成 PWA 以离线使用
 - **本地化**: 支持英语和简体中文。
 - **个性化**:
   - 每个城市可单独选择天气数据源。
   - 启动视图偏好设置（仪表盘 vs 最后查看的城市）。
   - 可自定义的详情视图板块。
+  - 支持自定义 API Host。
 
 ## 技术栈
 
-- **核心**: [Electron](https://www.electronjs.org/), [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/)
+- **核心**: [Tauri](https://tauri.app/), [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/)
+- **移动端**: [Capacitor](https://capacitorjs.com/)
 - **构建工具**: [Vite](https://vitejs.dev/)
 - **样式**: [Tailwind CSS](https://tailwindcss.com/)
 - **动画**: [Framer Motion](https://www.framer.com/motion/)
@@ -36,6 +42,8 @@
 ### 先决条件
 
 确保您的机器上已安装 [Node.js](https://nodejs.org/)。
+对于 Android 开发，您还需要安装 [Android Studio](https://developer.android.com/studio)。
+对于 Tauri 开发，请确保您已安装操作系统的[先决条件](https://tauri.app/zh-cn/v1/guides/getting-started/prerequisites)。
 
 ### 安装
 
@@ -48,26 +56,47 @@ npm install
 
 ### 开发
 
-要在开发模式下启动应用程序（渲染进程和主进程均支持热重载）：
+要在开发模式下启动应用程序：
 
 ```bash
-npm run dev
+npm run tauri dev
 ```
 
 ### 构建
 
-构建生产环境应用程序：
+#### 桌面端 (Tauri)
+
+构建生产环境应用程序（Windows, macOS, Linux）：
 
 ```bash
-npm run build
+npm run tauri build
 ```
 
-输出文件将位于 `dist` 和 `dist-electron` 目录中。
+输出文件将位于 `src-tauri/target/release/bundle` 目录中。
+
+#### Android
+
+构建 Android 应用：
+
+```bash
+npm run android:build
+```
+
+此命令将构建 Web 资源并将其同步到 Android 项目。然后，您可以使用 `npx cap open android` 在 Android Studio 中打开项目。
+
+## CI/CD
+
+使用 GitHub Actions 配置了以下平台的自动构建：
+- Windows
+- macOS
+- Ubuntu
+- Android
 
 ## 项目结构
 
 ```
-├── electron/        # Electron 主进程代码
+├── src-tauri/       # Tauri 主进程代码 (Rust)
+├── android/         # Android 原生项目代码
 ├── src/            
 │   ├── components/  # React UI 组件
 │   ├── contexts/    # Context providers (Weather, Theme, etc.)
