@@ -4,7 +4,7 @@ import { verifyConnection } from '../services/weatherApi';
 import { useI18n } from '../contexts/I18nContext';
 import {
     FaTimes, FaSave, FaCog, FaGlobe, FaKey, FaClock, FaDesktop,
-    FaSync, FaCloud, FaInfoCircle, FaGripLines, FaCheckSquare, FaSquare, FaList
+    FaSync, FaCloud, FaInfoCircle, FaGripLines, FaCheckSquare, FaSquare, FaList, FaGithub
 } from 'react-icons/fa';
 import packageJson from '../../package.json';
 import { motion, Variants } from 'framer-motion';
@@ -452,9 +452,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
 
                 {/* Footer */}
                 <div className="p-6 pt-0 mt-2 flex justify-between items-center flex-shrink-0">
-                    <div className="text-white/20 text-[10px] font-mono">
+                    <a
+                        href="https://github.com/AirSodaz/weather-app"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white/20 hover:text-white/50 transition-colors text-[10px] font-mono flex items-center gap-2"
+                    >
+                        <FaGithub className="text-lg" />
                         v{packageJson.version}
-                    </div>
+                    </a>
                     <button
                         onClick={handleSave}
                         disabled={loading}

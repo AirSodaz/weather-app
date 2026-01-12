@@ -1,4 +1,4 @@
-appId: com.weather.app
+appId: com.airsodaz.weatherapp
 productName: Weather App
 directories:
   output: release
@@ -15,6 +15,11 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: "Weather App"
+  perMachine: true
+  runAfterFinish: true
 mac:
   target:
     - dmg
