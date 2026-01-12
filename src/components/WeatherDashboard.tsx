@@ -60,7 +60,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     const [error, setError] = useState<string | null>(null);
     const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
     const [, setTick] = useState(0); // For forcing re-render of relative time
-    const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
+    const autoRefreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [contextMenu, setContextMenu] = useState<ContextMenuState>({
         show: false, x: 0, y: 0, weather: null, subMenu: null
     });
@@ -71,12 +71,13 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     // const [scrollStyle, setScrollStyle] = useState<React.CSSProperties>({}); // Removed in favor of direct ref manipulation
     const [suggestions, setSuggestions] = useState<CityResult[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const searchRef = useRef<HTMLDivElement>(null);
     const contextMenuRef = useRef<HTMLDivElement>(null); // Added ref for context menu
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
     const [isScrolled, setIsScrolled] = useState(false);
     const lastSourceRef = useRef<string | null>(null);
+    const rafRef = useRef<number | null>(null);
 
     const loadAppConfig = async () => {
         const settings = await getSettings();
@@ -242,19 +243,26 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         // Use a smaller threshold for quicker response
         setIsScrolled(container.scrollTop > 10);
 
-        const scrollTop = container.scrollTop;
-        const scrollHeight = container.scrollHeight - container.clientHeight;
-        const scrollPercent = scrollHeight > 0 ? Math.min(scrollTop / scrollHeight, 1) : 0;
-
-        // Calculate gradient shift angle (0 to 45 degrees)
-        const shiftAngle = scrollPercent * 45;
-        // Calculate color intensity modifier (0 to 1)
-        const intensity = scrollPercent;
-
-        if (bgContainerRef && bgContainerRef.current) {
-            bgContainerRef.current.style.setProperty('--scroll-shift', `${shiftAngle}deg`);
-            bgContainerRef.current.style.setProperty('--intensity', String(intensity));
+        if (rafRef.current) {
+            return;
         }
+
+        rafRef.current = requestAnimationFrame(() => {
+            const scrollTop = container.scrollTop;
+            const scrollHeight = container.scrollHeight - container.clientHeight;
+            const scrollPercent = scrollHeight > 0 ? Math.min(scrollTop / scrollHeight, 1) : 0;
+
+            // Calculate gradient shift angle (0 to 45 degrees)
+            const shiftAngle = scrollPercent * 45;
+            // Calculate color intensity modifier (0 to 1)
+            const intensity = scrollPercent;
+
+            if (bgContainerRef && bgContainerRef.current) {
+                bgContainerRef.current.style.setProperty('--scroll-shift', `${shiftAngle}deg`);
+                bgContainerRef.current.style.setProperty('--intensity', String(intensity));
+            }
+            rafRef.current = null;
+        });
     }, [bgContainerRef]);
 
     useEffect(() => {
@@ -266,6 +274,9 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
         return () => {
             container.removeEventListener('scroll', handleScroll);
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+            }
         };
     }, [handleScroll]);
 
