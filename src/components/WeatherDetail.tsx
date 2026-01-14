@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { WeatherData } from '../services/weatherApi';
 import {
     FaArrowLeft, FaTint, FaWind, FaCompressArrowsAlt, FaEye,
@@ -107,7 +107,7 @@ const sectionsContainerVariants: Variants = {
     }
 };
 
-const WeatherDetail: React.FC<WeatherDetailProps> = ({
+const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
     weather,
     lastRefreshTime,
     onBack,
@@ -626,7 +626,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = ({
             </div>
         </motion.div>
     );
-};
+});
 
 export default WeatherDetail;
 
