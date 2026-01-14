@@ -71,7 +71,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     // const [scrollStyle, setScrollStyle] = useState<React.CSSProperties>({}); // Removed in favor of direct ref manipulation
     const [suggestions, setSuggestions] = useState<CityResult[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const searchRef = useRef<HTMLDivElement>(null);
     const contextMenuRef = useRef<HTMLDivElement>(null); // Added ref for context menu
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
@@ -482,7 +482,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         loadSavedCities();
     }, [currentLanguage]);
 
-    const refreshAllCities = async () => {
+    const refreshAllCities = useCallback(async () => {
         if (weatherList.length === 0 || refreshing) return;
 
         setRefreshing(true);
@@ -506,9 +506,9 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         } finally {
             setRefreshing(false);
         }
-    };
+    }, [weatherList, refreshing, currentLanguage]);
 
-    const refreshDefaultSourceCities = async () => {
+    const refreshDefaultSourceCities = useCallback(async () => {
         if (weatherList.length === 0 || refreshing) return;
 
         setRefreshing(true);
@@ -536,7 +536,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         } finally {
             setRefreshing(false);
         }
-    };
+    }, [weatherList, refreshing, currentLanguage]);
 
     const handleSearch = async (e?: React.FormEvent, cityOverride?: string) => {
         if (e) e.preventDefault();
@@ -595,7 +595,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         await storage.set('savedCities', savedCities);
     };
 
-    const handleUpdateCitySource = async (city: string, source: string | undefined) => {
+    const handleUpdateCitySource = useCallback(async (city: string, source: string | undefined) => {
         setLoading(true);
         try {
             const currentCity = weatherList.find(w => w.city === city);
@@ -619,7 +619,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         } finally {
             setLoading(false);
         }
-    };
+    }, [weatherList, currentLanguage, selectedCity, t.errors]);
 
     const handleSettingsChange = async () => {
         setupAutoRefresh();
@@ -645,6 +645,20 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             weather: weather
         });
     }, []);
+
+    const handleDetailBack = useCallback(() => window.history.back(), []);
+
+    const handleDetailOpenSettings = useCallback(() => {
+        setShowSettings(true);
+        window.history.pushState({ modal: 'settings' }, '', '');
+    }, []);
+
+    // Create a stable wrapper for handleUpdateCitySource to pass to WeatherDetail
+    const onDetailSourceChange = useCallback((source: string | undefined) => {
+        if (selectedCity) {
+            handleUpdateCitySource(selectedCity.city, source);
+        }
+    }, [selectedCity, handleUpdateCitySource]);
 
     // Drag and drop handlers
     const handleDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, index: number) => {
@@ -933,13 +947,10 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                             layoutId={`weather-card-${selectedCity.city}`}
                             weather={selectedCity}
                             lastRefreshTime={lastRefreshTime}
-                            onBack={() => window.history.back()}
-                            onSourceChange={(source) => handleUpdateCitySource(selectedCity.city, source)}
+                            onBack={handleDetailBack}
+                            onSourceChange={onDetailSourceChange}
                             onRefresh={refreshAllCities}
-                            onOpenSettings={() => {
-                                setShowSettings(true);
-                                window.history.pushState({ modal: 'settings' }, '', '');
-                            }}
+                            onOpenSettings={handleDetailOpenSettings}
                             sections={detailViewSections}
                         />
                     )
