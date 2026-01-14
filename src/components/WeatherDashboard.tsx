@@ -5,9 +5,10 @@ import { FaCloud, FaSearch, FaTrash, FaCog, FaSync, FaInfoCircle, FaEllipsisV, F
 import WeatherDetail from './WeatherDetail';
 import WeatherCard from './WeatherCard';
 import SettingsModal from './SettingsModal';
+import RelativeTime from './RelativeTime';
 import { storage } from '../utils/storage';
 import { useI18n } from '../contexts/I18nContext';
-import { formatRelativeTime, getWeatherBackground } from '../utils/helpers';
+import { getWeatherBackground } from '../utils/helpers';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 
 const dropdownVariants: Variants = {
@@ -58,8 +59,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
-    const [, setTick] = useState(0); // For forcing re-render of relative time
+    const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(new Date());
     const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
     const [contextMenu, setContextMenu] = useState<ContextMenuState>({
         show: false, x: 0, y: 0, weather: null, subMenu: null
@@ -225,14 +225,6 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             return () => clearTimeout(timer);
         }
     }, [error]);
-
-    // Update relative time display every minute
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setTick(t => t + 1);
-        }, 60000);
-        return () => clearInterval(interval);
-    }, []);
 
     // Handle scroll-based background animation
     const handleScroll = useCallback(() => {
@@ -849,7 +841,8 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                                 >
                                     {lastRefreshTime && (
                                         <div className="px-5 py-3 text-sm font-medium text-white/40 border-b border-white/10 uppercase tracking-wider">
-                                            {t.refresh.lastUpdate}: {formatRelativeTime(lastRefreshTime, t)}
+                                            {/* Optimization: Use RelativeTime to isolate minute updates */}
+                                            <RelativeTime date={lastRefreshTime} label={t.refresh.lastUpdate} />
                                         </div>
                                     )}
 
