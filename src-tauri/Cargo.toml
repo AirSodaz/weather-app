@@ -1,6 +1,6 @@
 [package]
 name = "weather-app"
-version = "0.1.0"
+version = "0.1.3"
 description = "A beautiful cross-platform weather application"
 authors = ["AirSodaz"]
 edition = "2021"

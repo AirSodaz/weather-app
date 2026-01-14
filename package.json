@@ -1,5 +1,6 @@
 {
   "name": "weather-app",
+  "productName": "Weather App",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/AirSodaz/weather-app.git"
@@ -10,7 +11,7 @@
     "email": "asodaz@outlook.com"
   },
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -21,6 +22,11 @@
     "android:build": "npm run build && npx cap sync",
     "preview": "vite preview",
     "tauri": "tauri"
+  },
+  "build": {
+    "directories": {
+      "buildResources": "assets"
+    }
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
