@@ -1,0 +1,3 @@
+## 2024-05-24 - Unstable Drag Handlers Break Memoization
+**Learning:** In React lists with drag-and-drop, using state directly in drag handlers (like `handleDragEnter` depending on `draggedIndex`) causes the handler function to be recreated on every drag update. This forces *all* list items to re-render, defeating `React.memo`, even if their own props haven't meaningfully changed.
+**Action:** Use `useRef` to store mutable values like `draggedIndex` or the list data itself, allowing the callback functions to remain stable (empty dependency array) while still accessing the latest data. Sync the refs with state using `useEffect`.

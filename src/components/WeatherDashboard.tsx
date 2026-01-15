@@ -67,6 +67,11 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     const [showMenu, setShowMenu] = useState(false);
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+    // Performance optimization: Refs to access latest state in callbacks without triggering re-creation
+    const draggedIndexRef = useRef<number | null>(null);
+    const weatherListRef = useRef<WeatherData[]>([]);
+
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     // const [scrollStyle, setScrollStyle] = useState<React.CSSProperties>({}); // Removed in favor of direct ref manipulation
     const [suggestions, setSuggestions] = useState<CityResult[]>([]);
@@ -89,6 +94,15 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     useEffect(() => {
         loadAppConfig();
     }, []);
+
+    // Keep refs in sync with state
+    useEffect(() => {
+        draggedIndexRef.current = draggedIndex;
+    }, [draggedIndex]);
+
+    useEffect(() => {
+        weatherListRef.current = weatherList;
+    }, [weatherList]);
 
     // Handle browser back button
     useEffect(() => {
@@ -592,7 +606,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         await updateSavedCities(newList);
     };
 
-    const updateSavedCities = async (list: WeatherData[]) => {
+    const updateSavedCities = useCallback(async (list: WeatherData[]) => {
         // Map to SavedCity format
         const savedCities: SavedCity[] = list.map(w => ({
             name: w.city,
@@ -601,7 +615,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             lon: w.lon
         }));
         await storage.set('savedCities', savedCities);
-    };
+    }, []);
 
     const handleUpdateCitySource = useCallback(async (city: string, source: string | undefined) => {
         setLoading(true);
@@ -682,10 +696,11 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
     const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>, index: number) => {
         e.preventDefault();
-        if (draggedIndex !== null && draggedIndex !== index) {
+        const currentDraggedIndex = draggedIndexRef.current;
+        if (currentDraggedIndex !== null && currentDraggedIndex !== index) {
             setDragOverIndex(index);
         }
-    }, [draggedIndex]);
+    }, []);
 
     const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -694,21 +709,24 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
     const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
         e.preventDefault();
-        if (draggedIndex === null || draggedIndex === dropIndex) {
+        const currentDraggedIndex = draggedIndexRef.current;
+        const currentList = weatherListRef.current;
+
+        if (currentDraggedIndex === null || currentDraggedIndex === dropIndex) {
             setDraggedIndex(null);
             setDragOverIndex(null);
             return;
         }
 
-        const newList = [...weatherList];
-        const [draggedItem] = newList.splice(draggedIndex, 1);
+        const newList = [...currentList];
+        const [draggedItem] = newList.splice(currentDraggedIndex, 1);
         newList.splice(dropIndex, 0, draggedItem);
 
         setWeatherList(newList);
         await updateSavedCities(newList);
         setDraggedIndex(null);
         setDragOverIndex(null);
-    }, [draggedIndex, weatherList]);
+    }, [updateSavedCities]);
 
     const handleDragEnd = useCallback(() => {
         setDraggedIndex(null);
