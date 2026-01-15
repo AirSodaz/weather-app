@@ -377,7 +377,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
             transition={{ type: "spring", stiffness: 350, damping: 35 }}
             ref={scrollContainerRef}
             className={`
-                fixed inset-0 z-50 flex flex-col text-white overflow-y-auto 
+                absolute inset-0 z-50 flex flex-col text-white overflow-y-auto 
                 weather-bg ${getWeatherBackground(weather.condition)}
                 will-change-transform
                 ${isTauri ? 'pt-12' : ''}
