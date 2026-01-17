@@ -66,6 +66,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     });
     const [showMenu, setShowMenu] = useState(false);
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+    const draggedIndexRef = useRef<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     // const [scrollStyle, setScrollStyle] = useState<React.CSSProperties>({}); // Removed in favor of direct ref manipulation
@@ -85,6 +86,10 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             lastSourceRef.current = settings.source;
         }
     };
+
+    useEffect(() => {
+        draggedIndexRef.current = draggedIndex;
+    }, [draggedIndex]);
 
     useEffect(() => {
         loadAppConfig();
@@ -671,6 +676,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     // Drag and drop handlers
     const handleDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, index: number) => {
         setDraggedIndex(index);
+        draggedIndexRef.current = index;
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', String(index));
     }, []);
@@ -682,10 +688,11 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
     const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>, index: number) => {
         e.preventDefault();
-        if (draggedIndex !== null && draggedIndex !== index) {
+        const currentDraggedIndex = draggedIndexRef.current;
+        if (currentDraggedIndex !== null && currentDraggedIndex !== index) {
             setDragOverIndex(index);
         }
-    }, [draggedIndex]);
+    }, []);
 
     const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -694,21 +701,22 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
     const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
         e.preventDefault();
-        if (draggedIndex === null || draggedIndex === dropIndex) {
+        const currentDraggedIndex = draggedIndexRef.current;
+        if (currentDraggedIndex === null || currentDraggedIndex === dropIndex) {
             setDraggedIndex(null);
             setDragOverIndex(null);
             return;
         }
 
         const newList = [...weatherList];
-        const [draggedItem] = newList.splice(draggedIndex, 1);
+        const [draggedItem] = newList.splice(currentDraggedIndex, 1);
         newList.splice(dropIndex, 0, draggedItem);
 
         setWeatherList(newList);
         await updateSavedCities(newList);
         setDraggedIndex(null);
         setDragOverIndex(null);
-    }, [draggedIndex, weatherList]);
+    }, [weatherList]);
 
     const handleDragEnd = useCallback(() => {
         setDraggedIndex(null);
