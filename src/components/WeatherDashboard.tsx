@@ -592,7 +592,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         await updateSavedCities(newList);
     };
 
-    const updateSavedCities = async (list: WeatherData[]) => {
+    const updateSavedCities = useCallback(async (list: WeatherData[]) => {
         // Map to SavedCity format
         const savedCities: SavedCity[] = list.map(w => ({
             name: w.city,
@@ -601,7 +601,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             lon: w.lon
         }));
         await storage.set('savedCities', savedCities);
-    };
+    }, []);
 
     const handleUpdateCitySource = useCallback(async (city: string, source: string | undefined) => {
         setLoading(true);
@@ -708,7 +708,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         await updateSavedCities(newList);
         setDraggedIndex(null);
         setDragOverIndex(null);
-    }, [draggedIndex, weatherList]);
+    }, [draggedIndex, weatherList, updateSavedCities]);
 
     const handleDragEnd = useCallback(() => {
         setDraggedIndex(null);
