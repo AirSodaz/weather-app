@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { isTauri } from '../utils/env';
 import { AppSettings, getSettings, saveSettings, WeatherSource, SectionConfig } from '../utils/config';
 import { verifyConnection } from '../services/weatherApi';
 import { useI18n } from '../contexts/I18nContext';
@@ -39,7 +40,7 @@ const modalVariants: Variants = {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettingsChange }) => {
     const { t, language, setLanguage } = useI18n();
-    const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
+    const isTauriEnv = isTauri();
     const [localLanguage, setLocalLanguage] = useState(language);
     const [source, setSource] = useState<WeatherSource>('openweathermap');
     const [customUrl, setCustomUrl] = useState('');
@@ -175,7 +176,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
             initial="hidden"
             animate="visible"
             exit="exit"
-            className={`absolute inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md ${isTauri ? 'pt-12' : ''}`}
+            className={`absolute inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md ${isTauriEnv ? 'pt-12' : ''}`}
             onClick={onClose}
         >
             <motion.div

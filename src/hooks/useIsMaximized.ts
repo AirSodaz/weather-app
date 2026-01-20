@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { appWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 export function useIsMaximized() {
     const [isMaximized, setIsMaximized] = useState(false);
@@ -8,7 +8,7 @@ export function useIsMaximized() {
         const updateState = async () => {
             try {
                 // Check initial state
-                setIsMaximized(await appWindow.isMaximized());
+                setIsMaximized(await getCurrentWindow().isMaximized());
             } catch (error) {
                 console.error('Failed to check maximized state:', error);
             }
@@ -19,7 +19,7 @@ export function useIsMaximized() {
         const setupListener = async () => {
             try {
                 // Listen for window resize events
-                unlisten = await appWindow.onResized(async () => {
+                unlisten = await getCurrentWindow().onResized(async () => {
                     updateState();
                 });
             } catch (error) {

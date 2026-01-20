@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
+import { isTauri } from '../utils/env';
 import { WeatherData } from '../services/weatherApi';
 import {
     FaArrowLeft, FaTint, FaWind, FaCompressArrowsAlt, FaEye,
@@ -124,7 +125,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
     const [scrollStyle, setScrollStyle] = useState<React.CSSProperties>({});
     const [isScrolled, setIsScrolled] = useState(false);
     const [isReady, setIsReady] = useState(false);
-    const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__;
+    const isTauriEnv = isTauri();
 
     // Optimized: Defer heavy content rendering by a single tick
     // This allows the initial shared layout animation frame to start immediately without jank
@@ -380,7 +381,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
                 absolute inset-0 z-50 flex flex-col text-white overflow-y-auto 
                 weather-bg ${getWeatherBackground(weather.condition)}
                 will-change-transform
-                ${isTauri ? 'pt-12' : ''}
+                ${isTauriEnv ? 'pt-12' : ''}
             `}
             style={{ WebkitOverflowScrolling: 'touch', ...scrollStyle }}
         >
