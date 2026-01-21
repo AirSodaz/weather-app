@@ -95,88 +95,111 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
     }
 
     try {
-        // Get current weather
-        const response = await axios.get(`${OPENWEATHER_BASE_URL}/weather`, {
+        // Start concurrent requests where possible
+
+        // 1. Current Weather (Mandatory)
+        const weatherPromise = axios.get(`${OPENWEATHER_BASE_URL}/weather`, {
             params: params
         });
 
-        const data = response.data;
-
-        // Get forecast data
-        let hourlyForecast: HourlyForecast[] = [];
-        let dailyForecast: DailyForecast[] = [];
-
-        try {
-            const forecastResponse = await axios.get(`${OPENWEATHER_BASE_URL}/forecast`, {
-                params: params
-            });
-
-            const forecastData = forecastResponse.data;
-
-            // Process hourly forecast (next 24 hours, 8 x 3-hour intervals)
-            hourlyForecast = forecastData.list.slice(0, 8).map((item: any) => ({
-                time: new Date(item.dt * 1000).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
-                temperature: Math.round(item.main.temp),
-                condition: item.weather[0].description,
-                icon: item.weather[0].icon
-            }));
-
-            // Process daily forecast (group by day)
-            const dailyMap = new Map<string, any>();
-            forecastData.list.forEach((item: any) => {
-                // Use fixed locale to ensure YYYY/MM/DD or similar if we use toLocaleDateString
-                // But safer to just take YYYY-MM-DD from item.dt_txt if available? 
-                // OWM 5 day forecast has `dt_txt`: "2022-08-30 09:00:00"
-                const dateStr = item.dt_txt.split(' ')[0]; // YYYY-MM-DD
-                const date = dateStr.replace(/-/g, '/'); // YYYY/MM/DD standard? Or keep YYYY-MM-DD? Let's use YYYY/MM/DD to match other APIs in this app logic
-                if (!dailyMap.has(date)) {
-                    dailyMap.set(date, {
-                        temps: [],
-                        condition: item.weather[0].description,
-                        icon: item.weather[0].icon,
-                        dt: item.dt
-                    });
-                }
-                dailyMap.get(date).temps.push(item.main.temp);
-            });
-
-            dailyMap.forEach((value, key) => {
-                dailyForecast.push({
-                    date: key,
-                    tempMin: Math.round(Math.min(...value.temps)),
-                    tempMax: Math.round(Math.max(...value.temps)),
-                    condition: value.condition,
-                    icon: value.icon
-                });
-            });
-        } catch (e) {
+        // 2. Forecast (Optional)
+        const forecastPromise = axios.get(`${OPENWEATHER_BASE_URL}/forecast`, {
+            params: params
+        }).then(res => res.data).catch(e => {
             console.error('Failed to fetch forecast:', e);
+            return null;
+        });
+
+        // 3. Air Quality (Optional, requires coords)
+        // If coords are already known, start this request immediately.
+        let aqPromise: Promise<any> | null = null;
+        if (coords) {
+            aqPromise = axios.get(`${OPENWEATHER_BASE_URL}/air_pollution`, {
+                params: {
+                    lat: coords.lat,
+                    lon: coords.lon,
+                    appid: apiKey
+                }
+            }).then(res => res.data).catch(e => {
+                console.error('Failed to fetch air quality:', e);
+                return null;
+            });
         }
 
-        // Get air quality data (requires lat/lon)
-        let airQuality: AirQuality | undefined;
-        try {
-            const aqResponse = await axios.get(`${OPENWEATHER_BASE_URL}/air_pollution`, {
+        // Await mandatory weather data
+        const weatherResponse = await weatherPromise;
+        const data = weatherResponse.data;
+
+        // If we didn't start AQ request yet (because we didn't have coords), start it now using data from weather response
+        if (!aqPromise) {
+            aqPromise = axios.get(`${OPENWEATHER_BASE_URL}/air_pollution`, {
                 params: {
                     lat: data.coord.lat,
                     lon: data.coord.lon,
                     appid: apiKey
                 }
+            }).then(res => res.data).catch(e => {
+                console.error('Failed to fetch air quality:', e);
+                return null;
             });
+        }
 
-            const aqData = aqResponse.data.list[0];
-            // const t = locales[lang];
-            // const aqiLabels = t.aqi.levels;
+        // Await optional data
+        const [forecastData, aqDataRaw] = await Promise.all([forecastPromise, aqPromise]);
+
+        // Process forecast data
+        let hourlyForecast: HourlyForecast[] = [];
+        let dailyForecast: DailyForecast[] = [];
+
+        if (forecastData) {
+            // Process hourly forecast (next 24 hours, 8 x 3-hour intervals)
+            if (forecastData.list) {
+                hourlyForecast = forecastData.list.slice(0, 8).map((item: any) => ({
+                    time: new Date(item.dt * 1000).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
+                    temperature: Math.round(item.main.temp),
+                    condition: item.weather[0].description,
+                    icon: item.weather[0].icon
+                }));
+
+                // Process daily forecast (group by day)
+                const dailyMap = new Map<string, any>();
+                forecastData.list.forEach((item: any) => {
+                    const dateStr = item.dt_txt.split(' ')[0]; // YYYY-MM-DD
+                    const date = dateStr.replace(/-/g, '/');
+                    if (!dailyMap.has(date)) {
+                        dailyMap.set(date, {
+                            temps: [],
+                            condition: item.weather[0].description,
+                            icon: item.weather[0].icon,
+                            dt: item.dt
+                        });
+                    }
+                    dailyMap.get(date).temps.push(item.main.temp);
+                });
+
+                dailyMap.forEach((value, key) => {
+                    dailyForecast.push({
+                        date: key,
+                        tempMin: Math.round(Math.min(...value.temps)),
+                        tempMax: Math.round(Math.max(...value.temps)),
+                        condition: value.condition,
+                        icon: value.icon
+                    });
+                });
+            }
+        }
+
+        // Process air quality data
+        let airQuality: AirQuality | undefined;
+        if (aqDataRaw && aqDataRaw.list && aqDataRaw.list.length > 0) {
+            const aqData = aqDataRaw.list[0];
             airQuality = {
                 aqi: aqData.main.aqi,
-                // aqiLabel: aqiLabels[aqData.main.aqi - 1] || t.aqi.unknown,
                 pm25: Math.round(aqData.components.pm2_5),
                 pm10: Math.round(aqData.components.pm10),
                 o3: Math.round(aqData.components.o3),
                 no2: Math.round(aqData.components.no2)
             };
-        } catch (e) {
-            console.error('Failed to fetch air quality:', e);
         }
 
         const sunrise = new Date(data.sys.sunrise * 1000).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
@@ -215,7 +238,10 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
     const query = coords ? `${coords.lat},${coords.lon}` : city;
 
     try {
-        const response = await axios.get(`${WEATHERAPI_BASE_URL}/forecast.json`, {
+        // Start concurrent requests
+
+        // 1. Forecast (Mandatory)
+        const forecastPromise = axios.get(`${WEATHERAPI_BASE_URL}/forecast.json`, {
             params: {
                 key: apiKey,
                 q: query,
@@ -225,6 +251,24 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
                 lang: lang
             }
         });
+
+        // 2. History (Optional)
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const dt = yesterdayDate.toISOString().substring(0, 10);
+
+        const historyPromise = axios.get(`${WEATHERAPI_BASE_URL}/history.json`, {
+            params: {
+                key: apiKey,
+                q: query, // Use same query (coords or city) for history
+                dt: dt
+            }
+        }).then(res => res.data).catch(e => {
+            console.error('Failed to fetch WeatherAPI history:', e);
+            return null;
+        });
+
+        const [response, historyDataRaw] = await Promise.all([forecastPromise, historyPromise]);
 
         const data = response.data;
         const current = data.current;
@@ -251,33 +295,16 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
         const usEpaIndex = current.air_quality ? current.air_quality['us-epa-index'] : 1;
         // const aqiLabels = t.aqi.levels;
 
-        // Check if we can fetch yesterday's weather
-        try {
-            const yesterdayDate = new Date();
-            yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-            const dt = yesterdayDate.toISOString().substring(0, 10);
-
-            const historyResponse = await axios.get(`${WEATHERAPI_BASE_URL}/history.json`, {
-                params: {
-                    key: apiKey,
-                    q: query, // Use same query (coords or city) for history
-                    dt: dt
-                }
+        // Process history data if available
+        if (historyDataRaw && historyDataRaw.forecast && historyDataRaw.forecast.forecastday && historyDataRaw.forecast.forecastday.length > 0) {
+            const historyData = historyDataRaw.forecast.forecastday[0];
+            dailyForecast.unshift({
+                date: historyData.date, // YYYY-MM-DD
+                tempMin: Math.round(historyData.day.mintemp_c),
+                tempMax: Math.round(historyData.day.maxtemp_c),
+                condition: historyData.day.condition.text,
+                icon: historyData.day.condition.icon
             });
-
-            const historyData = historyResponse.data.forecast.forecastday[0];
-            if (historyData) {
-                dailyForecast.unshift({
-                    date: historyData.date, // YYYY-MM-DD
-                    // dayName: t.date.relative.yesterday,
-                    tempMin: Math.round(historyData.day.mintemp_c),
-                    tempMax: Math.round(historyData.day.maxtemp_c),
-                    condition: historyData.day.condition.text,
-                    icon: historyData.day.condition.icon
-                });
-            }
-        } catch (e) {
-            console.error('Failed to fetch WeatherAPI history:', e);
         }
 
         return {
