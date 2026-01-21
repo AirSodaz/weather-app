@@ -7,7 +7,7 @@ import {
     FaEllipsisV, FaSync, FaCog, FaInfoCircle, FaClock, FaCalendarAlt
 } from 'react-icons/fa';
 import { useI18n } from '../contexts/I18nContext';
-import { formatRelativeTime } from '../utils/helpers';
+import RelativeTime from './RelativeTime';
 import { SectionConfig, DetailSectionId } from '../utils/config';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 
@@ -425,7 +425,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
                                 >
                                     {lastRefreshTime && (
                                         <div className="px-5 py-3 text-sm font-medium text-white/40 border-b border-white/10 uppercase tracking-wider">
-                                            {t.refresh.lastUpdate}: {formatRelativeTime(lastRefreshTime, t)}
+                                            {t.refresh.lastUpdate}: <RelativeTime date={lastRefreshTime} />
                                         </div>
                                     )}
 
