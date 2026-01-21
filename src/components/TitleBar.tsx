@@ -34,8 +34,9 @@ const TitleBar: React.FC = () => {
         };
     }, []);
 
-    // Only show TitleBar in Tauri environment
-    if (!isTauri()) {
+    // Only show TitleBar in Tauri desktop environment, not on Android
+    const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+    if (!isTauri() || isAndroid) {
         return null;
     }
 
