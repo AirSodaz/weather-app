@@ -122,7 +122,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
     const [showMenu, setShowMenu] = useState(false);
     const [subMenu, setSubMenu] = useState<string | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const [scrollStyle, setScrollStyle] = useState<React.CSSProperties>({});
+    // Removed scrollStyle state to prevent re-renders on scroll
     const [isScrolled, setIsScrolled] = useState(false);
     const [isReady, setIsReady] = useState(false);
     const isTauriEnv = isTauri();
@@ -174,10 +174,9 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
         const shiftAngle = scrollPercent * 45;
         const intensity = scrollPercent;
 
-        setScrollStyle({
-            '--scroll-shift': `${shiftAngle}deg`,
-            '--intensity': intensity,
-        } as React.CSSProperties);
+        // Directly update CSS variables to avoid expensive re-renders
+        container.style.setProperty('--scroll-shift', `${shiftAngle}deg`);
+        container.style.setProperty('--intensity', String(intensity));
 
         setIsScrolled(scrollTop > 200);
     }, []);
@@ -383,7 +382,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
                 will-change-transform
                 ${isTauriEnv ? 'pt-12' : ''}
             `}
-            style={{ WebkitOverflowScrolling: 'touch', ...scrollStyle }}
+            style={{ WebkitOverflowScrolling: 'touch' }}
         >
             {/* Header */}
             <div className="w-full flex items-center justify-between p-6 sticky top-0 z-50 transition-all duration-300">
