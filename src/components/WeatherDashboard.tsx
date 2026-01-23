@@ -10,6 +10,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { getWeatherBackground } from '../utils/weatherUtils';
 import RelativeTime from './RelativeTime';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
+import { processWithConcurrency } from '../utils/asyncUtils';
 
 const dropdownVariants: Variants = {
     hidden: { opacity: 0, y: -10, scale: 0.95 },
@@ -378,8 +379,18 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                 let results: (WeatherData | null)[] | undefined;
 
                 if (shouldFetch) {
-                    results = await Promise.all(
-                        savedData.map(async (item) => {
+                    // Initialize currentList with cached data if available and lengths match,
+                    // otherwise use empty placeholders. This allows progressive updates to replace old data.
+                    let currentList: (WeatherData | null)[] = [];
+                    if (cachedWeather && cachedWeather.length === savedData.length) {
+                        currentList = [...cachedWeather];
+                    } else {
+                        currentList = new Array(savedData.length).fill(null);
+                    }
+
+                    results = await processWithConcurrency(
+                        savedData,
+                        async (item) => {
                             const cityName = typeof item === 'string' ? item : item.name;
                             const source = typeof item === 'string' ? undefined : item.source;
                             const coords = typeof item === 'string' ? undefined : (item.lat && item.lon ? { lat: item.lat, lon: item.lon } : undefined);
@@ -390,7 +401,19 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                                 console.error(`Failed to load weather for ${cityName}`, e);
                                 return null;
                             }
-                        })
+                        },
+                        5, // Limit concurrency to 5
+                        (result, index) => {
+                            // Progressive update: Update the specific item and refresh state
+                            // We only update if we have a valid result (or we can update to null if failed, but UI might not like it)
+                            // Ideally we keep the old data if failed? But here we are loading fresh.
+                            // If result is null (failed), we keep it null in currentList?
+                            currentList[index] = result;
+                            
+                            // Only set state with valid items to avoid empty holes in UI
+                            const validSoFar = currentList.filter(w => w !== null) as WeatherData[];
+                            setWeatherList(validSoFar);
+                        }
                     );
 
                     const validResults = results.filter((w) => w !== null) as WeatherData[];
@@ -487,8 +510,9 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
         setRefreshing(true);
         try {
-            const results = await Promise.all(
-                weatherList.map(async (weather) => {
+            const results = await processWithConcurrency(
+                weatherList,
+                async (weather) => {
                     try {
                         const source = (weather as any).sourceOverride;
                         // Use coords from weather data if available
@@ -499,7 +523,11 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                         console.error(`Failed to refresh weather for ${weather.city}`, e);
                         return weather; // Keep old data on error
                     }
-                })
+                },
+                5,
+                (result) => {
+                    setWeatherList(prev => prev.map(w => w.city === result.city ? result : w));
+                }
             );
             setWeatherList(results);
             setLastRefreshTime(new Date());
@@ -513,8 +541,9 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
         setRefreshing(true);
         try {
-            const results = await Promise.all(
-                weatherList.map(async (weather) => {
+            const results = await processWithConcurrency(
+                weatherList,
+                async (weather) => {
                     try {
                         const source = (weather as any).sourceOverride;
                         if (source) {
@@ -528,7 +557,11 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                         console.error(`Failed to refresh weather for ${weather.city}`, e);
                         return weather;
                     }
-                })
+                },
+                5,
+                (result) => {
+                    setWeatherList(prev => prev.map(w => w.city === result.city ? result : w));
+                }
             );
             setWeatherList(results);
             setLastRefreshTime(new Date());
