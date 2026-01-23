@@ -11,6 +11,15 @@ const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
 const WEATHERAPI_BASE_URL = 'https://api.weatherapi.com/v1';
 const DATE_SEPARATOR_REGEX = /-/g;
 
+const timeFormatters = new Map<string, Intl.DateTimeFormat>();
+
+const getTimeFormatter = (locale: string) => {
+    if (!timeFormatters.has(locale)) {
+        timeFormatters.set(locale, new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }));
+    }
+    return timeFormatters.get(locale)!;
+};
+
 interface CacheEntry {
     data: WeatherData;
     timestamp: number;
@@ -193,7 +202,7 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
         if (forecastData) {
             // Process hourly forecast (next 24 hours, 8 x 3-hour intervals)
             if (forecastData.list) {
-                const timeFormatter = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' });
+                const timeFormatter = getTimeFormatter(locale);
                 const limit = 8;
                 for (let i = 0; i < forecastData.list.length; i++) {
                     if (hourlyForecast.length >= limit) break;
@@ -247,8 +256,9 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
             };
         }
 
-        const sunrise = new Date(data.sys.sunrise * 1000).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
-        const sunset = new Date(data.sys.sunset * 1000).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+        const timeFormatter = getTimeFormatter(locale);
+        const sunrise = timeFormatter.format(new Date(data.sys.sunrise * 1000));
+        const sunset = timeFormatter.format(new Date(data.sys.sunset * 1000));
 
         return {
             city: data.name,
@@ -319,7 +329,7 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
         const current = data.current;
         const forecast = data.forecast.forecastday;
 
-        const timeFormatter = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' });
+        const timeFormatter = getTimeFormatter(locale);
         const hourlyForecast: HourlyForecast[] = [];
         const sourceHours = forecast[0].hour;
         const limit = 8;
@@ -450,7 +460,7 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
             sun = sunRes.value.data;
         }
 
-        const timeFormatter = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' });
+        const timeFormatter = getTimeFormatter(locale);
         const hourlyForecast: HourlyForecast[] = [];
         const limit = 8;
 
