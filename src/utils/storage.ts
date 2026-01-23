@@ -3,7 +3,7 @@ const localStorageFallback = {
     get: async (key: string) => {
         try {
             const value = localStorage.getItem(key);
-            return value ? JSON.parse(value) : null;
+            return value ? await new Response(value).json() : null;
         } catch {
             return null;
         }
