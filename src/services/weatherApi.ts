@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getSettings } from '../utils/config';
+import { storage } from '../utils/storage';
 // Localized strings removed to be handled by UI
 // import en from '../locales/en.json';
 // import zh from '../locales/zh.json';
@@ -8,6 +9,43 @@ import { getSettings } from '../utils/config';
 
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
 const WEATHERAPI_BASE_URL = 'https://api.weatherapi.com/v1';
+
+interface CacheEntry {
+    data: WeatherData;
+    timestamp: number;
+    lang: string;
+    source: string;
+}
+
+interface WeatherCacheStore {
+    [key: string]: CacheEntry;
+}
+
+let memoryCache: WeatherCacheStore | null = null;
+let cacheLoadPromise: Promise<WeatherCacheStore> | null = null;
+const CACHE_KEY = 'weather_cache_v1';
+
+const getCache = async (): Promise<WeatherCacheStore> => {
+    if (memoryCache) return memoryCache;
+    if (cacheLoadPromise) return cacheLoadPromise;
+
+    cacheLoadPromise = storage.get(CACHE_KEY).then(c => {
+        memoryCache = c || {};
+        return memoryCache!;
+    }).catch(e => {
+        console.error('Failed to load weather cache:', e);
+        memoryCache = {};
+        return memoryCache;
+    });
+    return cacheLoadPromise;
+};
+
+const getCacheKey = (city: string, source: string, lang: string, coords?: { lat: number, lon: number }) => {
+    if (coords) {
+        return `${source}:${lang}:lat_${coords.lat.toFixed(2)}_lon_${coords.lon.toFixed(2)}`;
+    }
+    return `${source}:${lang}:${city.toLowerCase()}`;
+};
 
 const getQWeatherUrls = (customHost?: string) => {
     // Priority: Custom Host (param) > Env Var > Default
@@ -482,33 +520,85 @@ export const getWeather = async (city: string, preferredSource?: string, lang: '
     const settings = await getSettings();
     console.log('Current settings:', settings);
 
+    // Determine TTL (default 15 mins if 0 or undefined)
+    const ttlMinutes = settings.autoRefreshInterval > 0 ? settings.autoRefreshInterval : 15;
+    const ttl = ttlMinutes * 60 * 1000;
+
+    let sourceToUse = preferredSource || settings.source;
     if (settings.source === 'custom' && settings.customUrl) {
-        return fetchCustom(city, settings.customUrl, settings.apiKeys.custom, lang);
+        sourceToUse = 'custom';
     }
 
-    const sourceToUse = preferredSource || settings.source;
+    // Check cache
+    try {
+        const cache = await getCache();
+        const key = getCacheKey(city, sourceToUse, lang, coords);
+        const now = Date.now();
 
-    // Cast sourceToUse to allow indexing if it matches one of the known keys
-    if (sourceToUse && (sourceToUse in settings.apiKeys)) {
-        const apiKey = settings.apiKeys[sourceToUse as keyof typeof settings.apiKeys];
-
-        if (!apiKey) {
-            throw new Error(`API key for ${sourceToUse} is invalid or missing.`);
+        if (cache[key]) {
+            const entry = cache[key];
+            if (now - entry.timestamp < ttl) {
+                console.log(`[Cache Hit] Returning cached weather data for ${key}`);
+                return entry.data;
+            } else {
+                console.log(`[Cache Expired] ${key} expired (age: ${now - entry.timestamp}ms, ttl: ${ttl}ms)`);
+                delete cache[key];
+            }
+        } else {
+            console.log(`[Cache Miss] ${key}`);
         }
+    } catch (e) {
+        console.warn('Cache check failed, proceeding to fetch:', e);
+    }
 
-        switch (sourceToUse) {
-            case 'openweathermap':
-                return fetchOpenWeatherMap(city, apiKey, lang, coords);
-            case 'weatherapi':
-                return fetchWeatherAPI(city, apiKey, lang, coords);
-            case 'qweather':
-                return fetchQWeather(city, apiKey, lang, settings.qweatherHost, coords);
-            default:
-                throw new Error('Unknown weather source');
+    let weatherData: WeatherData;
+
+    if (sourceToUse === 'custom' && settings.customUrl) {
+        weatherData = await fetchCustom(city, settings.customUrl, settings.apiKeys.custom, lang);
+    } else {
+        // Cast sourceToUse to allow indexing if it matches one of the known keys
+        if (sourceToUse && (sourceToUse in settings.apiKeys)) {
+            const apiKey = settings.apiKeys[sourceToUse as keyof typeof settings.apiKeys];
+
+            if (!apiKey) {
+                throw new Error(`API key for ${sourceToUse} is invalid or missing.`);
+            }
+
+            switch (sourceToUse) {
+                case 'openweathermap':
+                    weatherData = await fetchOpenWeatherMap(city, apiKey, lang, coords);
+                    break;
+                case 'weatherapi':
+                    weatherData = await fetchWeatherAPI(city, apiKey, lang, coords);
+                    break;
+                case 'qweather':
+                    weatherData = await fetchQWeather(city, apiKey, lang, settings.qweatherHost, coords);
+                    break;
+                default:
+                    throw new Error('Unknown weather source');
+            }
+        } else {
+            throw new Error('Please configure a weather source and API key in settings.');
         }
     }
 
-    throw new Error('Please configure a weather source and API key in settings.');
+    // Save to cache
+    try {
+        const cache = await getCache();
+        const key = getCacheKey(city, sourceToUse, lang, coords);
+        cache[key] = {
+            data: weatherData,
+            timestamp: Date.now(),
+            lang,
+            source: sourceToUse
+        };
+        // Persist (fire and forget)
+        storage.set(CACHE_KEY, cache).catch(e => console.error('Failed to save cache:', e));
+    } catch (e) {
+        console.warn('Failed to update cache:', e);
+    }
+
+    return weatherData;
 };
 
 export interface CityResult {
