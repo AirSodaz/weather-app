@@ -1,6 +1,6 @@
 # Weather App
 
-A modern, beautiful, and highly responsive weather application built with **Tauri**, **React**, **Capacitor**, and **Vite**. This application features a premium glassmorphism design, real-time weather updates, and detailed forecast information. It supports Windows, macOS, Linux, and Android.
+A modern, beautiful, and highly responsive weather application built with **Tauri 2.0**, **React**, and **Vite**. This application features a premium glassmorphism design, real-time weather updates, and detailed forecast information. It supports Windows, macOS, Linux, and Android.
 
 [English](README.md) | [简体中文](README_zh-CN.md)
 
@@ -18,7 +18,7 @@ A modern, beautiful, and highly responsive weather application built with **Taur
   - Dynamic layouts
 - **Cross-Platform Support**:
   - Desktop: Windows, macOS, Linux (via Tauri)
-  - Mobile: Android (via Capacitor)
+  - Mobile: Android (via Tauri 2.0)
   - Web: PWA support for offline usage
 - **Localization**: Support for English and Chinese (Simplified).
 - **Customization**:
@@ -29,8 +29,7 @@ A modern, beautiful, and highly responsive weather application built with **Taur
 
 ## Tech Stack
 
-- **Core**: [Tauri](https://tauri.app/), [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/)
-- **Mobile**: [Capacitor](https://capacitorjs.com/)
+- **Core**: [Tauri 2.0](https://v2.tauri.app/), [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/)
 - **Build Tool**: [Vite](https://vitejs.dev/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **Animation**: [Framer Motion](https://www.framer.com/motion/)
@@ -74,15 +73,19 @@ npm run tauri build
 
 The output will be in the `src-tauri/target/release/bundle` directory.
 
-#### Android
+#### Android (Tauri 2.0)
+
+To develop for Android:
+
+```bash
+npm run tauri android dev
+```
 
 To build for Android:
 
 ```bash
-npm run android:build
+npm run tauri android build
 ```
-
-This will build the web assets and sync them with the Android project. You can then open the project in Android Studio using `npx cap open android`.
 
 ## CI/CD
 
@@ -96,10 +99,10 @@ Automated builds are configured using GitHub Actions for:
 
 ```
 ├── src-tauri/       # Tauri main project code (Rust)
-├── android/         # Android native project code
 ├── src/            
 │   ├── components/  # React UI components
 │   ├── contexts/    # Context providers (Weather, Theme, etc.)
+│   ├── hooks/       # Custom React hooks
 │   ├── services/    # API services (Weather API)
 │   ├── utils/       # Utility functions
 │   ├── locales/     # i18n translation files

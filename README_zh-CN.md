@@ -1,6 +1,6 @@
 # Weather App
 
-一个基于 **Tauri**、**React**、**Capacitor** 和 **Vite** 构建的现代、美观且响应式极佳的天气应用。该应用采用高级的玻璃拟态设计，提供实时天气更新和详细的预报信息。支持 Windows、macOS、Linux 和 Android。
+一个基于 **Tauri 2.0**、**React** 和 **Vite** 构建的现代、美观且响应式极佳的天气应用。该应用采用高级的玻璃拟态设计，提供实时天气更新和详细的预报信息。支持 Windows、macOS、Linux 和 Android。
 
 [English](README.md) | [简体中文](README_zh-CN.md)
 
@@ -18,7 +18,7 @@
   - 动态布局
 - **跨平台支持**:
   - 桌面: Windows, macOS, Linux (via Tauri)
-  - 移动: Android (via Capacitor)
+  - 移动: Android (via Tauri 2.0)
   - Web: 支持生成 PWA 以离线使用
 - **本地化**: 支持英语和简体中文。
 - **个性化**:
@@ -29,8 +29,7 @@
 
 ## 技术栈
 
-- **核心**: [Tauri](https://tauri.app/), [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/)
-- **移动端**: [Capacitor](https://capacitorjs.com/)
+- **核心**: [Tauri 2.0](https://v2.tauri.app/), [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/)
 - **构建工具**: [Vite](https://vitejs.dev/)
 - **样式**: [Tailwind CSS](https://tailwindcss.com/)
 - **动画**: [Framer Motion](https://www.framer.com/motion/)
@@ -74,15 +73,19 @@ npm run tauri build
 
 输出文件将位于 `src-tauri/target/release/bundle` 目录中。
 
-#### Android
+#### Android (Tauri 2.0)
+
+开发 Android 应用：
+
+```bash
+npm run tauri android dev
+```
 
 构建 Android 应用：
 
 ```bash
-npm run android:build
+npm run tauri android build
 ```
-
-此命令将构建 Web 资源并将其同步到 Android 项目。然后，您可以使用 `npx cap open android` 在 Android Studio 中打开项目。
 
 ## CI/CD
 
@@ -96,10 +99,10 @@ npm run android:build
 
 ```
 ├── src-tauri/       # Tauri 主进程代码 (Rust)
-├── android/         # Android 原生项目代码
 ├── src/            
 │   ├── components/  # React UI 组件
 │   ├── contexts/    # Context providers (Weather, Theme, etc.)
+│   ├── hooks/       # 自定义 React Hooks
 │   ├── services/    # API 服务 (Weather API)
 │   ├── utils/       # 工具函数
 │   ├── locales/     # i18n 翻译文件
