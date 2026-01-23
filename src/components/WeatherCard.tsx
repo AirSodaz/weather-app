@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { FaSun, FaCloud, FaCloudRain, FaSnowflake, FaWind, FaTint } from 'react-icons/fa';
 import { WeatherData } from '../services/weatherApi';
 import { motion } from 'framer-motion';
+import { getWeatherCategory, WeatherCategory } from '../utils/weatherUtils';
 
 interface WeatherCardProps {
     weather: WeatherData;
@@ -21,17 +22,17 @@ interface WeatherCardProps {
 }
 
 const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ condition, className = "text-5xl" }) => {
-    const c = condition.toLowerCase();
-    if (c.includes('sunny') || c.includes('clear') || c.includes('晴')) {
-        return <FaSun className={`${className} text-amber-300 animate-spin-slow`} />;
+    const category = getWeatherCategory(condition);
+    switch (category) {
+        case WeatherCategory.Sunny:
+            return <FaSun className={`${className} text-amber-300 animate-spin-slow`} />;
+        case WeatherCategory.Rainy:
+            return <FaCloudRain className={`${className} text-blue-300 animate-float`} />;
+        case WeatherCategory.Snowy:
+            return <FaSnowflake className={`${className} text-white animate-float`} />;
+        default:
+            return <FaCloud className={`${className} text-gray-200 animate-float`} />;
     }
-    if (c.includes('rain') || c.includes('drizzle') || c.includes('thunder') || c.includes('雨') || c.includes('雷')) {
-        return <FaCloudRain className={`${className} text-blue-300 animate-float`} />;
-    }
-    if (c.includes('snow') || c.includes('sleet') || c.includes('blizzard') || c.includes('雪') || c.includes('冰')) {
-        return <FaSnowflake className={`${className} text-white animate-float`} />;
-    }
-    return <FaCloud className={`${className} text-gray-200 animate-float`} />;
 };
 
 const WeatherCard: React.FC<WeatherCardProps> = memo(({
