@@ -9,6 +9,7 @@ import { storage } from '../utils/storage';
 
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
 const WEATHERAPI_BASE_URL = 'https://api.weatherapi.com/v1';
+const DATE_SEPARATOR_REGEX = /-/g;
 
 interface CacheEntry {
     data: WeatherData;
@@ -203,7 +204,7 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
                 const dailyMap = new Map<string, any>();
                 forecastData.list.forEach((item: any) => {
                     const dateStr = item.dt_txt.split(' ')[0]; // YYYY-MM-DD
-                    const date = dateStr.replace(/-/g, '/');
+                    const date = dateStr.replace(DATE_SEPARATOR_REGEX, '/');
                     if (!dailyMap.has(date)) {
                         dailyMap.set(date, {
                             temps: [],
