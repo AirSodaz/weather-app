@@ -29,6 +29,10 @@
       "buildResources": "assets"
     }
   },
+  "overrides": {
+    "source-map": "0.7.4",
+    "magic-string": "^0.30.17"
+  },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.4.0",
     "@tauri-apps/api": "^2.9.1",
