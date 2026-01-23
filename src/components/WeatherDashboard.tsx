@@ -280,13 +280,15 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     // Cache weatherList whenever it changes
     useEffect(() => {
         if (weatherList.length > 0) {
-            storage.set('weatherCache', {
-                lang: currentLanguage,
-                data: weatherList
-            });
+            const timer = setTimeout(() => {
+                storage.setAsync('weatherCache', {
+                    lang: currentLanguage,
+                    data: weatherList
+                });
+            }, 1000);
+            return () => clearTimeout(timer);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [weatherList]);
+    }, [weatherList, currentLanguage]);
 
     useEffect(() => {
         loadSavedCities();
