@@ -22,6 +22,8 @@ interface WeatherDetailProps {
     layoutId?: string;
 }
 
+const DATE_SPLIT_REGEX = /[-/]/;
+
 // Helper function to get background class based on weather condition
 // Helper function to get background class based on weather condition
 const getWeatherBackground = (condition: string): string => {
@@ -142,7 +144,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
         if (index === 0) return t.date.relative.today;
         if (index === 1) return t.date.relative.tomorrow;
         try {
-            const parts = dateStr.split(/[-/]/);
+            const parts = dateStr.split(DATE_SPLIT_REGEX);
             if (parts.length >= 3) {
                 const year = parseInt(parts[0]);
                 const month = parseInt(parts[1]) - 1;
