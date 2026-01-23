@@ -7,7 +7,7 @@ import WeatherCard from './WeatherCard';
 import SettingsModal from './SettingsModal';
 import { storage } from '../utils/storage';
 import { useI18n } from '../contexts/I18nContext';
-import { getWeatherBackground } from '../utils/helpers';
+import { getWeatherBackground } from '../utils/weatherUtils';
 import RelativeTime from './RelativeTime';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 
