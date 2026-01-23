@@ -193,12 +193,18 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
         if (forecastData) {
             // Process hourly forecast (next 24 hours, 8 x 3-hour intervals)
             if (forecastData.list) {
-                hourlyForecast = forecastData.list.slice(0, 8).map((item: any) => ({
-                    time: new Date(item.dt * 1000).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
-                    temperature: Math.round(item.main.temp),
-                    condition: item.weather[0].description,
-                    icon: item.weather[0].icon
-                }));
+                const timeFormatter = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' });
+                const limit = 8;
+                for (let i = 0; i < forecastData.list.length; i++) {
+                    if (hourlyForecast.length >= limit) break;
+                    const item = forecastData.list[i];
+                    hourlyForecast.push({
+                        time: timeFormatter.format(new Date(item.dt * 1000)),
+                        temperature: Math.round(item.main.temp),
+                        condition: item.weather[0].description,
+                        icon: item.weather[0].icon
+                    });
+                }
 
                 // Process daily forecast (group by day)
                 const dailyMap = new Map<string, any>();
@@ -313,12 +319,21 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
         const current = data.current;
         const forecast = data.forecast.forecastday;
 
-        const hourlyForecast: HourlyForecast[] = forecast[0].hour.filter((_: any, i: number) => i % 3 === 0).slice(0, 8).map((item: any) => ({
-            time: new Date(item.time).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
-            temperature: Math.round(item.temp_c),
-            condition: item.condition.text,
-            icon: item.condition.icon
-        }));
+        const timeFormatter = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' });
+        const hourlyForecast: HourlyForecast[] = [];
+        const sourceHours = forecast[0].hour;
+        const limit = 8;
+
+        for (let i = 0; i < sourceHours.length; i += 3) {
+            if (hourlyForecast.length >= limit) break;
+            const item = sourceHours[i];
+            hourlyForecast.push({
+                time: timeFormatter.format(new Date(item.time)),
+                temperature: Math.round(item.temp_c),
+                condition: item.condition.text,
+                icon: item.condition.icon
+            });
+        }
 
         const dailyForecast: DailyForecast[] = forecast.map((item: any) => {
             return {
@@ -435,12 +450,20 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
             sun = sunRes.value.data;
         }
 
-        const hourlyForecast: HourlyForecast[] = hourly.filter((_: any, i: number) => i % 3 === 0).slice(0, 8).map((item: any) => ({
-            time: new Date(item.fxTime).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
-            temperature: parseInt(item.temp),
-            condition: item.text,
-            icon: item.icon // QWeather icon code
-        }));
+        const timeFormatter = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' });
+        const hourlyForecast: HourlyForecast[] = [];
+        const limit = 8;
+
+        for (let i = 0; i < hourly.length; i += 3) {
+            if (hourlyForecast.length >= limit) break;
+            const item = hourly[i];
+            hourlyForecast.push({
+                time: timeFormatter.format(new Date(item.fxTime)),
+                temperature: parseInt(item.temp),
+                condition: item.text,
+                icon: item.icon // QWeather icon code
+            });
+        }
 
         const dailyForecast: DailyForecast[] = daily.map((item: any) => {
             return {
