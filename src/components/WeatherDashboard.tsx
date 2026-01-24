@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { getWeather, WeatherData, searchCities, CityResult } from '../services/weatherApi';
+import { getWeather, WeatherData } from '../services/weatherApi';
 import { getSettings, SectionConfig } from '../utils/config';
-import { FaCloud, FaSearch, FaTrash, FaCog, FaSync, FaInfoCircle, FaEllipsisV, FaLocationArrow } from 'react-icons/fa';
+import { FaCloud, FaTrash, FaCog, FaSync, FaInfoCircle, FaEllipsisV } from 'react-icons/fa';
 import WeatherDetail from './WeatherDetail';
 import WeatherCard from './WeatherCard';
 import SettingsModal from './SettingsModal';
+import SearchBar from './SearchBar';
 import { storage } from '../utils/storage';
 import { useI18n } from '../contexts/I18nContext';
 import { getWeatherBackground } from '../utils/weatherUtils';
@@ -53,7 +54,7 @@ interface WeatherDashboardProps {
 
 const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgContainerRef }) => {
     const { t, currentLanguage } = useI18n();
-    const [searchCity, setSearchCity] = useState('');
+    // Removed search state moved to SearchBar
     const [weatherList, setWeatherList] = useState<WeatherData[]>([]);
     const [selectedCity, setSelectedCity] = useState<WeatherData | null>(null);
     const [showSettings, setShowSettings] = useState(false);
@@ -69,11 +70,9 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    // const [scrollStyle, setScrollStyle] = useState<React.CSSProperties>({}); // Removed in favor of direct ref manipulation
-    const [suggestions, setSuggestions] = useState<CityResult[]>([]);
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const searchRef = useRef<HTMLDivElement>(null);
+
+    // Removed refs and state for search suggestions
+
     const contextMenuRef = useRef<HTMLDivElement>(null); // Added ref for context menu
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
     const [isScrolled, setIsScrolled] = useState(false);
@@ -106,47 +105,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         return () => window.removeEventListener('popstate', handlePopState);
     }, [selectedCity, showSettings]);
 
-    // Close suggestions when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-                setShowSuggestions(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
-
-    // Debounced search for suggestions
-    useEffect(() => {
-        if (searchTimeoutRef.current) {
-            clearTimeout(searchTimeoutRef.current);
-        }
-
-        if (searchCity.trim().length < 2) {
-            setSuggestions([]);
-            setShowSuggestions(false);
-            return;
-        }
-
-        searchTimeoutRef.current = setTimeout(async () => {
-            try {
-                const results = await searchCities(searchCity, currentLanguage);
-                setSuggestions(results);
-                setShowSuggestions(true);
-            } catch (error) {
-                console.error('Failed to fetch suggestions', error);
-            }
-        }, 500);
-
-        return () => {
-            if (searchTimeoutRef.current) {
-                clearTimeout(searchTimeoutRef.current);
-            }
-        };
-    }, [searchCity, currentLanguage]);
+    // Removed click outside listener for search suggestions (handled in SearchBar)
 
     // Close context menu and main menu when clicking elsewhere
     useEffect(() => {
@@ -155,16 +114,6 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             if (contextMenu.show && contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
                 setContextMenu(prev => ({ ...prev, show: false }));
             }
-
-            // Check for Main Menu (existing logic was just closing it on any click)
-            // We can keep the behavior simple: close if clicking outside
-            // Note: Main menu handling might need its own ref if we want to be precise, 
-            // but for now let's just ensure we don't break existing 'click to close' behavior for it.
-            // Start of removed block
-            // if (showMenu) {
-            //    setShowMenu(false);
-            // }
-            // End of removed block
         };
 
         if (contextMenu.show || showMenu) {
@@ -209,9 +158,6 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                 });
             } else {
                 // Optional: Clear or keep last viewed? 
-                // Keeping it allows "restore last even if I closed it before quitting"
-                // But let's assume we update it to what is currently open.
-                // If we want "startup view = detail", we should probably only track when a detail IS open.
             }
         };
         saveLastViewed();
@@ -326,15 +272,9 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                 setWeatherList(cachedWeather as WeatherData[]);
             } else if (!cache || !cache.lang || cache.lang !== currentLanguage) {
                 // Force refresh if language mismatch or cache is malformed/missing language info
-                // console.log('Cache language mismatch or missing, forcing refresh');
                 cachedWeather = null;
             } else if (Array.isArray(cache)) {
-                // Backward compatibility: Old cache format was just an array
-                // If simple array, assume it's valid but might be wrong language if we can't tell.
-                // But we should probably discard old format if we want strict language support.
-                // For now, let's assume it's invalid if we want to force language.
-                // cachedWeather = cache;
-                // Actually better to discard old cache to force correct language load
+                // Backward compatibility
                 console.log("Cache ignored due to old format, forcing refresh for correct language.");
                 cachedWeather = null;
             }
@@ -360,29 +300,18 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             // Fresh cache, no loading spinner needed
             setLoading(false);
             setRefreshing(false);
-
-            // If we have fresh cache, we might still want to load saved cities list just to be sure we have the correct "selected" city logic
-            // But we shouldn't trigger a FETCH.
-            // The logic below continues... we need to wrap the fetch part.
         }
 
         try {
             const savedData: (string | SavedCity)[] = (await storage.get('savedCities')) || [];
 
             if (savedData.length > 0) {
-                // Determine if we should fetch
-                // We should fetch if:
-                // 1. We have no cache
-                // 2. OR the data is stale
-
                 const shouldFetch = !cachedWeather || isStale;
                 let finalList: WeatherData[] = cachedWeather || [];
 
                 let results: (WeatherData | null)[] | undefined;
 
                 if (shouldFetch) {
-                    // Initialize currentList with cached data if available and lengths match,
-                    // otherwise use empty placeholders. This allows progressive updates to replace old data.
                     let currentList: (WeatherData | null)[] = [];
                     if (cachedWeather && cachedWeather.length === savedData.length) {
                         currentList = [...cachedWeather];
@@ -406,10 +335,6 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                         },
                         5, // Limit concurrency to 5
                         (result, index) => {
-                            // Progressive update: Update the specific item and refresh state
-                            // We only update if we have a valid result (or we can update to null if failed, but UI might not like it)
-                            // Ideally we keep the old data if failed? But here we are loading fresh.
-                            // If result is null (failed), we keep it null in currentList?
                             currentList[index] = result;
                             
                             // Only set state with valid items to avoid empty holes in UI
@@ -573,44 +498,65 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         }
     }, [weatherList, refreshing, currentLanguage]);
 
-    const handleSearch = async (e?: React.FormEvent, cityOverride?: string) => {
-        if (e) e.preventDefault();
-        const cityToSearch = cityOverride || searchCity;
-
-        if (!cityToSearch.trim()) return;
-
-        // Hide suggestions immediately
-        setShowSuggestions(false);
+    const handleSearch = async (city: string): Promise<boolean> => {
+        if (!city.trim()) return false;
 
         setError(null);
         setLoading(true);
 
         // Check if already exists
-        if (weatherList.some(w => w.city.toLowerCase() === cityToSearch.toLowerCase())) {
+        if (weatherList.some(w => w.city.toLowerCase() === city.toLowerCase())) {
             setError(t.search.cityExists);
             setLoading(false);
-            return;
+            return false;
         }
 
         try {
-            const data = await getWeather(cityToSearch, undefined, currentLanguage);
+            const data = await getWeather(city, undefined, currentLanguage);
             const newList = [...weatherList, data];
             setWeatherList(newList);
             await updateSavedCities(newList);
-            setSearchCity('');
             setLastRefreshTime(new Date());
+            return true;
         } catch (err) {
             setError(t.search.error);
             console.error(err);
+            return false;
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSuggestionClick = (suggestion: CityResult) => {
-        const query = suggestion.name;
-        setSearchCity(query);
-        handleSearch(undefined, query);
+    const handleLocationRequest = () => {
+        setLoading(true);
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const { latitude, longitude } = position.coords;
+                    const data = await getWeather('', undefined, currentLanguage, { lat: latitude, lon: longitude });
+
+                    if (weatherList.some(w => w.city.toLowerCase() === data.city.toLowerCase())) {
+                        setError(t.search.cityExists);
+                    } else {
+                        const newList = [...weatherList, data];
+                        setWeatherList(newList);
+                        await updateSavedCities(newList);
+                        setLastRefreshTime(new Date());
+                    }
+                } catch (err) {
+                    console.error("Geolocation weather fetch failed", err);
+                    setError(t.errors?.loadFailed || "Failed to load location");
+                } finally {
+                    setLoading(false);
+                }
+            },
+            (err) => {
+                console.error("Geolocation error", err);
+                setError("Location access denied or unavailable");
+                setLoading(false);
+            },
+            { timeout: 10000 }
+        );
     };
 
     const handleRemoveCity = async (cityToRemove: string) => {
@@ -757,112 +703,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                     }`}
             >
                 {/* Search Bar */}
-                <div ref={searchRef} className="flex-1 relative">
-                    <form onSubmit={(e) => handleSearch(e)} className="w-full flex items-center space-x-2 glass-card rounded-full px-4 py-4 transition-all focus-within:bg-white/10 focus-within:shadow-lg focus-within:ring-1 focus-within:ring-white/20">
-                        <FaSearch className="text-white/60" />
-                        <input
-                            type="text"
-                            value={searchCity}
-                            onChange={(e) => setSearchCity(e.target.value)}
-                            placeholder={t.search.placeholder}
-                            className="bg-transparent border-none outline-none text-white placeholder-white/50 w-full text-base"
-                            onFocus={() => {
-                                setShowSuggestions(true);
-                            }}
-                        />
-                        {searchCity && (
-                            <button
-                                type="button"
-                                onClick={() => setSearchCity('')}
-                                className="text-white/40 hover:text-white transition-colors p-1"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                </svg>
-                            </button>
-                        )}
-                    </form>
-
-                    {/* Suggestions Dropdown */}
-                    <AnimatePresence>
-                        {
-                            (showSuggestions) && (
-                                <motion.div
-                                    variants={dropdownVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                    className="absolute top-full left-0 right-0 mt-2 glass-card rounded-2xl overflow-hidden shadow-xl z-50 backdrop-blur-xl border border-white/10"
-                                >
-                                    {/* Current Location Option */}
-                                    <button
-                                        onClick={() => {
-                                            setShowSuggestions(false);
-                                            setLoading(true);
-                                            navigator.geolocation.getCurrentPosition(
-                                                async (position) => {
-                                                    try {
-                                                        const { latitude, longitude } = position.coords;
-                                                        // Use reverse geocoding or just fetch weather by coords
-                                                        // getWeather supports coords but we ideally want a city name to display initially
-                                                        // if we just pass coords, the API usually returns the city name which is great.
-
-                                                        // Check if already exists by fuzzy coord match? 
-                                                        // Actually, let's just fetch it. The existing check uses city name.
-                                                        // We'll rely on the returned city name from API to check duplicates after fetch if we want strictness,
-                                                        // but handleSearch logic does pre-check.
-                                                        // Let's modify handleSearch or just do it here inline for clarity.
-
-                                                        const data = await getWeather('', undefined, currentLanguage, { lat: latitude, lon: longitude });
-
-                                                        if (weatherList.some(w => w.city.toLowerCase() === data.city.toLowerCase())) {
-                                                            setError(t.search.cityExists);
-                                                        } else {
-                                                            const newList = [...weatherList, data];
-                                                            setWeatherList(newList);
-                                                            await updateSavedCities(newList);
-                                                            setLastRefreshTime(new Date());
-                                                        }
-                                                    } catch (err) {
-                                                        console.error("Geolocation weather fetch failed", err);
-                                                        setError(t.errors?.loadFailed || "Failed to load location");
-                                                    } finally {
-                                                        setLoading(false);
-                                                    }
-                                                },
-                                                (err) => {
-                                                    console.error("Geolocation error", err);
-                                                    setError("Location access denied or unavailable");
-                                                    setLoading(false);
-                                                },
-                                                { timeout: 10000 }
-                                            );
-                                        }}
-                                        className="w-full px-5 py-3 text-left hover:bg-white/10 text-white flex items-center gap-3 transition-colors border-b border-white/5 last:border-none"
-                                    >
-                                        <FaLocationArrow className="text-white/60" />
-                                        <div className="flex flex-col gap-0.5">
-                                            <span className="font-medium text-sm">{t.search?.currentLocation || "Use Current Location"}</span>
-                                        </div>
-                                    </button>
-
-                                    {suggestions.map((item, index) => (
-                                        <button
-                                            key={`${item.name}-${item.lat}-${item.lon}-${index}`}
-                                            onClick={() => handleSuggestionClick(item)}
-                                            className="w-full px-5 py-3 text-left hover:bg-white/10 text-white flex flex-col gap-0.5 transition-colors border-b border-white/5 last:border-none"
-                                        >
-                                            <span className="font-medium text-sm">{item.name}</span>
-                                            <span className="text-xs text-white/40">
-                                                {[item.region, item.country].filter(Boolean).join(', ')}
-                                            </span>
-                                        </button>
-                                    ))}
-                                </motion.div>
-                            )
-                        }
-                    </AnimatePresence>
-                </div>
+                <SearchBar onSearch={handleSearch} onLocationRequest={handleLocationRequest} />
 
                 {/* Top Right Menu Button */}
                 <div className="relative">
