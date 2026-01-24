@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { FaSun, FaCloud, FaCloudRain, FaSnowflake, FaWind, FaTint } from 'react-icons/fa';
+import { FaSun, FaCloud, FaCloudRain, FaSnowflake, FaWind, FaTint, FaSmog } from 'react-icons/fa';
 import { WeatherData } from '../services/weatherApi';
 import { motion } from 'framer-motion';
 import { getWeatherCategory, WeatherCategory } from '../utils/weatherUtils';
@@ -30,6 +30,8 @@ const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ cond
             return <FaCloudRain className={`${className} text-blue-300 animate-float`} />;
         case WeatherCategory.Snowy:
             return <FaSnowflake className={`${className} text-white animate-float`} />;
+        case WeatherCategory.Mist:
+            return <FaSmog className={`${className} text-gray-300 animate-float`} />;
         default:
             return <FaCloud className={`${className} text-gray-200 animate-float`} />;
     }
