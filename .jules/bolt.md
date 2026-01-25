@@ -13,3 +13,11 @@
 ## 2026-01-22 - Avoid Premature useLatest Optimization
 **Learning:** Using `useRef` to stabilize callbacks adds complexity and is often unnecessary if dependencies are naturally stable during critical paths (e.g., drag start index doesn't change during drag).
 **Action:** Verify dependency instability during interaction before optimizing.
+
+## 2026-01-22 - Scroll Verification with Empty States
+**Learning:** When verifying scroll behaviors with Playwright in empty or loading states, the container may not be scrollable.
+**Action:** Explicitly inject a spacer element (e.g., `minHeight = '2000px'`) into the scroll container to ensure scroll events can be triggered.
+
+## 2026-01-22 - Playwright Evaluate Syntax
+**Learning:** Python Playwright's `evaluate` method requires a function wrapper (e.g., `() => { ... }`) if the string argument contains a `return` statement.
+**Action:** Always wrap multi-line scripts with return statements in an arrow function string when using `page.evaluate`.

@@ -70,6 +70,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const ticking = useRef(false);
 
     // Removed refs and state for search suggestions
 
@@ -175,24 +176,35 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
     // Handle scroll-based background animation
     const handleScroll = useCallback(() => {
-        const container = scrollContainerRef.current;
-        if (!container) return;
+        if (!ticking.current) {
+            window.requestAnimationFrame(() => {
+                const container = scrollContainerRef.current;
+                if (!container) {
+                    ticking.current = false;
+                    return;
+                }
 
-        // Use a smaller threshold for quicker response
-        setIsScrolled(container.scrollTop > 10);
+                const scrollTop = container.scrollTop;
+                // Use a smaller threshold for quicker response
+                setIsScrolled(scrollTop > 10);
 
-        const scrollTop = container.scrollTop;
-        const scrollHeight = container.scrollHeight - container.clientHeight;
-        const scrollPercent = scrollHeight > 0 ? Math.min(scrollTop / scrollHeight, 1) : 0;
+                const scrollHeight = container.scrollHeight - container.clientHeight;
+                const scrollPercent = scrollHeight > 0 ? Math.min(scrollTop / scrollHeight, 1) : 0;
 
-        // Calculate gradient shift angle (0 to 45 degrees)
-        const shiftAngle = scrollPercent * 45;
-        // Calculate color intensity modifier (0 to 1)
-        const intensity = scrollPercent;
+                // Calculate gradient shift angle (0 to 45 degrees)
+                const shiftAngle = scrollPercent * 45;
+                // Calculate color intensity modifier (0 to 1)
+                const intensity = scrollPercent;
 
-        if (bgContainerRef && bgContainerRef.current) {
-            bgContainerRef.current.style.setProperty('--scroll-shift', `${shiftAngle}deg`);
-            bgContainerRef.current.style.setProperty('--intensity', String(intensity));
+                if (bgContainerRef && bgContainerRef.current) {
+                    bgContainerRef.current.style.setProperty('--scroll-shift', `${shiftAngle}deg`);
+                    bgContainerRef.current.style.setProperty('--intensity', String(intensity));
+                }
+
+                ticking.current = false;
+            });
+
+            ticking.current = true;
         }
     }, [bgContainerRef]);
 
