@@ -21,3 +21,7 @@
 ## 2026-01-22 - Playwright Evaluate Syntax
 **Learning:** Python Playwright's `evaluate` method requires a function wrapper (e.g., `() => { ... }`) if the string argument contains a `return` statement.
 **Action:** Always wrap multi-line scripts with return statements in an arrow function string when using `page.evaluate`.
+
+## 2026-01-23 - Parallelize QWeather Requests
+**Learning:** QWeather API endpoints accept `lon,lat` directly, allowing the initial City Lookup (for ID) to be parallelized with data requests when coordinates are known.
+**Action:** When refactoring API logic, verify if "dependent" requests actually require the output of the previous step or if they can be fired concurrently using available inputs.

@@ -407,44 +407,70 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
     console.log('Using QWeather API', lang, host ? `with custom host: ${host}` : '', coords ? `with coords: ${coords.lat},${coords.lon}` : '');
     const locale = lang === 'zh' ? 'zh-CN' : 'en-US';
     try {
-        // Need to lookup Location ID first
         const { base: qBaseUrl, geo: qGeoUrl } = getQWeatherUrls(host);
 
         // QWeather geo API supports "lon,lat" (note order!) for location lookup
         const locationQuery = coords ? `${coords.lon.toFixed(2)},${coords.lat.toFixed(2)}` : city;
 
-        const geoResponse = await axios.get(`${qGeoUrl}/city/lookup`, {
-            params: {
-                location: locationQuery,
-                key: apiKey,
-                lang: lang
-            }
-        });
-
-        if (geoResponse.data.code !== '200') {
-            throw new Error(`Location not found: ${geoResponse.data.code}`);
-        }
-
-        const locationId = geoResponse.data.location[0].id;
-        const cityName = geoResponse.data.location[0].name;
-        const locationLat = parseFloat(geoResponse.data.location[0].lat);
-        const locationLon = parseFloat(geoResponse.data.location[0].lon);
-
-        // Parallel requests for weather data with error handling for optional components
-        const weatherRequests = [
-            axios.get(`${qBaseUrl}/weather/now`, { params: { location: locationId, key: apiKey, lang: lang } }),
-            axios.get(`${qBaseUrl}/weather/7d`, { params: { location: locationId, key: apiKey, lang: lang } }),
-            axios.get(`${qBaseUrl}/weather/24h`, { params: { location: locationId, key: apiKey, lang: lang } })
+        // Helpers to generate requests
+        const getWeatherRequests = (loc: string) => [
+            axios.get(`${qBaseUrl}/weather/now`, { params: { location: loc, key: apiKey, lang: lang } }),
+            axios.get(`${qBaseUrl}/weather/7d`, { params: { location: loc, key: apiKey, lang: lang } }),
+            axios.get(`${qBaseUrl}/weather/24h`, { params: { location: loc, key: apiKey, lang: lang } })
         ];
 
-        // Core weather data (Must succeed)
-        const [nowRes, dailyRes, hourlyRes] = await Promise.all(weatherRequests);
+        const getOptionalRequests = (loc: string) => [
+            axios.get(`${qBaseUrl}/air/now`, { params: { location: loc, key: apiKey, lang: lang } }),
+            axios.get(`${qBaseUrl}/astronomy/sun`, { params: { location: loc, key: apiKey, date: new Date().toISOString().substring(0, 10), lang: lang } })
+        ];
 
-        // Optional data requests
-        const airPromise = axios.get(`${qBaseUrl}/air/now`, { params: { location: locationId, key: apiKey, lang: lang } });
-        const sunPromise = axios.get(`${qBaseUrl}/astronomy/sun`, { params: { location: locationId, key: apiKey, date: new Date().toISOString().substring(0, 10), lang: lang } });
+        let lookupRes;
+        let weatherRes: any[];
+        let optionalRes: PromiseSettledResult<any>[];
 
-        const [airRes, sunRes] = await Promise.allSettled([airPromise, sunPromise]);
+        if (coords) {
+            // Parallelize everything if coords are available
+            const lookupPromise = axios.get(`${qGeoUrl}/city/lookup`, {
+                params: { location: locationQuery, key: apiKey, lang: lang }
+            });
+
+            // Use coords for weather requests directly
+            const weatherPromise = Promise.all(getWeatherRequests(locationQuery));
+            const optionalPromise = Promise.allSettled(getOptionalRequests(locationQuery));
+
+            [lookupRes, weatherRes, optionalRes] = await Promise.all([
+                lookupPromise,
+                weatherPromise,
+                optionalPromise
+            ]);
+        } else {
+            // Must lookup first to get ID/validate city
+            lookupRes = await axios.get(`${qGeoUrl}/city/lookup`, {
+                params: { location: locationQuery, key: apiKey, lang: lang }
+            });
+
+            if (lookupRes.data.code !== '200') {
+                throw new Error(`Location not found: ${lookupRes.data.code}`);
+            }
+
+            const locationId = lookupRes.data.location[0].id;
+
+            [weatherRes, optionalRes] = await Promise.all([
+                Promise.all(getWeatherRequests(locationId)),
+                Promise.allSettled(getOptionalRequests(locationId))
+            ]);
+        }
+
+        if (lookupRes.data.code !== '200') {
+            throw new Error(`Location not found: ${lookupRes.data.code}`);
+        }
+
+        const cityName = lookupRes.data.location[0].name;
+        const locationLat = parseFloat(lookupRes.data.location[0].lat);
+        const locationLon = parseFloat(lookupRes.data.location[0].lon);
+
+        const [nowRes, dailyRes, hourlyRes] = weatherRes;
+        const [airRes, sunRes] = optionalRes;
 
         const now = nowRes.data.now;
         const daily = dailyRes.data.daily;
