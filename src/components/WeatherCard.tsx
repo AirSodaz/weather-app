@@ -91,7 +91,7 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
                 <div>
                     <motion.h2
                         layoutId={`${layoutId}-city`}
-                        className="text-2xl font-bold tracking-tight mb-1 text-white group-hover:text-white/90 transition-colors"
+                        className="text-2xl font-bold tracking-tight mb-1 text-white group-hover:text-white/90 transition-colors line-clamp-2 h-16 overflow-hidden"
                     >
                         {weather.city}
                     </motion.h2>
