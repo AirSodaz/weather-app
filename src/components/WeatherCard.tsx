@@ -74,7 +74,7 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
             onDrop={(e: any) => onDrop && onDrop(e, index)}
             onDragEnd={(e: any) => onDragEnd && onDragEnd(e)}
             className={`
-                relative glass-card rounded-3xl p-6 
+                relative glass-card rounded-3xl p-6 flex flex-col h-full
                 cursor-pointer
                 hover:shadow-2xl
                 group
@@ -91,7 +91,7 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
                 <div>
                     <motion.h2
                         layoutId={`${layoutId}-city`}
-                        className="text-2xl font-bold tracking-tight mb-1 text-white group-hover:text-white/90 transition-colors line-clamp-2 h-16 overflow-hidden"
+                        className="text-2xl font-bold tracking-tight mb-1 text-white group-hover:text-white/90 transition-colors line-clamp-2 overflow-hidden"
                     >
                         {weather.city}
                     </motion.h2>
@@ -116,7 +116,7 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
             </div>
 
             {/* Temperature */}
-            <div className="mb-6">
+            <div className="mb-6 mt-auto">
                 <motion.span
                     layoutId={`${layoutId}-temp`}
                     className="text-7xl font-light tracking-tighter text-white inline-block"
