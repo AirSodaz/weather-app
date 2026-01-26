@@ -10,6 +10,10 @@ on:
     paths-ignore:
       - '**.md'
       - '.gitignore'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
 
 jobs:
   build:
@@ -28,6 +32,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
 
       - name: setup java
         uses: actions/setup-java@v4
@@ -43,8 +48,16 @@ jobs:
         with:
           targets: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
 
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: install frontend dependencies
         run: npm install
+
+      - name: Lint and Typecheck
+        run: npm run lint
 
       - name: install android ndk
         run: sdkmanager --install "ndk;25.2.9519653"

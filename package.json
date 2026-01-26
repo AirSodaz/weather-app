@@ -22,7 +22,9 @@
     "android:dev": "npm run tauri android dev",
     "android:build": "npm run tauri android build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "lint": "tsc -b",
+    "test": "echo \"No test specified\" && exit 0"
   },
   "build": {
     "directories": {

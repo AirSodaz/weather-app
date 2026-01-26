@@ -60,3 +60,4 @@ yarn-error.log*
 # Tauri
 src-tauri/target/
 src-tauri/gen/
+vite.config.d.ts

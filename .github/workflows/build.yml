@@ -32,14 +32,22 @@ jobs:
       - name: setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: install frontend dependencies
         run: npm install
+
+      - name: Lint and Typecheck
+        run: npm run lint
 
       - name: Build and Release
         uses: tauri-apps/tauri-action@v0
