@@ -72,6 +72,12 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const ticking = useRef(false);
 
+    // Optimization: Use ref for draggedIndex to stabilize drag callbacks
+    const draggedIndexRef = useRef<number | null>(null);
+    useEffect(() => {
+        draggedIndexRef.current = draggedIndex;
+    }, [draggedIndex]);
+
     // Removed refs and state for search suggestions
 
     const contextMenuRef = useRef<HTMLDivElement>(null); // Added ref for context menu
@@ -667,10 +673,11 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
     const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>, index: number) => {
         e.preventDefault();
-        if (draggedIndex !== null && draggedIndex !== index) {
+        const currentDraggedIndex = draggedIndexRef.current;
+        if (currentDraggedIndex !== null && currentDraggedIndex !== index) {
             setDragOverIndex(index);
         }
-    }, [draggedIndex]);
+    }, []);
 
     const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -679,21 +686,22 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
     const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
         e.preventDefault();
-        if (draggedIndex === null || draggedIndex === dropIndex) {
+        const currentDraggedIndex = draggedIndexRef.current;
+        if (currentDraggedIndex === null || currentDraggedIndex === dropIndex) {
             setDraggedIndex(null);
             setDragOverIndex(null);
             return;
         }
 
         const newList = [...weatherList];
-        const [draggedItem] = newList.splice(draggedIndex, 1);
+        const [draggedItem] = newList.splice(currentDraggedIndex, 1);
         newList.splice(dropIndex, 0, draggedItem);
 
         setWeatherList(newList);
         await updateSavedCities(newList);
         setDraggedIndex(null);
         setDragOverIndex(null);
-    }, [draggedIndex, weatherList]);
+    }, [weatherList]);
 
     const handleDragEnd = useCallback(() => {
         setDraggedIndex(null);
