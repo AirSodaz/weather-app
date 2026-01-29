@@ -42,10 +42,16 @@ interface ContextMenuState {
     subMenu?: 'source' | null;
 }
 
-
-
-
-
+const updateSavedCities = async (list: WeatherData[]) => {
+    // Map to SavedCity format
+    const savedCities: SavedCity[] = list.map(w => ({
+        name: w.city,
+        source: (w as any).sourceOverride,
+        lat: w.lat,
+        lon: w.lon
+    }));
+    await storage.set('savedCities', savedCities);
+};
 
 interface WeatherDashboardProps {
     onBgChange?: (bgClass: string) => void;
@@ -56,6 +62,14 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     const { t, currentLanguage } = useI18n();
     // Removed search state moved to SearchBar
     const [weatherList, setWeatherList] = useState<WeatherData[]>([]);
+
+    // Optimization: Use ref to hold weatherList to stabilize handleDrop callback
+    // and prevent excessive re-renders of WeatherCard components (which depend on handleDrop prop).
+    const weatherListRef = useRef(weatherList);
+    useEffect(() => {
+        weatherListRef.current = weatherList;
+    }, [weatherList]);
+
     const [selectedCity, setSelectedCity] = useState<WeatherData | null>(null);
     const [showSettings, setShowSettings] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -583,17 +597,6 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         await updateSavedCities(newList);
     };
 
-    const updateSavedCities = async (list: WeatherData[]) => {
-        // Map to SavedCity format
-        const savedCities: SavedCity[] = list.map(w => ({
-            name: w.city,
-            source: (w as any).sourceOverride,
-            lat: w.lat,
-            lon: w.lon
-        }));
-        await storage.set('savedCities', savedCities);
-    };
-
     const handleUpdateCitySource = useCallback(async (city: string, source: string | undefined) => {
         setLoading(true);
         try {
@@ -693,7 +696,9 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             return;
         }
 
-        const newList = [...weatherList];
+        // Use ref instead of state dependency to keep handleDrop stable
+        const currentList = weatherListRef.current;
+        const newList = [...currentList];
         const [draggedItem] = newList.splice(currentDraggedIndex, 1);
         newList.splice(dropIndex, 0, draggedItem);
 
@@ -701,7 +706,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         await updateSavedCities(newList);
         setDraggedIndex(null);
         setDragOverIndex(null);
-    }, [weatherList]);
+    }, []);
 
     const handleDragEnd = useCallback(() => {
         setDraggedIndex(null);
