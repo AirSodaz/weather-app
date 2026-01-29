@@ -53,8 +53,18 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
     index,
     layoutId
 }) => {
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick(weather);
+        }
+    };
+
     return (
         <motion.div
+            role="button"
+            tabIndex={0}
+            onKeyDown={handleKeyDown}
             layoutId={layoutId}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -82,6 +92,7 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
                 transition-transform duration-300 ease-out
                 hover:scale-[1.02] hover:-translate-y-1
                 active:scale-[0.98]
+                focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
                 ${isDragging ? 'dragging' : ''}
                 ${isDragOver ? 'drag-over' : ''}
             `}
