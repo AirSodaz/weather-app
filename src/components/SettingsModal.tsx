@@ -152,13 +152,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                 <div className="flex justify-between items-center p-6 border-b border-white/5 flex-shrink-0">
                     <h2 className="text-xl font-bold text-white flex items-center gap-3">
                         <div className="p-2 rounded-xl bg-white/5">
-                            <FaCog className="text-lg text-slate-300" />
+                            <FaCog className="text-lg text-slate-300" aria-hidden="true" />
                         </div>
                         {t.settings.title}
                     </h2>
                     <button
                         onClick={onClose}
                         className="w-8 h-8 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                        aria-label="Close"
                     >
                         <FaTimes />
                     </button>
@@ -231,34 +232,38 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                     {/* Custom URL Input */}
                     {source === 'custom' && (
                         <div className="space-y-3 animate-fade-in">
-                            <label className="text-xs font-semibold text-white/50 uppercase tracking-widest">
+                            <label htmlFor="settings-custom-url" className="text-xs font-semibold text-white/50 uppercase tracking-widest">
                                 {t.settings.apiUrl}
                             </label>
                             <input
+                                id="settings-custom-url"
                                 type="text"
                                 value={customUrl}
                                 onChange={(e) => setCustomUrl(e.target.value)}
                                 placeholder={t.settings.apiUrlPlaceholder}
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/50 transition-colors placeholder-white/20 text-sm font-mono"
+                                aria-describedby="settings-custom-url-help"
                             />
-                            <p className="text-[10px] text-white/30">{t.settings.apiUrlHelp}</p>
+                            <p id="settings-custom-url-help" className="text-[10px] text-white/30">{t.settings.apiUrlHelp}</p>
                         </div>
                     )}
 
                     {/* QWeather Host Input */}
                     {source === 'qweather' && (
                         <div className="space-y-3 animate-fade-in">
-                            <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                                <FaGlobe /> {t.settings.qweatherHost}
+                            <label htmlFor="settings-qweather-host" className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
+                                <FaGlobe aria-hidden="true" /> {t.settings.qweatherHost}
                             </label>
                             <input
+                                id="settings-qweather-host"
                                 type="text"
                                 value={qweatherHost}
                                 onChange={(e) => setQWeatherHost(e.target.value)}
                                 placeholder={t.settings.qweatherHostPlaceholder}
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/50 transition-colors placeholder-white/20 text-sm font-mono"
+                                aria-describedby="settings-qweather-host-help"
                             />
-                            <p className="text-[10px] text-white/30">{t.settings.qweatherHostHelp}</p>
+                            <p id="settings-qweather-host-help" className="text-[10px] text-white/30">{t.settings.qweatherHostHelp}</p>
                         </div>
                     )}
 
