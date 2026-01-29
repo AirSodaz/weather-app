@@ -67,10 +67,11 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
 
     return (
         <div className="space-y-3 animate-fade-in">
-            <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                <FaKey /> {t.settings.apiKey}
+            <label htmlFor={`api-key-${source}`} className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
+                <FaKey aria-hidden="true" /> {t.settings.apiKey}
             </label>
             <input
+                id={`api-key-${source}`}
                 type="password"
                 value={value}
                 onChange={handleChange}
