@@ -20,8 +20,14 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest }) =>
     const [searchCity, setSearchCity] = useState('');
     const [suggestions, setSuggestions] = useState<CityResult[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState(-1);
     const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const searchRef = useRef<HTMLDivElement>(null);
+
+    // Reset selection when suggestions change or search term changes
+    useEffect(() => {
+        setSelectedIndex(-1);
+    }, [suggestions, searchCity]);
 
     // Close suggestions when clicking outside
     useEffect(() => {
@@ -89,6 +95,31 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest }) =>
         onLocationRequest();
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (!showSuggestions) return;
+
+        const totalItems = 1 + suggestions.length; // 1 for Current Location
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSelectedIndex(prev => (prev + 1) % totalItems);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSelectedIndex(prev => (prev - 1 + totalItems) % totalItems);
+        } else if (e.key === 'Enter') {
+            if (selectedIndex >= 0) {
+                e.preventDefault();
+                if (selectedIndex === 0) {
+                    handleLocationClick();
+                } else {
+                    handleSuggestionClick(suggestions[selectedIndex - 1]);
+                }
+            }
+        } else if (e.key === 'Escape') {
+            setShowSuggestions(false);
+        }
+    };
+
     return (
         <div ref={searchRef} className="flex-1 relative">
             <form role="search" onSubmit={handleSubmit} className="w-full flex items-center space-x-2 glass-card rounded-full px-4 py-4 transition-all focus-within:bg-white/10 focus-within:shadow-lg focus-within:ring-1 focus-within:ring-white/20">
@@ -97,8 +128,17 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest }) =>
                     type="text"
                     value={searchCity}
                     onChange={(e) => setSearchCity(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     placeholder={t.search?.placeholder || 'Search city...'}
                     aria-label={t.search?.placeholder || 'Search city'}
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={showSuggestions}
+                    aria-controls="search-suggestions"
+                    aria-activedescendant={
+                        selectedIndex === 0 ? "suggestion-location" :
+                        selectedIndex > 0 ? `suggestion-${selectedIndex - 1}` : undefined
+                    }
                     className="bg-transparent border-none outline-none text-white placeholder-white/50 w-full text-base"
                     onFocus={() => {
                         setShowSuggestions(true);
@@ -123,6 +163,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest }) =>
                 {
                     (showSuggestions) && (
                         <motion.div
+                            id="search-suggestions"
+                            role="listbox"
                             variants={dropdownVariants}
                             initial="hidden"
                             animate="visible"
@@ -131,8 +173,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest }) =>
                         >
                             {/* Current Location Option */}
                             <button
+                                id="suggestion-location"
+                                role="option"
+                                aria-selected={selectedIndex === 0}
                                 onClick={handleLocationClick}
-                                className="w-full px-5 py-3 text-left hover:bg-white/10 text-white flex items-center gap-3 transition-colors border-b border-white/5 last:border-none"
+                                className={`w-full px-5 py-3 text-left hover:bg-white/10 text-white flex items-center gap-3 transition-colors border-b border-white/5 last:border-none ${selectedIndex === 0 ? 'bg-white/20' : ''}`}
                             >
                                 <FaLocationArrow className="text-white/60" />
                                 <div className="flex flex-col gap-0.5">
@@ -143,8 +188,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest }) =>
                             {suggestions.map((item, index) => (
                                 <button
                                     key={`${item.name}-${item.lat}-${item.lon}-${index}`}
+                                    id={`suggestion-${index}`}
+                                    role="option"
+                                    aria-selected={selectedIndex === index + 1}
                                     onClick={() => handleSuggestionClick(item)}
-                                    className="w-full px-5 py-3 text-left hover:bg-white/10 text-white flex flex-col gap-0.5 transition-colors border-b border-white/5 last:border-none"
+                                    className={`w-full px-5 py-3 text-left hover:bg-white/10 text-white flex flex-col gap-0.5 transition-colors border-b border-white/5 last:border-none ${selectedIndex === index + 1 ? 'bg-white/20' : ''}`}
                                 >
                                     <span className="font-medium text-sm">{item.name}</span>
                                     <span className="text-xs text-white/40">
