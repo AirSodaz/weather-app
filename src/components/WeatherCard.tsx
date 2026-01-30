@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { FaSun, FaCloud, FaCloudRain, FaSnowflake, FaWind, FaTint, FaSmog } from 'react-icons/fa';
+import { FaSun, FaCloud, FaCloudRain, FaSnowflake, FaWind, FaTint, FaSmog, FaEllipsisV } from 'react-icons/fa';
 import { WeatherData } from '../services/weatherApi';
 import { getWeatherCategory, WeatherCategory } from '../utils/weatherUtils';
 
@@ -9,6 +9,8 @@ import { getWeatherCategory, WeatherCategory } from '../utils/weatherUtils';
 interface WeatherCardProps {
     /** The weather data to display. */
     weather: WeatherData;
+    /** Optional callback to show actions menu. */
+    onShowActions?: (e: React.MouseEvent) => void;
 }
 
 /**
@@ -43,14 +45,29 @@ const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ cond
  * @returns {JSX.Element} The weather card content.
  */
 const WeatherCard: React.FC<WeatherCardProps> = memo(({
-    weather
+    weather,
+    onShowActions
 }) => {
     return (
         <>
+            {/* Actions Button */}
+            {onShowActions && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onShowActions(e);
+                    }}
+                    className="absolute top-4 right-4 p-2 text-white/40 hover:text-white rounded-full transition-colors hover:bg-white/10 active:scale-95 focus-visible:bg-white/20 focus-visible:outline-none z-10"
+                    aria-label="More actions"
+                >
+                    <FaEllipsisV />
+                </button>
+            )}
+
             {/* Main Content */}
             <div className="flex justify-between items-start mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight mb-1 text-white group-hover:text-white/90 transition-colors line-clamp-2 overflow-hidden">
+                    <h2 className="text-2xl font-bold tracking-tight mb-1 text-white group-hover:text-white/90 transition-colors line-clamp-2 overflow-hidden pr-8">
                         {weather.city}
                     </h2>
                     <p className="text-sm font-medium text-white/60 capitalize tracking-wide flex items-center gap-2">

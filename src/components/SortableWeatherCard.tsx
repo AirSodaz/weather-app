@@ -90,7 +90,10 @@ const SortableWeatherCard: React.FC<SortableWeatherCardProps> = ({
             onClick={() => onClick(weather)}
             onContextMenu={(e) => onContextMenu(e, weather)}
         >
-            <WeatherCard weather={weather} />
+            <WeatherCard
+                weather={weather}
+                onShowActions={(e) => onContextMenu(e, weather)}
+            />
 
             {/* Hover Shine Effect */}
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
