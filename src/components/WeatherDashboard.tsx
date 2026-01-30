@@ -22,7 +22,7 @@ const dropdownVariants: Variants = {
 
 
 const contextMenuVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.9, transformOrigin: "top left" }, // Dynamic origin handling would be better but fixed is ok.
+    hidden: { opacity: 0, scale: 0.9 },
     visible: { opacity: 1, scale: 1, transition: { duration: 0.2 } },
     exit: { opacity: 0, scale: 0.95, transition: { duration: 0.1 } }
 };
@@ -46,6 +46,7 @@ interface ContextMenuState {
     y: number;
     weather: WeatherData | null;
     subMenu?: 'source' | null;
+    menuStyle?: React.CSSProperties;
 }
 
 /**
@@ -680,11 +681,52 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
     const handleCardContextMenu = useCallback((e: React.MouseEvent, weather: WeatherData) => {
         e.preventDefault();
+
+        const { clientX, clientY } = e;
+        const { innerWidth, innerHeight } = window;
+
+        // Determine quadrant
+        const isRight = clientX > innerWidth / 2;
+        const isBottom = clientY > innerHeight / 2;
+
+        let menuStyle: React.CSSProperties = {};
+
+        if (isBottom && isRight) {
+            // Bottom Right
+            menuStyle = {
+                bottom: innerHeight - clientY,
+                right: innerWidth - clientX,
+                transformOrigin: "bottom right"
+            };
+        } else if (isBottom && !isRight) {
+            // Bottom Left
+            menuStyle = {
+                bottom: innerHeight - clientY,
+                left: clientX,
+                transformOrigin: "bottom left"
+            };
+        } else if (!isBottom && isRight) {
+            // Top Right
+            menuStyle = {
+                top: clientY,
+                right: innerWidth - clientX,
+                transformOrigin: "top right"
+            };
+        } else {
+            // Top Left (Default)
+            menuStyle = {
+                top: clientY,
+                left: clientX,
+                transformOrigin: "top left"
+            };
+        }
+
         setContextMenu({
             show: true,
-            x: e.clientX,
-            y: e.clientY,
-            weather: weather
+            x: clientX,
+            y: clientY,
+            weather: weather,
+            menuStyle
         });
     }, []);
 
@@ -921,7 +963,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                                 animate="visible"
                                 exit="exit"
                                 className="fixed z-[100] glass-card rounded-3xl py-2 min-w-[200px] border border-white/20"
-                                style={{ left: contextMenu.x, top: contextMenu.y }}
+                                style={contextMenu.menuStyle}
                                 onClick={(e) => e.stopPropagation()}
                                 onContextMenu={(e) => e.stopPropagation()}
                             >
