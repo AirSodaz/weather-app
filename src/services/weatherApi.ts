@@ -6,19 +6,65 @@ const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
 const WEATHERAPI_BASE_URL = 'https://api.weatherapi.com/v1';
 const DATE_SEPARATOR_REGEX = /-/g;
 
-const timeFormatters = new Map<string, Intl.DateTimeFormat>();
+/**
+ * Formats a date object to HH:mm string manually.
+ *
+ * @param {Date} date - The date to format.
+ * @param {boolean} [use24h=true] - Whether to use 24-hour format.
+ * @returns {string} The formatted time string.
+ */
+const formatTime = (date: Date, use24h: boolean = true): string => {
+    if (use24h) {
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    } else {
+        let hours = date.getHours();
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+        return `${hours}:${minutes} ${ampm}`;
+    }
+};
 
 /**
- * Retrieves a cached Intl.DateTimeFormat instance for the specified locale.
+ * Formats a time string (e.g., "05:00 AM" or "13:00") to the desired format.
+ * Assuming input is either 12h with AM/PM or 24h.
  *
- * @param {string} locale - The locale string (e.g., 'en-US').
- * @returns {Intl.DateTimeFormat} The formatter instance.
+ * @param {string} timeStr - The time string to format.
+ * @param {boolean} [use24h=true] - Whether to use 24-hour format.
+ * @returns {string} The formatted time string.
  */
-const getTimeFormatter = (locale: string): Intl.DateTimeFormat => {
-    if (!timeFormatters.has(locale)) {
-        timeFormatters.set(locale, new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }));
+const formatTimeString = (timeStr: string, use24h: boolean = true): string => {
+    // Check if input is 12h (has AM/PM) or 24h (HH:mm)
+    const is12hInput = /AM|PM/i.test(timeStr);
+
+    let hours = 0;
+    let minutes = 0;
+
+    if (is12hInput) {
+        const [time, modifier] = timeStr.split(' ');
+        const [h, m] = time.split(':');
+        hours = parseInt(h, 10);
+        minutes = parseInt(m, 10);
+
+        if (hours === 12) {
+            hours = 0;
+        }
+        if (modifier && modifier.toUpperCase() === 'PM') {
+            hours += 12;
+        }
+    } else {
+        const [h, m] = timeStr.split(':');
+        hours = parseInt(h, 10);
+        minutes = parseInt(m, 10);
     }
-    return timeFormatters.get(locale)!;
+
+    // Now re-format
+    const date = new Date();
+    date.setHours(hours, minutes);
+    return formatTime(date, use24h);
 };
 
 interface CacheEntry {
@@ -26,6 +72,7 @@ interface CacheEntry {
     timestamp: number;
     lang: string;
     source: string;
+    timeFormat?: '24h' | '12h';
 }
 
 interface WeatherCacheStore {
@@ -163,13 +210,14 @@ export interface WeatherData {
  * @param {string} apiKey - The API key.
  * @param {'zh' | 'en'} [lang='zh'] - The language code.
  * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
+ * @param {boolean} [use24h=true] - Whether to use 24-hour format.
  * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
  * @throws {Error} If the API request fails.
  */
-const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh', coords?: { lat: number, lon: number }): Promise<WeatherData> => {
+const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh', coords?: { lat: number, lon: number }, use24h: boolean = true): Promise<WeatherData> => {
     console.log('Using OpenWeatherMap API', lang, coords ? `with coords: ${coords.lat},${coords.lon}` : '');
     const apiLang = lang === 'zh' ? 'zh_cn' : 'en';
-    const locale = 'en-US'; // Use fixed locale for standard date parsing.
+    // const locale = 'en-US'; // Use fixed locale for standard date parsing.
 
     const params: any = {
         appid: apiKey,
@@ -244,13 +292,12 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
         if (forecastData) {
             // Process hourly forecast (next 24 hours, 8 x 3-hour intervals).
             if (forecastData.list) {
-                const timeFormatter = getTimeFormatter(locale);
                 const limit = 8;
                 for (let i = 0; i < forecastData.list.length; i++) {
                     if (hourlyForecast.length >= limit) break;
                     const item = forecastData.list[i];
                     hourlyForecast.push({
-                        time: timeFormatter.format(new Date(item.dt * 1000)),
+                        time: formatTime(new Date(item.dt * 1000), use24h),
                         temperature: Math.round(item.main.temp),
                         condition: item.weather[0].description,
                         icon: item.weather[0].icon
@@ -298,9 +345,8 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
             };
         }
 
-        const timeFormatter = getTimeFormatter(locale);
-        const sunrise = timeFormatter.format(new Date(data.sys.sunrise * 1000));
-        const sunset = timeFormatter.format(new Date(data.sys.sunset * 1000));
+        const sunrise = formatTime(new Date(data.sys.sunrise * 1000), use24h);
+        const sunset = formatTime(new Date(data.sys.sunset * 1000), use24h);
 
         return {
             city: data.name,
@@ -334,12 +380,13 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
  * @param {string} apiKey - The API key.
  * @param {'zh' | 'en'} [lang='zh'] - The language code.
  * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
+ * @param {boolean} [use24h=true] - Whether to use 24-hour format.
  * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
  * @throws {Error} If the API request fails.
  */
-const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh', coords?: { lat: number, lon: number }): Promise<WeatherData> => {
+const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh', coords?: { lat: number, lon: number }, use24h: boolean = true): Promise<WeatherData> => {
     console.log('Using WeatherAPI.com', lang, coords ? `with coords: ${coords.lat},${coords.lon}` : '');
-    const locale = lang === 'zh' ? 'zh-CN' : 'en-US';
+    // const locale = lang === 'zh' ? 'zh-CN' : 'en-US';
 
     // WeatherAPI supports "lat,lon" as q parameter.
     const query = coords ? `${coords.lat},${coords.lon}` : city;
@@ -381,7 +428,6 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
         const current = data.current;
         const forecast = data.forecast.forecastday;
 
-        const timeFormatter = getTimeFormatter(locale);
         const hourlyForecast: HourlyForecast[] = [];
         const sourceHours = forecast[0].hour;
         const limit = 8;
@@ -390,7 +436,7 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
             if (hourlyForecast.length >= limit) break;
             const item = sourceHours[i];
             hourlyForecast.push({
-                time: timeFormatter.format(new Date(item.time)),
+                time: formatTime(new Date(item.time), use24h),
                 temperature: Math.round(item.temp_c),
                 condition: item.condition.text,
                 icon: item.condition.icon
@@ -432,8 +478,8 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
             pressure: current.pressure_mb,
             visibility: current.vis_km,
             uvIndex: current.uv,
-            sunrise: forecast[0].astro.sunrise,
-            sunset: forecast[0].astro.sunset,
+            sunrise: formatTimeString(forecast[0].astro.sunrise, use24h),
+            sunset: formatTimeString(forecast[0].astro.sunset, use24h),
             hourlyForecast,
             dailyForecast,
             airQuality: {
@@ -461,12 +507,13 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
  * @param {'zh' | 'en'} [lang='zh'] - The language code.
  * @param {string} [host] - Optional custom host.
  * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
+ * @param {boolean} [use24h=true] - Whether to use 24-hour format.
  * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
  * @throws {Error} If the API request fails.
  */
-const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh', host?: string, coords?: { lat: number, lon: number }): Promise<WeatherData> => {
+const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh', host?: string, coords?: { lat: number, lon: number }, use24h: boolean = true): Promise<WeatherData> => {
     console.log('Using QWeather API', lang, host ? `with custom host: ${host}` : '', coords ? `with coords: ${coords.lat},${coords.lon}` : '');
-    const locale = lang === 'zh' ? 'zh-CN' : 'en-US';
+    // const locale = lang === 'zh' ? 'zh-CN' : 'en-US';
     try {
         const { base: qBaseUrl, geo: qGeoUrl } = getQWeatherUrls(host);
 
@@ -547,7 +594,6 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
             sun = sunRes.value.data;
         }
 
-        const timeFormatter = getTimeFormatter(locale);
         const hourlyForecast: HourlyForecast[] = [];
         const limit = 8;
 
@@ -555,7 +601,7 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
             if (hourlyForecast.length >= limit) break;
             const item = hourly[i];
             hourlyForecast.push({
-                time: timeFormatter.format(new Date(item.fxTime)),
+                time: formatTime(new Date(item.fxTime), use24h),
                 temperature: parseInt(item.temp),
                 condition: item.text,
                 icon: item.icon // QWeather icon code.
@@ -590,8 +636,8 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
         };
 
         if (sun) {
-            weatherData.sunrise = sun.sunrise;
-            weatherData.sunset = sun.sunset;
+            weatherData.sunrise = formatTime(new Date(sun.sunrise), use24h);
+            weatherData.sunset = formatTime(new Date(sun.sunset), use24h);
         }
 
         if (air) {
@@ -672,6 +718,11 @@ export const getWeather = async (city: string, preferredSource?: string, lang: '
     }
 
     // Check cache.
+    let weatherData: WeatherData;
+    const use24h = settings.timeFormat !== '12h';
+    const currentTimeFormat = settings.timeFormat || '24h';
+
+    // Check cache.
     try {
         const cache = await getCache();
         const key = getCacheKey(city, sourceToUse, lang, coords);
@@ -679,11 +730,18 @@ export const getWeather = async (city: string, preferredSource?: string, lang: '
 
         if (cache[key]) {
             const entry = cache[key];
-            if (now - entry.timestamp < ttl) {
+            // Check if cached data format matches requested format
+            const isFormatMatch = entry.timeFormat === currentTimeFormat;
+
+            if (now - entry.timestamp < ttl && isFormatMatch) {
                 console.log(`[Cache Hit] Returning cached weather data for ${key}`);
                 return entry.data;
             } else {
-                console.log(`[Cache Expired] ${key} expired (age: ${now - entry.timestamp}ms, ttl: ${ttl}ms)`);
+                if (!isFormatMatch) {
+                    console.log(`[Cache Miss] Format mismatch for ${key} (cached: ${entry.timeFormat}, requested: ${currentTimeFormat})`);
+                } else {
+                    console.log(`[Cache Expired] ${key} expired (age: ${now - entry.timestamp}ms, ttl: ${ttl}ms)`);
+                }
                 delete cache[key];
             }
         } else {
@@ -692,8 +750,6 @@ export const getWeather = async (city: string, preferredSource?: string, lang: '
     } catch (e) {
         console.warn('Cache check failed, proceeding to fetch:', e);
     }
-
-    let weatherData: WeatherData;
 
     if (sourceToUse === 'custom' && settings.customUrl) {
         weatherData = await fetchCustom(city, settings.customUrl, settings.apiKeys.custom, lang);
@@ -708,13 +764,13 @@ export const getWeather = async (city: string, preferredSource?: string, lang: '
 
             switch (sourceToUse) {
                 case 'openweathermap':
-                    weatherData = await fetchOpenWeatherMap(city, apiKey, lang, coords);
+                    weatherData = await fetchOpenWeatherMap(city, apiKey, lang, coords, use24h);
                     break;
                 case 'weatherapi':
-                    weatherData = await fetchWeatherAPI(city, apiKey, lang, coords);
+                    weatherData = await fetchWeatherAPI(city, apiKey, lang, coords, use24h);
                     break;
                 case 'qweather':
-                    weatherData = await fetchQWeather(city, apiKey, lang, settings.qweatherHost, coords);
+                    weatherData = await fetchQWeather(city, apiKey, lang, settings.qweatherHost, coords, use24h);
                     break;
                 default:
                     throw new Error('Unknown weather source');
@@ -732,7 +788,8 @@ export const getWeather = async (city: string, preferredSource?: string, lang: '
             data: weatherData,
             timestamp: Date.now(),
             lang,
-            source: sourceToUse
+            source: sourceToUse,
+            timeFormat: currentTimeFormat
         };
         // Persist (fire and forget).
         storage.set(CACHE_KEY, cache).catch(e => console.error('Failed to save cache:', e));

@@ -285,10 +285,12 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     // Cache weatherList whenever it changes.
     useEffect(() => {
         if (weatherList.length > 0) {
-            const timer = setTimeout(() => {
+            const timer = setTimeout(async () => {
+                const settings = await getSettings();
                 storage.setAsync('weatherCache', {
                     lang: currentLanguage,
-                    data: weatherList
+                    data: weatherList,
+                    timeFormat: settings.timeFormat
                 });
             }, 1000);
             return () => clearTimeout(timer);
@@ -324,17 +326,22 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         // Try to load from cache first.
         try {
             const cache: any = await storage.get('weatherCache');
+            const settings = await getSettings();
+            const currentTimeFormat = settings.timeFormat || '24h';
+
             // Check if cache format is valid and language matches.
             // Strict check: if cache language doesn't match current, treat as no cache.
-            if (cache && cache.data && Array.isArray(cache.data) && cache.lang === currentLanguage) {
+            // Also check timeFormat match.
+            const isFormatMatch = cache?.timeFormat === currentTimeFormat;
+
+            if (cache && cache.data && Array.isArray(cache.data) && cache.lang === currentLanguage && isFormatMatch) {
                 cachedWeather = cache.data;
                 setWeatherList(cachedWeather as WeatherData[]);
-            } else if (!cache || !cache.lang || cache.lang !== currentLanguage) {
-                // Force refresh if language mismatch or cache is malformed/missing language info.
-                cachedWeather = null;
-            } else if (Array.isArray(cache)) {
-                // Backward compatibility.
-                console.log("Cache ignored due to old format, forcing refresh for correct language.");
+            } else {
+                // Force refresh if language mismatch, format mismatch or cache is malformed.
+                if (cache) {
+                     console.log(`Cache mismatch/invalid. Lang: ${cache.lang}/${currentLanguage}, Format: ${cache.timeFormat}/${currentTimeFormat}`);
+                }
                 cachedWeather = null;
             }
         } catch (e) {

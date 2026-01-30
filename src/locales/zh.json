@@ -29,7 +29,10 @@
         "cityList": "城市列表",
         "version": "版本",
         "detailView": "自定义详细页面",
-        "detailViewHelp": "拖拽排序，取消勾选以隐藏。"
+        "detailViewHelp": "拖拽排序，取消勾选以隐藏。",
+        "timeFormat": "时间格式",
+        "timeFormat24": "24 小时制 (13:00)",
+        "timeFormat12": "12 小时制 (1:00 PM)"
     },
     "detailSections": {
         "hourly": "逐时预报",

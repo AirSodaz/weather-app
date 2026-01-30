@@ -29,7 +29,10 @@
         "cityList": "City list",
         "version": "Version",
         "detailView": "Detail View Customization",
-        "detailViewHelp": "Drag to reorder sections. Uncheck to hide."
+        "detailViewHelp": "Drag to reorder sections. Uncheck to hide.",
+        "timeFormat": "Time Format",
+        "timeFormat24": "24 Hour (13:00)",
+        "timeFormat12": "12 Hour (1:00 PM)"
     },
     "detailSections": {
         "hourly": "Hourly Forecast",
