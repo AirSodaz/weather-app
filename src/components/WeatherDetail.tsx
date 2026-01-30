@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
 import { isTauri } from '../utils/env';
 import { WeatherData } from '../services/weatherApi';
 import {
@@ -132,26 +132,35 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
     }, []);
 
 
-    // Helper to get localized day name
-    const getDayName = (dateStr: string, index: number) => {
-        if (index === 0) return t.date.relative.today;
-        if (index === 1) return t.date.relative.tomorrow;
-        try {
-            const parts = dateStr.split(DATE_SPLIT_REGEX);
-            if (parts.length >= 3) {
-                const year = parseInt(parts[0]);
-                const month = parseInt(parts[1]) - 1;
-                const day = parseInt(parts[2]);
-                const date = new Date(year, month, day);
-                return t.date.days[date.getDay()];
+    // Optimized: Memoize daily forecast names to prevent expensive date parsing on every render
+    const dailyForecastWithNames = useMemo(() => {
+        if (!weather.dailyForecast) return [];
+
+        const getDayName = (dateStr: string, index: number) => {
+            if (index === 0) return t.date.relative.today;
+            if (index === 1) return t.date.relative.tomorrow;
+            try {
+                const parts = dateStr.split(DATE_SPLIT_REGEX);
+                if (parts.length >= 3) {
+                    const year = parseInt(parts[0]);
+                    const month = parseInt(parts[1]) - 1;
+                    const day = parseInt(parts[2]);
+                    const date = new Date(year, month, day);
+                    return t.date.days[date.getDay()];
+                }
+            } catch (e) {
+                console.error('Date parse error', e);
             }
-        } catch (e) {
-            console.error('Date parse error', e);
-        }
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return '';
-        return t.date.days[date.getDay()];
-    };
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return '';
+            return t.date.days[date.getDay()];
+        };
+
+        return weather.dailyForecast.slice(0, 7).map((day, i) => ({
+            ...day,
+            dayName: getDayName(day.date, i)
+        }));
+    }, [weather.dailyForecast, t]);
 
     const getAqiLabel = (aqi: number) => {
         return t.aqi.levels[aqi - 1] || t.aqi.unknown;
@@ -224,18 +233,18 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
                     </motion.div>
                 );
             case 'daily':
-                return weather.dailyForecast && weather.dailyForecast.length > 0 && (
+                return dailyForecastWithNames.length > 0 && (
                     <motion.div variants={itemVariants} key="daily" className="w-full glass-card rounded-3xl p-6 mb-6">
                         <h3 className="text-base font-semibold flex items-center gap-2 mb-6">
                             <FaCalendarAlt className="text-gray-300" />
                             {t.weather.dailyForecast}
                         </h3>
                         <div className="space-y-4">
-                            {weather.dailyForecast.slice(0, 7).map((day, i) => (
+                            {dailyForecastWithNames.map((day, i) => (
                                 <div key={i} className="flex items-center justify-between group hover:bg-white/5 p-2 rounded-xl transition-colors -mx-2">
                                     <div className="w-24">
                                         <span className="font-medium block">
-                                            {getDayName(day.date, i)}
+                                            {day.dayName}
                                         </span>
                                         <span className="text-xs text-white/40">{day.date}</span>
                                     </div>
