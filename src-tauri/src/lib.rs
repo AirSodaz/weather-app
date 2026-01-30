@@ -1,3 +1,7 @@
+/// Runs the Tauri application.
+/// Initializes the Tauri builder, registers plugins, and starts the application loop.
+///
+/// This function is also used as the mobile entry point.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()

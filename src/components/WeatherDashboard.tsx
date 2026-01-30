@@ -22,11 +22,14 @@ const dropdownVariants: Variants = {
 
 
 const contextMenuVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.9, transformOrigin: "top left" }, // Dynamic origin handling would be better but fixed is ok
+    hidden: { opacity: 0, scale: 0.9, transformOrigin: "top left" }, // Dynamic origin handling would be better but fixed is ok.
     visible: { opacity: 1, scale: 1, transition: { duration: 0.2 } },
     exit: { opacity: 0, scale: 0.95, transition: { duration: 0.1 } }
 };
 
+/**
+ * Represents a saved city in local storage.
+ */
 interface SavedCity {
     name: string;
     source?: string;
@@ -34,6 +37,9 @@ interface SavedCity {
     lon?: number;
 }
 
+/**
+ * State for the context menu.
+ */
 interface ContextMenuState {
     show: boolean;
     x: number;
@@ -42,8 +48,14 @@ interface ContextMenuState {
     subMenu?: 'source' | null;
 }
 
+/**
+ * Updates the list of saved cities in storage based on the current weather list.
+ *
+ * @param {WeatherData[]} list - The current list of weather data.
+ * @returns {Promise<void>} A promise that resolves when storage is updated.
+ */
 const updateSavedCities = async (list: WeatherData[]) => {
-    // Map to SavedCity format
+    // Map to SavedCity format.
     const savedCities: SavedCity[] = list.map(w => ({
         name: w.city,
         source: (w as any).sourceOverride,
@@ -53,14 +65,26 @@ const updateSavedCities = async (list: WeatherData[]) => {
     await storage.set('savedCities', savedCities);
 };
 
+/**
+ * Props for the WeatherDashboard component.
+ */
 interface WeatherDashboardProps {
+    /** Callback triggered when the background should change based on weather. */
     onBgChange?: (bgClass: string) => void;
+    /** Ref to the background container for scroll-based effects. */
     bgContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
+/**
+ * Main dashboard component displaying the list of cities and weather summaries.
+ * Handles adding, removing, refreshing, and viewing details of cities.
+ *
+ * @param {WeatherDashboardProps} props - The component props.
+ * @returns {JSX.Element} The weather dashboard component.
+ */
 const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgContainerRef }) => {
     const { t, currentLanguage } = useI18n();
-    // Removed search state moved to SearchBar
+    // Removed search state moved to SearchBar.
     const [weatherList, setWeatherList] = useState<WeatherData[]>([]);
 
     // Optimization: Use ref to hold weatherList to stabilize handleDrop callback
@@ -86,19 +110,22 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const ticking = useRef(false);
 
-    // Optimization: Use ref for draggedIndex to stabilize drag callbacks
+    // Optimization: Use ref for draggedIndex to stabilize drag callbacks.
     const draggedIndexRef = useRef<number | null>(null);
     useEffect(() => {
         draggedIndexRef.current = draggedIndex;
     }, [draggedIndex]);
 
-    // Removed refs and state for search suggestions
+    // Removed refs and state for search suggestions.
 
-    const contextMenuRef = useRef<HTMLDivElement>(null); // Added ref for context menu
+    const contextMenuRef = useRef<HTMLDivElement>(null); // Added ref for context menu.
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
     const [isScrolled, setIsScrolled] = useState(false);
     const lastSourceRef = useRef<string | null>(null);
 
+    /**
+     * Loads application configuration settings.
+     */
     const loadAppConfig = async () => {
         const settings = await getSettings();
         setDetailViewSections(settings.detailViewSections || []);
@@ -111,13 +138,13 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         loadAppConfig();
     }, []);
 
-    // Handle browser back button
+    // Handle browser back button.
     useEffect(() => {
         const handlePopState = () => {
             if (showSettings) {
                 setShowSettings(false);
             } else if (selectedCity) {
-                // If we are showing detail, close it
+                // If we are showing detail, close it.
                 setSelectedCity(null);
             }
         };
@@ -126,12 +153,12 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         return () => window.removeEventListener('popstate', handlePopState);
     }, [selectedCity, showSettings]);
 
-    // Removed click outside listener for search suggestions (handled in SearchBar)
+    // Removed click outside listener for search suggestions (handled in SearchBar).
 
-    // Close context menu and main menu when clicking elsewhere
+    // Close context menu and main menu when clicking elsewhere.
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            // Check for Context Menu
+            // Check for Context Menu.
             if (contextMenu.show && contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
                 setContextMenu(prev => ({ ...prev, show: false }));
             }
@@ -139,7 +166,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
         if (contextMenu.show || showMenu) {
             document.addEventListener('mousedown', handleClickOutside, true);
-            document.addEventListener('contextmenu', handleClickOutside, true); // Handle right click outside
+            document.addEventListener('contextmenu', handleClickOutside, true); // Handle right click outside.
         }
 
         return () => {
@@ -148,13 +175,13 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         };
     }, [contextMenu.show, showMenu]);
 
-    // Calculate dominant weather condition
+    // Calculate dominant weather condition.
     const dominantCondition = weatherList.length > 0
         ? weatherList[0].condition
         : 'default';
 
-    // Trigger background transition animation when condition changes
-    // Notify parent of background change
+    // Trigger background transition animation when condition changes.
+    // Notify parent of background change.
     useEffect(() => {
         const currentBg = getWeatherBackground(dominantCondition);
         if (onBgChange) {
@@ -162,14 +189,14 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         }
     }, [dominantCondition, onBgChange]);
 
-    // Persist lastRefreshTime
+    // Persist lastRefreshTime.
     useEffect(() => {
         if (lastRefreshTime) {
             storage.set('lastRefreshTime', lastRefreshTime.toISOString());
         }
     }, [lastRefreshTime]);
 
-    // Save last viewed city
+    // Save last viewed city.
     useEffect(() => {
         const saveLastViewed = async () => {
             if (selectedCity) {
@@ -178,13 +205,13 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                     source: selectedCity.sourceOverride
                 });
             } else {
-                // Optional: Clear or keep last viewed? 
+                // Optional: Clear or keep last viewed?
             }
         };
         saveLastViewed();
     }, [selectedCity]);
 
-    // Auto-dismiss errors after 5 seconds
+    // Auto-dismiss errors after 5 seconds.
     useEffect(() => {
         if (error) {
             const timer = setTimeout(() => {
@@ -194,7 +221,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         }
     }, [error]);
 
-    // Handle scroll-based background animation
+    // Handle scroll-based background animation.
     const handleScroll = useCallback(() => {
         if (!ticking.current) {
             window.requestAnimationFrame(() => {
@@ -205,15 +232,15 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                 }
 
                 const scrollTop = container.scrollTop;
-                // Use a smaller threshold for quicker response
+                // Use a smaller threshold for quicker response.
                 setIsScrolled(scrollTop > 10);
 
                 const scrollHeight = container.scrollHeight - container.clientHeight;
                 const scrollPercent = scrollHeight > 0 ? Math.min(scrollTop / scrollHeight, 1) : 0;
 
-                // Calculate gradient shift angle (0 to 45 degrees)
+                // Calculate gradient shift angle (0 to 45 degrees).
                 const shiftAngle = scrollPercent * 45;
-                // Calculate color intensity modifier (0 to 1)
+                // Calculate color intensity modifier (0 to 1).
                 const intensity = scrollPercent;
 
                 if (bgContainerRef && bgContainerRef.current) {
@@ -233,14 +260,14 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         if (!container) return;
 
         container.addEventListener('scroll', handleScroll, { passive: true });
-        handleScroll(); // Initialize on mount
+        handleScroll(); // Initialize on mount.
 
         return () => {
             container.removeEventListener('scroll', handleScroll);
         };
     }, [handleScroll]);
 
-    // Setup auto-refresh
+    // Setup auto-refresh.
     const setupAutoRefresh = useCallback(async () => {
         if (autoRefreshRef.current) {
             clearInterval(autoRefreshRef.current);
@@ -255,7 +282,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         }
     }, []);
 
-    // Cache weatherList whenever it changes
+    // Cache weatherList whenever it changes.
     useEffect(() => {
         if (weatherList.length > 0) {
             const timer = setTimeout(() => {
@@ -283,7 +310,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         let cachedWeather: WeatherData[] | null = null;
         let savedLastRefreshTime: Date | null = null;
 
-        // Try to load last refresh time
+        // Try to load last refresh time.
         try {
             const timeStr = await storage.get('lastRefreshTime');
             if (timeStr) {
@@ -293,20 +320,20 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         } catch (e) {
             console.error("Failed to load last refresh time", e);
         }
-        // Try to load from cache first
-        // Try to load from cache first
+        // Try to load from cache first.
+        // Try to load from cache first.
         try {
             const cache: any = await storage.get('weatherCache');
-            // Check if cache format is valid and language matches
-            // Strict check: if cache language doesn't match current, treat as no cache
+            // Check if cache format is valid and language matches.
+            // Strict check: if cache language doesn't match current, treat as no cache.
             if (cache && cache.data && Array.isArray(cache.data) && cache.lang === currentLanguage) {
                 cachedWeather = cache.data;
                 setWeatherList(cachedWeather as WeatherData[]);
             } else if (!cache || !cache.lang || cache.lang !== currentLanguage) {
-                // Force refresh if language mismatch or cache is malformed/missing language info
+                // Force refresh if language mismatch or cache is malformed/missing language info.
                 cachedWeather = null;
             } else if (Array.isArray(cache)) {
-                // Backward compatibility
+                // Backward compatibility.
                 console.log("Cache ignored due to old format, forcing refresh for correct language.");
                 cachedWeather = null;
             }
@@ -314,7 +341,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             console.error("Failed to load cache", e);
         }
 
-        // Check for staleness
+        // Check for staleness.
         const settings = await getSettings();
         // If 0 (off), use 15 mins. Otherwise use minutes from settings.
         const thresholdMinutes = settings.autoRefreshInterval > 0 ? settings.autoRefreshInterval : 15;
@@ -322,14 +349,14 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         const timeDiff = savedLastRefreshTime ? now.getTime() - savedLastRefreshTime.getTime() : Infinity;
         const isStale = timeDiff > thresholdMinutes * 60 * 1000;
 
-        // Visual feedback based on state
+        // Visual feedback based on state.
         if (!cachedWeather) {
             setLoading(true);
         } else if (isStale) {
-            // If we have cache but it's stale, show spinner indicating update
+            // If we have cache but it's stale, show spinner indicating update.
             setRefreshing(true);
         } else {
-            // Fresh cache, no loading spinner needed
+            // Fresh cache, no loading spinner needed.
             setLoading(false);
             setRefreshing(false);
         }
@@ -367,13 +394,13 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                                 return null;
                             }
                         },
-                        5, // Limit concurrency to 5
+                        5, // Limit concurrency to 5.
                         (result, index) => {
                             currentList[index] = result;
                             completedCount++;
 
-                            // Only set state with valid items to avoid empty holes in UI
-                            // Batch updates to reduce re-renders: update every 5 items or on the last one
+                            // Only set state with valid items to avoid empty holes in UI.
+                            // Batch updates to reduce re-renders: update every 5 items or on the last one.
                             if (completedCount % 5 === 0 || completedCount === savedData.length) {
                                 const validSoFar = currentList.filter(w => w !== null) as WeatherData[];
                                 setWeatherList(validSoFar);
@@ -388,11 +415,11 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                         setWeatherList(validResults);
                         setLastRefreshTime(new Date());
 
-                        // Sychronize saved city names with fetched names (e.g. localized names)
+                        // Sychronize saved city names with fetched names (e.g. localized names).
                         let namesChanged = false;
                         const newSavedData = savedData.map((item, index) => {
                             // Find corresponding result. Note: results includes nulls, validResults does not.
-                            // We need to map by index from results
+                            // We need to map by index from results.
                             const weatherData = results![index];
                             if (weatherData && weatherData.city) {
                                 const currentName = typeof item === 'string' ? item : item.name;
@@ -415,16 +442,16 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                     }
                 }
 
-                // Check startup view settings
+                // Check startup view settings.
                 if (settings.startupView === 'detail') {
                     const lastViewed = await storage.get('lastViewedCity');
                     if (lastViewed) {
                         const lastCityName = typeof lastViewed === 'string' ? lastViewed : lastViewed.name;
 
-                        // Try to find by name first
+                        // Try to find by name first.
                         let targetCity = finalList.find(w => w.city === lastCityName);
 
-                        // If not found (e.g. name changed due to language switch), try to find by index
+                        // If not found (e.g. name changed due to language switch), try to find by index.
                         if (!targetCity) {
                             const savedIndex = savedData.findIndex(item => {
                                 const name = typeof item === 'string' ? item : item.name;
@@ -432,7 +459,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                             });
 
                             if (savedIndex !== -1) {
-                                // If we have fresh resultsWithNulls, use that
+                                // If we have fresh resultsWithNulls, use that.
                                 if (results && results[savedIndex]) {
                                     targetCity = results[savedIndex] as WeatherData;
                                 }
@@ -445,8 +472,8 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
                         if (targetCity) {
                             setSelectedCity(targetCity);
-                            // Push state if we are restoring from a "fresh" start (not currently viewing a city)
-                            // This ensures that the back button works (returns to home) instead of exiting the app
+                            // Push state if we are restoring from a "fresh" start (not currently viewing a city).
+                            // This ensures that the back button works (returns to home) instead of exiting the app.
                             if (!selectedCity) {
                                 window.history.pushState({ city: targetCity.city }, '', '');
                             }
@@ -465,7 +492,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         }
     };
 
-    // Re-load saved cities when language changes to refresh data in new language
+    // Re-load saved cities when language changes to refresh data in new language.
     useEffect(() => {
         loadSavedCities();
     }, [currentLanguage]);
@@ -480,13 +507,13 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                 async (weather) => {
                     try {
                         const source = (weather as any).sourceOverride;
-                        // Use coords from weather data if available
+                        // Use coords from weather data if available.
                         const coords = (weather.lat && weather.lon) ? { lat: weather.lat, lon: weather.lon } : undefined;
                         const newData = await getWeather(weather.city, source, currentLanguage, coords);
                         return { ...newData, sourceOverride: source };
                     } catch (e) {
                         console.error(`Failed to refresh weather for ${weather.city}`, e);
-                        return weather; // Keep old data on error
+                        return weather; // Keep old data on error.
                     }
                 },
                 5,
@@ -512,7 +539,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                     try {
                         const source = (weather as any).sourceOverride;
                         if (source) {
-                            // Don't refresh if source is manually set
+                            // Don't refresh if source is manually set.
                             return weather;
                         }
                         const coords = (weather.lat && weather.lon) ? { lat: weather.lat, lon: weather.lon } : undefined;
@@ -542,7 +569,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         setError(null);
         setLoading(true);
 
-        // Check if already exists
+        // Check if already exists.
         if (weatherList.some(w => w.city.toLowerCase() === city.toLowerCase())) {
             setError(t.search.cityExists);
             setLoading(false);
@@ -617,7 +644,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             setWeatherList(newList);
             await updateSavedCities(newList);
 
-            // If the updated city is currently selected, update it too
+            // If the updated city is currently selected, update it too.
             if (selectedCity && selectedCity.city === city) {
                 setSelectedCity({ ...newData, sourceOverride: source });
             }
@@ -661,14 +688,14 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         window.history.pushState({ modal: 'settings' }, '', '');
     }, []);
 
-    // Create a stable wrapper for handleUpdateCitySource to pass to WeatherDetail
+    // Create a stable wrapper for handleUpdateCitySource to pass to WeatherDetail.
     const onDetailSourceChange = useCallback((source: string | undefined) => {
         if (selectedCity) {
             handleUpdateCitySource(selectedCity.city, source);
         }
     }, [selectedCity, handleUpdateCitySource]);
 
-    // Drag and drop handlers
+    // Drag and drop handlers.
     const handleDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, index: number) => {
         setDraggedIndex(index);
         e.dataTransfer.effectAllowed = 'move';
@@ -702,7 +729,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             return;
         }
 
-        // Use ref instead of state dependency to keep handleDrop stable
+        // Use ref instead of state dependency to keep handleDrop stable.
         const currentList = weatherListRef.current;
         const newList = [...currentList];
         const [draggedItem] = newList.splice(currentDraggedIndex, 1);

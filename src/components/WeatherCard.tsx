@@ -4,23 +4,48 @@ import { WeatherData } from '../services/weatherApi';
 import { motion } from 'framer-motion';
 import { getWeatherCategory, WeatherCategory } from '../utils/weatherUtils';
 
+/**
+ * Props for the WeatherCard component.
+ */
 interface WeatherCardProps {
+    /** The weather data to display. */
     weather: WeatherData;
+    /** Callback triggered when the card is clicked. */
     onClick: (weather: WeatherData) => void;
+    /** Callback triggered when the card is right-clicked. */
     onContextMenu: (e: React.MouseEvent, weather: WeatherData) => void;
+    /** Whether the card is draggable. */
     draggable?: boolean;
+    /** Callback for drag start event. */
     onDragStart?: (e: React.DragEvent<HTMLDivElement>, index: number) => void;
+    /** Callback for drag over event. */
     onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
+    /** Callback for drag enter event. */
     onDragEnter?: (e: React.DragEvent<HTMLDivElement>, index: number) => void;
+    /** Callback for drag leave event. */
     onDragLeave?: (e: React.DragEvent<HTMLDivElement>) => void;
+    /** Callback for drop event. */
     onDrop?: (e: React.DragEvent<HTMLDivElement>, index: number) => void;
+    /** Callback for drag end event. */
     onDragEnd?: (e: React.DragEvent<HTMLDivElement>) => void;
+    /** Whether the card is currently being dragged. */
     isDragging?: boolean;
+    /** Whether an item is being dragged over the card. */
     isDragOver?: boolean;
+    /** The index of the card in the list. */
     index: number;
+    /** Shared layout ID for Framer Motion animations. */
     layoutId?: string;
 }
 
+/**
+ * Renders the appropriate weather icon based on the condition string.
+ *
+ * @param {object} props - Component props.
+ * @param {string} props.condition - The weather condition string.
+ * @param {string} [props.className] - Optional CSS classes.
+ * @returns {JSX.Element} The icon component.
+ */
 const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ condition, className = "text-5xl" }) => {
     const category = getWeatherCategory(condition);
     switch (category) {
@@ -37,6 +62,13 @@ const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ cond
     }
 };
 
+/**
+ * A draggable card component displaying a summary of weather data for a city.
+ * Supports keyboard navigation and shared element transitions.
+ *
+ * @param {WeatherCardProps} props - The component props.
+ * @returns {JSX.Element} The weather card component.
+ */
 const WeatherCard: React.FC<WeatherCardProps> = memo(({
     weather,
     onClick,
@@ -70,7 +102,7 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{
-                layout: { duration: 0.3, delay: 0 }, // Instant start for shared element transition
+                layout: { duration: 0.3, delay: 0 }, // Instant start for shared element transition.
                 opacity: { duration: 0.3, delay: index * 0.1 },
                 y: { duration: 0.3, delay: index * 0.1 }
             }}

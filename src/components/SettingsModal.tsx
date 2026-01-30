@@ -10,9 +10,15 @@ import packageJson from '../../package.json';
 import { motion, Variants } from 'framer-motion';
 import ApiKeySettings from './ApiKeySettings';
 
+/**
+ * Props for the SettingsModal component.
+ */
 interface SettingsModalProps {
+    /** Whether the modal is currently open. */
     isOpen: boolean;
+    /** Callback function to close the modal. */
     onClose: () => void;
+    /** Optional callback triggered when settings are saved. */
     onSettingsChange?: () => void;
 }
 
@@ -38,6 +44,13 @@ const modalVariants: Variants = {
     }
 };
 
+/**
+ * Modal component for configuring application settings.
+ * Allows users to change language, weather source, API keys, auto-refresh interval, and UI preferences.
+ *
+ * @param {SettingsModalProps} props - The component props.
+ * @returns {JSX.Element} The settings modal component.
+ */
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettingsChange }) => {
     const { t, language, setLanguage } = useI18n();
     const isTauriEnv = isTauri();
@@ -46,7 +59,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
     const [customUrl, setCustomUrl] = useState('');
     const [qweatherHost, setQWeatherHost] = useState('');
 
-    // Use Ref for API keys to prevent re-renders on every keystroke
+    // Use Ref for API keys to prevent re-renders on every keystroke.
     const apiKeysRef = useRef<{ [key in WeatherSource]?: string }>({});
 
     const [autoRefreshInterval, setAutoRefreshInterval] = useState(0);
@@ -54,7 +67,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
     const [loading, setLoading] = useState(false);
 
-    // Drag and drop state
+    // Drag and drop state.
     const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
     const [dragOverSectionIndex, setDragOverSectionIndex] = useState<number | null>(null);
 
@@ -65,6 +78,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
         }
     }, [isOpen]);
 
+    /**
+     * Loads current settings from storage.
+     */
     const loadSettings = async () => {
         setLoading(true);
         const settings = await getSettings();
@@ -78,6 +94,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
         setLoading(false);
     };
 
+    /**
+     * Saves the modified settings to storage and updates the application state.
+     */
     const handleSave = async () => {
         setLoading(true);
         const newSettings: AppSettings = {
@@ -96,13 +115,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
         onClose();
     };
 
-    // Section Drag Handlers
+    // Section Drag Handlers.
+
+    /**
+     * Handles the start of a drag operation for a detail view section.
+     *
+     * @param {React.DragEvent<HTMLDivElement>} e - The drag event.
+     * @param {number} index - The index of the section being dragged.
+     */
     const handleSectionDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
         setDraggedSectionIndex(index);
         e.dataTransfer.effectAllowed = 'move';
-        // e.dataTransfer.setDragImage(e.currentTarget, 20, 20); // Optional custom drag image
+        // e.dataTransfer.setDragImage(e.currentTarget, 20, 20); // Optional custom drag image.
     };
 
+    /**
+     * Handles the drag over event to update the drop target indicator.
+     *
+     * @param {React.DragEvent<HTMLDivElement>} e - The drag event.
+     * @param {number} index - The index of the section being dragged over.
+     */
     const handleSectionDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
         e.preventDefault();
         if (draggedSectionIndex === null) return;
@@ -111,6 +143,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
         }
     };
 
+    /**
+     * Handles the drop event to reorder the sections.
+     *
+     * @param {React.DragEvent<HTMLDivElement>} e - The drag event.
+     * @param {number} dropIndex - The index where the item is dropped.
+     */
     const handleSectionDrop = (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
         e.preventDefault();
         if (draggedSectionIndex === null) return;
@@ -124,6 +162,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
         setDragOverSectionIndex(null);
     };
 
+    /**
+     * Toggles the visibility of a detail view section.
+     *
+     * @param {number} index - The index of the section to toggle.
+     */
     const toggleSectionVisibility = (index: number) => {
         const newSections = [...detailViewSections];
         newSections[index].visible = !newSections[index].visible;
