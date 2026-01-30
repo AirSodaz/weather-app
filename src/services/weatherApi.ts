@@ -1,11 +1,6 @@
 import axios from 'axios';
 import { getSettings } from '../utils/config';
 import { storage } from '../utils/storage';
-// Localized strings removed to be handled by UI
-// import en from '../locales/en.json';
-// import zh from '../locales/zh.json';
-// const locales = { en, zh };
-// Keeping imports commented out or just removing them. Removing is cleaner.
 
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
 const WEATHERAPI_BASE_URL = 'https://api.weatherapi.com/v1';
@@ -13,7 +8,13 @@ const DATE_SEPARATOR_REGEX = /-/g;
 
 const timeFormatters = new Map<string, Intl.DateTimeFormat>();
 
-const getTimeFormatter = (locale: string) => {
+/**
+ * Retrieves a cached Intl.DateTimeFormat instance for the specified locale.
+ *
+ * @param {string} locale - The locale string (e.g., 'en-US').
+ * @returns {Intl.DateTimeFormat} The formatter instance.
+ */
+const getTimeFormatter = (locale: string): Intl.DateTimeFormat => {
     if (!timeFormatters.has(locale)) {
         timeFormatters.set(locale, new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }));
     }
@@ -35,6 +36,11 @@ let memoryCache: WeatherCacheStore | null = null;
 let cacheLoadPromise: Promise<WeatherCacheStore> | null = null;
 const CACHE_KEY = 'weather_cache_v1';
 
+/**
+ * Loads the weather cache from storage or memory.
+ *
+ * @returns {Promise<WeatherCacheStore>} A promise that resolves to the cache store.
+ */
 const getCache = async (): Promise<WeatherCacheStore> => {
     if (memoryCache) return memoryCache;
     if (cacheLoadPromise) return cacheLoadPromise;
@@ -50,20 +56,35 @@ const getCache = async (): Promise<WeatherCacheStore> => {
     return cacheLoadPromise;
 };
 
-const getCacheKey = (city: string, source: string, lang: string, coords?: { lat: number, lon: number }) => {
+/**
+ * Generates a unique cache key for a weather request.
+ *
+ * @param {string} city - The name of the city.
+ * @param {string} source - The weather data source.
+ * @param {string} lang - The language code.
+ * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
+ * @returns {string} The generated cache key.
+ */
+const getCacheKey = (city: string, source: string, lang: string, coords?: { lat: number, lon: number }): string => {
     if (coords) {
         return `${source}:${lang}:lat_${coords.lat.toFixed(2)}_lon_${coords.lon.toFixed(2)}`;
     }
     return `${source}:${lang}:${city.toLowerCase()}`;
 };
 
-const getQWeatherUrls = (customHost?: string) => {
-    // Priority: Custom Host (param) > Env Var > Default
+/**
+ * Constructs the API URLs for QWeather, respecting custom host configurations.
+ *
+ * @param {string} [customHost] - An optional custom host URL.
+ * @returns {{ base: string, geo: string }} An object containing the base and geo API URLs.
+ */
+const getQWeatherUrls = (customHost?: string): { base: string, geo: string } => {
+    // Priority: Custom Host (param) > Env Var > Default.
     let host = customHost || import.meta.env.VITE_QWEATHER_API_HOST;
     if (host) {
-        // Remove protocol if present (http:// or https://)
+        // Remove protocol if present (http:// or https://).
         host = host.replace(/^https?:\/\//, '');
-        // Remove trailing slash if present
+        // Remove trailing slash if present.
         host = host.replace(/\/$/, '');
 
         return {
@@ -77,6 +98,9 @@ const getQWeatherUrls = (customHost?: string) => {
     };
 };
 
+/**
+ * Represents hourly weather forecast data.
+ */
 export interface HourlyForecast {
     time: string;
     temperature: number;
@@ -84,24 +108,33 @@ export interface HourlyForecast {
     icon: string;
 }
 
+/**
+ * Represents daily weather forecast data.
+ */
 export interface DailyForecast {
-    date: string; // ISO or YYYY/MM/DD
-    // dayName: string; // Removed, handled by UI
+    /** Date string in ISO or YYYY/MM/DD format. */
+    date: string;
     tempMin: number;
     tempMax: number;
     condition: string;
     icon: string;
 }
 
+/**
+ * Represents air quality data.
+ */
 export interface AirQuality {
-    aqi: number; // 1-5 scale
-    // aqiLabel: string; // Removed, handled by UI
+    /** AQI on a 1-5 scale (or similar index). */
+    aqi: number;
     pm25: number;
     pm10: number;
     o3: number;
     no2: number;
 }
 
+/**
+ * Represents comprehensive weather data for a specific location.
+ */
 export interface WeatherData {
     city: string;
     temperature: number;
@@ -123,11 +156,20 @@ export interface WeatherData {
     lon: number;
 }
 
+/**
+ * Fetches weather data from OpenWeatherMap.
+ *
+ * @param {string} city - The city name.
+ * @param {string} apiKey - The API key.
+ * @param {'zh' | 'en'} [lang='zh'] - The language code.
+ * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
+ * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
+ * @throws {Error} If the API request fails.
+ */
 const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh', coords?: { lat: number, lon: number }): Promise<WeatherData> => {
     console.log('Using OpenWeatherMap API', lang, coords ? `with coords: ${coords.lat},${coords.lon}` : '');
     const apiLang = lang === 'zh' ? 'zh_cn' : 'en';
-    // const locale = lang === 'zh' ? 'zh-CN' : 'en-US'; // Not needed for date formatting anymore if we use ISO
-    const locale = 'en-US'; // Use fixed locale for standard date parsing, or better yet, construct ISO manually
+    const locale = 'en-US'; // Use fixed locale for standard date parsing.
 
     const params: any = {
         appid: apiKey,
@@ -143,14 +185,14 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
     }
 
     try {
-        // Start concurrent requests where possible
+        // Start concurrent requests where possible.
 
-        // 1. Current Weather (Mandatory)
+        // 1. Current Weather (Mandatory).
         const weatherPromise = axios.get(`${OPENWEATHER_BASE_URL}/weather`, {
             params: params
         });
 
-        // 2. Forecast (Optional)
+        // 2. Forecast (Optional).
         const forecastPromise = axios.get(`${OPENWEATHER_BASE_URL}/forecast`, {
             params: params
         }).then(res => res.data).catch(e => {
@@ -158,7 +200,7 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
             return null;
         });
 
-        // 3. Air Quality (Optional, requires coords)
+        // 3. Air Quality (Optional, requires coords).
         // If coords are already known, start this request immediately.
         let aqPromise: Promise<any> | null = null;
         if (coords) {
@@ -174,11 +216,11 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
             });
         }
 
-        // Await mandatory weather data
+        // Await mandatory weather data.
         const weatherResponse = await weatherPromise;
         const data = weatherResponse.data;
 
-        // If we didn't start AQ request yet (because we didn't have coords), start it now using data from weather response
+        // If we didn't start AQ request yet (because we didn't have coords), start it now using data from weather response.
         if (!aqPromise) {
             aqPromise = axios.get(`${OPENWEATHER_BASE_URL}/air_pollution`, {
                 params: {
@@ -192,15 +234,15 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
             });
         }
 
-        // Await optional data
+        // Await optional data.
         const [forecastData, aqDataRaw] = await Promise.all([forecastPromise, aqPromise]);
 
-        // Process forecast data
+        // Process forecast data.
         let hourlyForecast: HourlyForecast[] = [];
         let dailyForecast: DailyForecast[] = [];
 
         if (forecastData) {
-            // Process hourly forecast (next 24 hours, 8 x 3-hour intervals)
+            // Process hourly forecast (next 24 hours, 8 x 3-hour intervals).
             if (forecastData.list) {
                 const timeFormatter = getTimeFormatter(locale);
                 const limit = 8;
@@ -215,7 +257,7 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
                     });
                 }
 
-                // Process daily forecast (group by day)
+                // Process daily forecast (group by day).
                 const dailyMap = new Map<string, any>();
                 forecastData.list.forEach((item: any) => {
                     const dateStr = item.dt_txt.split(' ')[0]; // YYYY-MM-DD
@@ -243,7 +285,7 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
             }
         }
 
-        // Process air quality data
+        // Process air quality data.
         let airQuality: AirQuality | undefined;
         if (aqDataRaw && aqDataRaw.list && aqDataRaw.list.length > 0) {
             const aqData = aqDataRaw.list[0];
@@ -285,17 +327,27 @@ const fetchOpenWeatherMap = async (city: string, apiKey: string, lang: 'zh' | 'e
     }
 };
 
+/**
+ * Fetches weather data from WeatherAPI.com.
+ *
+ * @param {string} city - The city name.
+ * @param {string} apiKey - The API key.
+ * @param {'zh' | 'en'} [lang='zh'] - The language code.
+ * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
+ * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
+ * @throws {Error} If the API request fails.
+ */
 const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh', coords?: { lat: number, lon: number }): Promise<WeatherData> => {
     console.log('Using WeatherAPI.com', lang, coords ? `with coords: ${coords.lat},${coords.lon}` : '');
     const locale = lang === 'zh' ? 'zh-CN' : 'en-US';
 
-    // WeatherAPI supports "lat,lon" as q parameter
+    // WeatherAPI supports "lat,lon" as q parameter.
     const query = coords ? `${coords.lat},${coords.lon}` : city;
 
     try {
-        // Start concurrent requests
+        // Start concurrent requests.
 
-        // 1. Forecast (Mandatory)
+        // 1. Forecast (Mandatory).
         const forecastPromise = axios.get(`${WEATHERAPI_BASE_URL}/forecast.json`, {
             params: {
                 key: apiKey,
@@ -307,7 +359,7 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
             }
         });
 
-        // 2. History (Optional)
+        // 2. History (Optional).
         const yesterdayDate = new Date();
         yesterdayDate.setDate(yesterdayDate.getDate() - 1);
         const dt = yesterdayDate.toISOString().substring(0, 10);
@@ -315,7 +367,7 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
         const historyPromise = axios.get(`${WEATHERAPI_BASE_URL}/history.json`, {
             params: {
                 key: apiKey,
-                q: query, // Use same query (coords or city) for history
+                q: query, // Use same query (coords or city) for history.
                 dt: dt
             }
         }).then(res => res.data).catch(e => {
@@ -355,11 +407,10 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
             };
         });
 
-        // Map US AQI to 1-5 scale roughly
+        // Map US AQI to 1-5 scale roughly.
         const usEpaIndex = current.air_quality ? current.air_quality['us-epa-index'] : 1;
-        // const aqiLabels = t.aqi.levels;
 
-        // Process history data if available
+        // Process history data if available.
         if (historyDataRaw && historyDataRaw.forecast && historyDataRaw.forecast.forecastday && historyDataRaw.forecast.forecastday.length > 0) {
             const historyData = historyDataRaw.forecast.forecastday[0];
             dailyForecast.unshift({
@@ -387,7 +438,6 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
             dailyForecast,
             airQuality: {
                 aqi: usEpaIndex || 1,
-                // aqiLabel: aqiLabels[(usEpaIndex || 1) - 1] || t.aqi.unknown,
                 pm25: Math.round(current.air_quality?.pm2_5 || 0),
                 pm10: Math.round(current.air_quality?.pm10 || 0),
                 o3: Math.round(current.air_quality?.o3 || 0),
@@ -403,16 +453,27 @@ const fetchWeatherAPI = async (city: string, apiKey: string, lang: 'zh' | 'en' =
     }
 };
 
+/**
+ * Fetches weather data from QWeather.
+ *
+ * @param {string} city - The city name.
+ * @param {string} apiKey - The API key.
+ * @param {'zh' | 'en'} [lang='zh'] - The language code.
+ * @param {string} [host] - Optional custom host.
+ * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
+ * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
+ * @throws {Error} If the API request fails.
+ */
 const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = 'zh', host?: string, coords?: { lat: number, lon: number }): Promise<WeatherData> => {
     console.log('Using QWeather API', lang, host ? `with custom host: ${host}` : '', coords ? `with coords: ${coords.lat},${coords.lon}` : '');
     const locale = lang === 'zh' ? 'zh-CN' : 'en-US';
     try {
         const { base: qBaseUrl, geo: qGeoUrl } = getQWeatherUrls(host);
 
-        // QWeather geo API supports "lon,lat" (note order!) for location lookup
+        // QWeather geo API supports "lon,lat" (note order!) for location lookup.
         const locationQuery = coords ? `${coords.lon.toFixed(2)},${coords.lat.toFixed(2)}` : city;
 
-        // Helpers to generate requests
+        // Helpers to generate requests.
         const getWeatherRequests = (loc: string) => [
             axios.get(`${qBaseUrl}/weather/now`, { params: { location: loc, key: apiKey, lang: lang } }),
             axios.get(`${qBaseUrl}/weather/7d`, { params: { location: loc, key: apiKey, lang: lang } }),
@@ -429,12 +490,12 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
         let optionalRes: PromiseSettledResult<any>[];
 
         if (coords) {
-            // Parallelize everything if coords are available
+            // Parallelize everything if coords are available.
             const lookupPromise = axios.get(`${qGeoUrl}/city/lookup`, {
                 params: { location: locationQuery, key: apiKey, lang: lang }
             });
 
-            // Use coords for weather requests directly
+            // Use coords for weather requests directly.
             const weatherPromise = Promise.all(getWeatherRequests(locationQuery));
             const optionalPromise = Promise.allSettled(getOptionalRequests(locationQuery));
 
@@ -444,7 +505,7 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
                 optionalPromise
             ]);
         } else {
-            // Must lookup first to get ID/validate city
+            // Must lookup first to get ID/validate city.
             lookupRes = await axios.get(`${qGeoUrl}/city/lookup`, {
                 params: { location: locationQuery, key: apiKey, lang: lang }
             });
@@ -497,7 +558,7 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
                 time: timeFormatter.format(new Date(item.fxTime)),
                 temperature: parseInt(item.temp),
                 condition: item.text,
-                icon: item.icon // QWeather icon code
+                icon: item.icon // QWeather icon code.
             });
         }
 
@@ -552,6 +613,16 @@ const fetchQWeather = async (city: string, apiKey: string, lang: 'zh' | 'en' = '
     }
 };
 
+/**
+ * Fetches weather data from a custom URL.
+ *
+ * @param {string} city - The city name.
+ * @param {string} url - The custom API URL.
+ * @param {string} [apiKey] - The optional API key.
+ * @param {'zh' | 'en'} [lang='zh'] - The language code.
+ * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
+ * @throws {Error} If the API request fails or response format is invalid.
+ */
 const fetchCustom = async (city: string, url: string, apiKey?: string, lang: 'zh' | 'en' = 'zh'): Promise<WeatherData> => {
     console.log('Using Custom API', lang);
     try {
@@ -564,7 +635,7 @@ const fetchCustom = async (city: string, url: string, apiKey?: string, lang: 'zh
         });
 
         const data = response.data;
-        // Basic validation to ensure it looks like WeatherData
+        // Basic validation to ensure it looks like WeatherData.
         if (!data.city || !data.temperature || !data.hourlyForecast || !data.dailyForecast) {
             throw new Error('Response does not match WeatherData interface');
         }
@@ -576,11 +647,22 @@ const fetchCustom = async (city: string, url: string, apiKey?: string, lang: 'zh
     }
 };
 
+/**
+ * Main function to fetch weather data from the configured or specified source.
+ * Handles caching, source selection, and fallback logic.
+ *
+ * @param {string} city - The city name.
+ * @param {string} [preferredSource] - Optionally override the configured source.
+ * @param {'zh' | 'en'} [lang='zh'] - The language code.
+ * @param {{ lat: number, lon: number }} [coords] - Optional coordinates for precise lookup.
+ * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
+ * @throws {Error} If no API key is configured or the fetch fails.
+ */
 export const getWeather = async (city: string, preferredSource?: string, lang: 'zh' | 'en' = 'zh', coords?: { lat: number, lon: number }): Promise<WeatherData> => {
     const settings = await getSettings();
     console.log('Current settings:', settings);
 
-    // Determine TTL (default 15 mins if 0 or undefined)
+    // Determine TTL (default 15 mins if 0 or undefined).
     const ttlMinutes = settings.autoRefreshInterval > 0 ? settings.autoRefreshInterval : 15;
     const ttl = ttlMinutes * 60 * 1000;
 
@@ -589,7 +671,7 @@ export const getWeather = async (city: string, preferredSource?: string, lang: '
         sourceToUse = 'custom';
     }
 
-    // Check cache
+    // Check cache.
     try {
         const cache = await getCache();
         const key = getCacheKey(city, sourceToUse, lang, coords);
@@ -616,7 +698,7 @@ export const getWeather = async (city: string, preferredSource?: string, lang: '
     if (sourceToUse === 'custom' && settings.customUrl) {
         weatherData = await fetchCustom(city, settings.customUrl, settings.apiKeys.custom, lang);
     } else {
-        // Cast sourceToUse to allow indexing if it matches one of the known keys
+        // Cast sourceToUse to allow indexing if it matches one of the known keys.
         if (sourceToUse && (sourceToUse in settings.apiKeys)) {
             const apiKey = settings.apiKeys[sourceToUse as keyof typeof settings.apiKeys];
 
@@ -642,7 +724,7 @@ export const getWeather = async (city: string, preferredSource?: string, lang: '
         }
     }
 
-    // Save to cache
+    // Save to cache.
     try {
         const cache = await getCache();
         const key = getCacheKey(city, sourceToUse, lang, coords);
@@ -652,7 +734,7 @@ export const getWeather = async (city: string, preferredSource?: string, lang: '
             lang,
             source: sourceToUse
         };
-        // Persist (fire and forget)
+        // Persist (fire and forget).
         storage.set(CACHE_KEY, cache).catch(e => console.error('Failed to save cache:', e));
     } catch (e) {
         console.warn('Failed to update cache:', e);
@@ -661,6 +743,9 @@ export const getWeather = async (city: string, preferredSource?: string, lang: '
     return weatherData;
 };
 
+/**
+ * Represents a result from a city search.
+ */
 export interface CityResult {
     name: string;
     region?: string;
@@ -670,6 +755,14 @@ export interface CityResult {
     id?: string; // For QWeather
 }
 
+/**
+ * Searches for cities using OpenWeatherMap.
+ *
+ * @param {string} query - The search query.
+ * @param {string} apiKey - The API key.
+ * @param {'zh' | 'en'} [lang='zh'] - The language code.
+ * @returns {Promise<CityResult[]>} A promise that resolves to an array of city results.
+ */
 const searchOpenWeatherMap = async (query: string, apiKey: string, lang: 'zh' | 'en' = 'zh'): Promise<CityResult[]> => {
     try {
         const response = await axios.get(`https://api.openweathermap.org/geo/1.0/direct`, {
@@ -692,6 +785,13 @@ const searchOpenWeatherMap = async (query: string, apiKey: string, lang: 'zh' | 
     }
 };
 
+/**
+ * Searches for cities using WeatherAPI.com.
+ *
+ * @param {string} query - The search query.
+ * @param {string} apiKey - The API key.
+ * @returns {Promise<CityResult[]>} A promise that resolves to an array of city results.
+ */
 const searchWeatherAPI = async (query: string, apiKey: string): Promise<CityResult[]> => {
     try {
         const response = await axios.get(`${WEATHERAPI_BASE_URL}/search.json`, {
@@ -713,6 +813,15 @@ const searchWeatherAPI = async (query: string, apiKey: string): Promise<CityResu
     }
 };
 
+/**
+ * Searches for cities using QWeather.
+ *
+ * @param {string} query - The search query.
+ * @param {string} apiKey - The API key.
+ * @param {'zh' | 'en'} [lang='zh'] - The language code.
+ * @param {string} [host] - Optional custom host.
+ * @returns {Promise<CityResult[]>} A promise that resolves to an array of city results.
+ */
 const searchQWeather = async (query: string, apiKey: string, lang: 'zh' | 'en' = 'zh', host?: string): Promise<CityResult[]> => {
     try {
         const { geo: qGeoUrl } = getQWeatherUrls(host);
@@ -739,6 +848,13 @@ const searchQWeather = async (query: string, apiKey: string, lang: 'zh' | 'en' =
 };
 
 
+/**
+ * Searches for cities based on the configured weather source.
+ *
+ * @param {string} query - The search query.
+ * @param {'zh' | 'en'} [lang='zh'] - The language code.
+ * @returns {Promise<CityResult[]>} A promise that resolves to an array of city results.
+ */
 export const searchCities = async (query: string, lang: 'zh' | 'en' = 'zh'): Promise<CityResult[]> => {
     const settings = await getSettings();
     if (!settings.source || !settings.apiKeys[settings.source]) return [];
@@ -757,10 +873,19 @@ export const searchCities = async (query: string, lang: 'zh' | 'en' = 'zh'): Pro
     }
 };
 
+/**
+ * Verifies the connection to a specific weather source using the provided API key.
+ *
+ * @param {string} source - The weather source to verify.
+ * @param {string} apiKey - The API key to test.
+ * @param {'zh' | 'en'} [lang='zh'] - The language code.
+ * @param {string} [host] - Optional custom host (for QWeather).
+ * @returns {Promise<boolean>} A promise that resolves to true if connection is successful, false otherwise.
+ */
 export const verifyConnection = async (source: string, apiKey: string, lang: 'zh' | 'en' = 'zh', host?: string): Promise<boolean> => {
     try {
         let result: any[] = [];
-        const testQuery = 'Beijing'; // Standard test city
+        const testQuery = 'Beijing'; // Standard test city.
 
         switch (source) {
             case 'openweathermap':
@@ -773,8 +898,8 @@ export const verifyConnection = async (source: string, apiKey: string, lang: 'zh
                 result = await searchQWeather(testQuery, apiKey, lang, host);
                 break;
             case 'custom':
-                // For custom, we can't easily test without a URL, but we assume it works if we can fetch
-                // We'll skip for now or require URL
+                // For custom, we can't easily test without a URL, but we assume it works if we can fetch.
+                // We'll skip for now or require URL.
                 return true;
             default:
                 throw new Error('Unknown source');
@@ -786,5 +911,3 @@ export const verifyConnection = async (source: string, apiKey: string, lang: 'zh
         return false;
     }
 };
-
-

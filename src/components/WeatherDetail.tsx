@@ -12,21 +12,38 @@ import { SectionConfig, DetailSectionId } from '../utils/config';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 import { getWeatherBackground, getWeatherCategory, WeatherCategory } from '../utils/weatherUtils';
 
+/**
+ * Props for the WeatherDetail component.
+ */
 interface WeatherDetailProps {
+    /** The weather data to display. */
     weather: WeatherData;
+    /** The time of the last data refresh. */
     lastRefreshTime?: Date | null;
+    /** Callback triggered when navigating back. */
     onBack: () => void;
+    /** Callback triggered when changing the weather data source for this city. */
     onSourceChange?: (source: string | undefined) => void;
+    /** Callback triggered to refresh the weather data. */
     onRefresh?: () => void;
+    /** Callback triggered to open the settings modal. */
     onOpenSettings?: () => void;
+    /** Configuration for the visibility and order of detail sections. */
     sections?: SectionConfig[];
+    /** Shared layout ID for Framer Motion animations. */
     layoutId?: string;
 }
 
 const DATE_SPLIT_REGEX = /[-/]/;
 
-// Get weather icon based on condition
-// Get weather icon based on condition
+/**
+ * Renders the appropriate weather icon based on the condition string.
+ *
+ * @param {object} props - Component props.
+ * @param {string} props.condition - The weather condition string.
+ * @param {string} [props.className] - Optional CSS classes.
+ * @returns {JSX.Element} The icon component.
+ */
 const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ condition, className = "text-6xl" }) => {
     const category = getWeatherCategory(condition);
     switch (category) {
@@ -43,14 +60,18 @@ const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ cond
     }
 };
 
-// Get AQI color and label
+/**
+ * Returns the tailwind text color class corresponding to the Air Quality Index (AQI).
+ *
+ * @param {number} aqi - The AQI value (1-5).
+ * @returns {string} The tailwind text color class.
+ */
 const getAqiColor = (aqi: number): string => {
     const colors = ['text-emerald-400', 'text-yellow-400', 'text-orange-400', 'text-red-400', 'text-purple-400', 'text-rose-900'];
     return colors[aqi - 1] || 'text-gray-400';
 };
 
-// Animation variants for staggered children
-// Animation variants for staggered children
+// Animation variants for staggered children.
 const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
@@ -62,7 +83,7 @@ const containerVariants: Variants = {
         }
     },
     exit: {
-        opacity: 1, // Keep container visible during shrink
+        opacity: 1, // Keep container visible during shrink.
         transition: {
             when: "afterChildren",
             duration: 0.2
@@ -81,7 +102,7 @@ const itemVariants: Variants = {
     exit: {
         opacity: 0,
         scale: 0.95,
-        transition: { duration: 0.1 } // Fast fade out on exit
+        transition: { duration: 0.1 } // Fast fade out on exit.
     }
 };
 
@@ -102,6 +123,13 @@ const sectionsContainerVariants: Variants = {
     }
 };
 
+/**
+ * Component for displaying detailed weather information for a specific city.
+ * Includes hourly/daily forecasts, air quality, stats, and sun/moon times.
+ *
+ * @param {WeatherDetailProps} props - The component props.
+ * @returns {JSX.Element} The weather detail view.
+ */
 const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
     weather,
     lastRefreshTime,
@@ -117,22 +145,22 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
     const [subMenu, setSubMenu] = useState<string | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const ticking = useRef(false);
-    // Removed scrollStyle state to prevent re-renders on scroll
+    // Removed scrollStyle state to prevent re-renders on scroll.
     const [isScrolled, setIsScrolled] = useState(false);
     const [isReady, setIsReady] = useState(false);
     const isTauriEnv = isTauri();
 
-    // Optimized: Defer heavy content rendering by a single tick
-    // This allows the initial shared layout animation frame to start immediately without jank
+    // Optimized: Defer heavy content rendering by a single tick.
+    // This allows the initial shared layout animation frame to start immediately without jank.
     useEffect(() => {
         const timer = setTimeout(() => {
             setIsReady(true);
-        }, 50); // Small 50ms delay is imperceptible but allows animation momentum to start
+        }, 50); // Small 50ms delay is imperceptible but allows animation momentum to start.
         return () => clearTimeout(timer);
     }, []);
 
 
-    // Optimized: Memoize daily forecast names to prevent expensive date parsing on every render
+    // Optimized: Memoize daily forecast names to prevent expensive date parsing on every render.
     const dailyForecastWithNames = useMemo(() => {
         if (!weather.dailyForecast) return [];
 
@@ -166,7 +194,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
         return t.aqi.levels[aqi - 1] || t.aqi.unknown;
     };
 
-    // Handle scroll-based background animation
+    // Handle scroll-based background animation.
     const handleScroll = useCallback(() => {
         if (!ticking.current) {
             window.requestAnimationFrame(() => {
@@ -183,7 +211,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
                 const shiftAngle = scrollPercent * 45;
                 const intensity = scrollPercent;
 
-                // Directly update CSS variables to avoid expensive re-renders
+                // Directly update CSS variables to avoid expensive re-renders.
                 container.style.setProperty('--scroll-shift', `${shiftAngle}deg`);
                 container.style.setProperty('--intensity', String(intensity));
 
@@ -262,7 +290,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
                                             <div
                                                 className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-400 to-amber-400 rounded-full opacity-80"
                                                 style={{
-                                                    left: '10%', // Ideally calculated based on min/max of the week
+                                                    left: '10%', // Ideally calculated based on min/max of the week.
                                                     right: '10%'
                                                 }}
                                             />
@@ -370,8 +398,8 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
         }
     };
 
-    // Determine sections to show
-    // If no sections prop is provided, show all in default order (backward compatibility/fallback)
+    // Determine sections to show.
+    // If no sections prop is provided, show all in default order (backward compatibility/fallback).
     const effectiveSections: SectionConfig[] = sections && sections.length > 0
         ? sections
         : [
@@ -384,7 +412,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
 
     return (
         <motion.div
-            layoutId={layoutId} // Hero transition linkage
+            layoutId={layoutId} // Hero transition linkage.
             initial="hidden"
             animate="visible"
             exit="exit"
@@ -620,7 +648,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
                 </motion.div>
 
                 {/* Dynamic Sections */}
-                {/* Dynamic Sections - Render only when ready */}
+                {/* Dynamic Sections - Render only when ready. */}
                 {isReady && (
                     <motion.div
                         variants={sectionsContainerVariants}
@@ -644,4 +672,3 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
 });
 
 export default WeatherDetail;
-
