@@ -4,11 +4,12 @@ import { AppSettings, getSettings, saveSettings, WeatherSource, SectionConfig } 
 import { useI18n } from '../contexts/I18nContext';
 import {
     FaTimes, FaSave, FaCog, FaGlobe, FaClock, FaDesktop,
-    FaSync, FaCloud, FaInfoCircle, FaGripLines, FaCheckSquare, FaSquare, FaList, FaGithub
+    FaSync, FaCloud, FaGripLines, FaCheckSquare, FaSquare, FaList, FaGithub
 } from 'react-icons/fa';
 import packageJson from '../../package.json';
 import { motion, Variants } from 'framer-motion';
 import ApiKeySettings from './ApiKeySettings';
+import { Select } from './ui/Select';
 
 /**
  * Props for the SettingsModal component.
@@ -239,41 +240,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
 
                     <div className="w-full h-px bg-white/5" />
 
-                    <div className="space-y-3 z-50 relative">
-                        <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                            <FaCloud /> {t.settings.weatherSource}
-                        </label>
-                        <div className="relative group">
-                            <button className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white text-left flex items-center justify-between transition-colors">
-                                <span>
-                                    {source === 'openweathermap' ? t.settings.openWeatherMap :
-                                        source === 'weatherapi' ? t.settings.weatherapi :
-                                            source === 'qweather' ? t.settings.qweather :
-                                                t.settings.custom}
-                                </span>
-                                <span className="text-xs opacity-50">▼</span>
-                            </button>
-                            <div className="absolute top-full left-0 right-0 mt-2 glass-dark rounded-2xl border border-white/10 shadow-2xl overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                                {[
-                                    { val: 'openweathermap', label: t.settings.openWeatherMap },
-                                    { val: 'weatherapi', label: t.settings.weatherapi },
-                                    { val: 'qweather', label: t.settings.qweather },
-                                    { val: 'custom', label: t.settings.custom }
-                                ].map((opt) => (
-                                    <button
-                                        key={opt.val}
-                                        onClick={() => setSource(opt.val as WeatherSource)}
-                                        className={`w-full px-4 py-3 text-left hover:bg-white/10 flex items-center justify-between
-                                            ${source === opt.val ? 'text-blue-300 bg-white/5' : 'text-white'}
-                                        `}
-                                    >
-                                        {opt.label}
-                                        {source === opt.val && <FaInfoCircle className="text-xs" />}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                    <Select
+                        label={t.settings.weatherSource}
+                        icon={<FaCloud />}
+                        value={source}
+                        onChange={(val) => setSource(val as WeatherSource)}
+                        options={[
+                            { value: 'openweathermap', label: t.settings.openWeatherMap },
+                            { value: 'weatherapi', label: t.settings.weatherapi },
+                            { value: 'qweather', label: t.settings.qweather },
+                            { value: 'custom', label: t.settings.custom }
+                        ]}
+                    />
 
                     {/* Custom URL Input */}
                     {source === 'custom' && (
@@ -313,37 +291,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                         </div>
                     )}
 
-                    {/* Time Format */}
-                    <div className="space-y-3 z-50 relative">
-                        <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                            <FaClock /> {t.settings.timeFormat}
-                        </label>
-                        <div className="relative group">
-                            <button className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white text-left flex items-center justify-between transition-colors">
-                                <span>
-                                    {timeFormat === '24h' ? t.settings.timeFormat24 : t.settings.timeFormat12}
-                                </span>
-                                <span className="text-xs opacity-50">▼</span>
-                            </button>
-                            <div className="absolute top-full left-0 right-0 mt-2 glass-dark rounded-2xl border border-white/10 shadow-2xl overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                                {[
-                                    { val: '24h', label: t.settings.timeFormat24 },
-                                    { val: '12h', label: t.settings.timeFormat12 }
-                                ].map((opt) => (
-                                    <button
-                                        key={opt.val}
-                                        onClick={() => setTimeFormat(opt.val as '24h' | '12h')}
-                                        className={`w-full px-4 py-3 text-left hover:bg-white/10 flex items-center justify-between
-                                            ${timeFormat === opt.val ? 'text-blue-300 bg-white/5' : 'text-white'}
-                                        `}
-                                    >
-                                        {opt.label}
-                                        {timeFormat === opt.val && <FaCheckSquare className="text-xs" />}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
 
                     {/* API Key Input */}
                     <ApiKeySettings
@@ -396,38 +343,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
 
                     <div className="w-full h-px bg-white/5" />
 
-                    {/* Auto Refresh Interval */}
-                    <div className="space-y-3 z-40 relative">
-                        <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                            <FaClock /> {t.settings.autoRefresh}
-                        </label>
-                        <div className="relative group">
-                            <button className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white text-left flex items-center justify-between transition-colors">
-                                <span>
-                                    {autoRefreshInterval === 0
-                                        ? t.settings.autoRefreshOff
-                                        : t.settings.autoRefreshMinutes.replace('{minutes}', String(autoRefreshInterval))}
-                                </span>
-                                <span className="text-xs opacity-50">▼</span>
-                            </button>
-                            <div className="absolute top-full left-0 right-0 mt-2 glass-dark rounded-2xl shadow-2xl overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 max-h-60 overflow-y-auto">
-                                {refreshOptions.map((mins) => (
-                                    <button
-                                        key={mins}
-                                        onClick={() => setAutoRefreshInterval(mins)}
-                                        className={`w-full px-4 py-3 text-left hover:bg-white/10 flex items-center justify-between
-                                            ${autoRefreshInterval === mins ? 'text-blue-300 bg-white/5' : 'text-white'}
-                                        `}
-                                    >
-                                        {mins === 0
-                                            ? t.settings.autoRefreshOff
-                                            : t.settings.autoRefreshMinutes.replace('{minutes}', String(mins))}
-                                        {autoRefreshInterval === mins && <FaInfoCircle className="text-xs opacity-0" />} {/* Spacer/Icon placeholder */}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                    <Select
+                        label={t.settings.autoRefresh}
+                        icon={<FaClock />}
+                        value={autoRefreshInterval}
+                        onChange={(val) => setAutoRefreshInterval(val as number)}
+                        options={refreshOptions.map(mins => ({
+                            value: mins,
+                            label: mins === 0
+                                ? t.settings.autoRefreshOff
+                                : t.settings.autoRefreshMinutes.replace('{minutes}', String(mins))
+                        }))}
+                        direction="up"
+                    />
 
                     {/* Startup View */}
                     <div className="space-y-3">
@@ -463,6 +391,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                             </button>
                         </div>
                     </div>
+
+                    <div className="w-full h-px bg-white/5" />
+
+                    <Select
+                        label={t.settings.timeFormat}
+                        icon={<FaClock />}
+                        value={timeFormat}
+                        onChange={(val) => setTimeFormat(val as '24h' | '12h')}
+                        options={[
+                            { value: '24h', label: t.settings.timeFormat24 },
+                            { value: '12h', label: t.settings.timeFormat12 }
+                        ]}
+                        direction="up"
+                    />
                 </div>
 
                 {/* Footer */}
