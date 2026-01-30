@@ -3,9 +3,9 @@
 ![Build Status](https://img.shields.io/github/actions/workflow/status/AirSodaz/weather-app/build.yml?style=flat-square)
 ![Version](https://img.shields.io/github/package-json/v/AirSodaz/weather-app?style=flat-square)
 ![License](https://img.shields.io/github/license/AirSodaz/weather-app?style=flat-square)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-blue?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android%20%7C%20Web-blue?style=flat-square)
 
-A modern, beautiful, and highly responsive weather application built with **Tauri 2.0**, **React**, and **Vite**. This application features a premium glassmorphism design, real-time weather updates, and detailed forecast information. It supports Windows, macOS, Linux, and Android.
+A modern, beautiful, and highly responsive weather application built with **Tauri 2.0**, **React**, and **Vite**. This application features a premium glassmorphism design, real-time weather updates, and detailed forecast information. It supports Windows, macOS, Linux, Android, and Web.
 
 ![App Screenshot](https://via.placeholder.com/800x450.png?text=App+Screenshot+Placeholder)
 
@@ -105,6 +105,16 @@ To build for Android:
 ```bash
 npm run tauri android build
 ```
+
+#### Web
+
+To build the application for the web:
+
+```bash
+npm run build
+```
+
+The output will be in the `dist` directory.
 
 ## CI/CD
 

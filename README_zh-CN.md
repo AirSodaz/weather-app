@@ -3,9 +3,9 @@
 ![Build Status](https://img.shields.io/github/actions/workflow/status/AirSodaz/weather-app/build.yml?style=flat-square)
 ![Version](https://img.shields.io/github/package-json/v/AirSodaz/weather-app?style=flat-square)
 ![License](https://img.shields.io/github/license/AirSodaz/weather-app?style=flat-square)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-blue?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android%20%7C%20Web-blue?style=flat-square)
 
-一个基于 **Tauri 2.0**、**React** 和 **Vite** 构建的现代、美观且响应式极佳的天气应用。该应用采用高级的玻璃拟态设计，提供实时天气更新和详细的预报信息。支持 Windows、macOS、Linux 和 Android。
+一个基于 **Tauri 2.0**、**React** 和 **Vite** 构建的现代、美观且响应式极佳的天气应用。该应用采用高级的玻璃拟态设计，提供实时天气更新和详细的预报信息。支持 Windows、macOS、Linux、Android 和 Web。
 
 ![App Screenshot](https://via.placeholder.com/800x450.png?text=App+Screenshot+Placeholder)
 
@@ -105,6 +105,16 @@ npm run tauri android dev
 ```bash
 npm run tauri android build
 ```
+
+#### Web
+
+构建 Web 应用程序：
+
+```bash
+npm run build
+```
+
+输出文件将位于 `dist` 目录中。
 
 ## CI/CD
 

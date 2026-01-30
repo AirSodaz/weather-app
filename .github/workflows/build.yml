@@ -7,10 +7,17 @@ on:
       - alpha
     tags:
       - 'v*'
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
 
 jobs:
-  build-tauri:
+  # Desktop builds (Windows, macOS, Linux)
+  build-desktop:
     permissions:
       contents: write
     strategy:
@@ -49,11 +56,109 @@ jobs:
       - name: Lint and Typecheck
         run: npm run lint
 
-      - name: Build and Release
+      - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v__VERSION__
-          releaseName: 'App v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
+          # Don't create release here, just build and upload artifacts
+          tagName: ''
+          releaseName: ''
+          releaseBody: ''
+          releaseDraft: false
+          prerelease: false
+
+  # Android build
+  build-android:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: setup java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: setup android sdk
+        uses: android-actions/setup-android@v3
+
+      - name: install rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: install frontend dependencies
+        run: npm install
+
+      - name: Lint and Typecheck
+        run: npm run lint
+
+      - name: install android ndk
+        run: sdkmanager --install "ndk;25.2.9519653"
+
+      - name: init android project
+        run: npm run tauri android init
+
+      - name: build android
+        run: npm run tauri android build --release
+        env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/25.2.9519653
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+
+  # Unified release - runs after all builds complete
+  release:
+    needs: [build-desktop, build-android]
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display downloaded artifacts
+        run: ls -R artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*.exe
+            artifacts/**/*.msi
+            artifacts/**/*.dmg
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb
+            artifacts/**/*.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
