@@ -3,7 +3,7 @@ import { getWeather, WeatherData } from '../services/weatherApi';
 import { getSettings, SectionConfig } from '../utils/config';
 import { FaCloud, FaTrash, FaCog, FaSync, FaInfoCircle, FaEllipsisV } from 'react-icons/fa';
 import WeatherDetail from './WeatherDetail';
-import WeatherCard from './WeatherCard';
+import SortableWeatherCard from './SortableWeatherCard';
 import SettingsModal from './SettingsModal';
 import SearchBar from './SearchBar';
 import { storage } from '../utils/storage';
@@ -12,6 +12,21 @@ import { getWeatherBackground } from '../utils/weatherUtils';
 import RelativeTime from './RelativeTime';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 import { processWithConcurrency } from '../utils/asyncUtils';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    rectSortingStrategy,
+} from '@dnd-kit/sortable';
 
 const dropdownVariants: Variants = {
     hidden: { opacity: 0, y: -10, scale: 0.95 },
@@ -106,16 +121,41 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         show: false, x: 0, y: 0, weather: null, subMenu: null
     });
     const [showMenu, setShowMenu] = useState(false);
-    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-    const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const ticking = useRef(false);
 
-    // Optimization: Use ref for draggedIndex to stabilize drag callbacks.
-    const draggedIndexRef = useRef<number | null>(null);
-    useEffect(() => {
-        draggedIndexRef.current = draggedIndex;
-    }, [draggedIndex]);
+    /**
+     * Sensors for handling drag interactions.
+     * Starts drag after 8px movement to prevent accidental activation.
+     */
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8, // 8px movement required before drag starts (prevents accidental drags on click)
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    /**
+     * Handles the end of a drag event to reorder the weather list.
+     * Updates both local state and persistent storage.
+     *
+     * @param event - The drag end event from dnd-kit.
+     */
+    const handleDragEnd = useCallback((event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (over && active.id !== over.id) {
+            const oldIndex = weatherList.findIndex((w) => w.city === active.id);
+            const newIndex = weatherList.findIndex((w) => w.city === over.id);
+            const newList = arrayMove(weatherList, oldIndex, newIndex);
+            setWeatherList(newList);
+            updateSavedCities(newList);
+        }
+    }, [weatherList]);
 
     // Removed refs and state for search suggestions.
 
@@ -341,7 +381,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             } else {
                 // Force refresh if language mismatch, format mismatch or cache is malformed.
                 if (cache) {
-                     console.log(`Cache mismatch/invalid. Lang: ${cache.lang}/${currentLanguage}, Format: ${cache.timeFormat}/${currentTimeFormat}`);
+                    console.log(`Cache mismatch/invalid. Lang: ${cache.lang}/${currentLanguage}, Format: ${cache.timeFormat}/${currentTimeFormat}`);
                 }
                 cachedWeather = null;
             }
@@ -685,9 +725,14 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         const { clientX, clientY } = e;
         const { innerWidth, innerHeight } = window;
 
-        // Determine quadrant
-        const isRight = clientX > innerWidth / 2;
-        const isBottom = clientY > innerHeight / 2;
+        // Estimated menu dimensions (adjust if menu size changes)
+        const menuWidth = 200;
+        const menuHeight = 150;
+        const padding = 3; // Safety margin from screen edge
+
+        // Check if menu would overflow screen boundaries
+        const isRight = clientX + menuWidth + padding > innerWidth;
+        const isBottom = clientY + menuHeight + padding > innerHeight;
 
         let menuStyle: React.CSSProperties = {};
 
@@ -744,56 +789,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         }
     }, [selectedCity, handleUpdateCitySource]);
 
-    // Drag and drop handlers.
-    const handleDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, index: number) => {
-        setDraggedIndex(index);
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', String(index));
-    }, []);
 
-    const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-    }, []);
-
-    const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>, index: number) => {
-        e.preventDefault();
-        const currentDraggedIndex = draggedIndexRef.current;
-        if (currentDraggedIndex !== null && currentDraggedIndex !== index) {
-            setDragOverIndex(index);
-        }
-    }, []);
-
-    const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        setDragOverIndex(null);
-    }, []);
-
-    const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
-        e.preventDefault();
-        const currentDraggedIndex = draggedIndexRef.current;
-        if (currentDraggedIndex === null || currentDraggedIndex === dropIndex) {
-            setDraggedIndex(null);
-            setDragOverIndex(null);
-            return;
-        }
-
-        // Use ref instead of state dependency to keep handleDrop stable.
-        const currentList = weatherListRef.current;
-        const newList = [...currentList];
-        const [draggedItem] = newList.splice(currentDraggedIndex, 1);
-        newList.splice(dropIndex, 0, draggedItem);
-
-        setWeatherList(newList);
-        await updateSavedCities(newList);
-        setDraggedIndex(null);
-        setDragOverIndex(null);
-    }, []);
-
-    const handleDragEnd = useCallback(() => {
-        setDraggedIndex(null);
-        setDragOverIndex(null);
-    }, []);
 
     return (
         <div
@@ -887,29 +883,30 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             }
 
             {/* Weather Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4 pb-4">
-                <AnimatePresence mode='popLayout'>
-                    {weatherList.map((weather, index) => (
-                        <WeatherCard
-                            key={weather.city}
-                            layoutId={`weather-card-${weather.city}`}
-                            weather={weather}
-                            index={index}
-                            draggable={true}
-                            onClick={handleCardClick}
-                            onContextMenu={handleCardContextMenu}
-                            onDragStart={handleDragStart}
-                            onDragOver={handleDragOver}
-                            onDragEnter={handleDragEnter}
-                            onDragLeave={handleDragLeave}
-                            onDrop={handleDrop}
-                            onDragEnd={handleDragEnd}
-                            isDragging={draggedIndex === index}
-                            isDragOver={dragOverIndex === index}
-                        />
-                    ))}
-                </AnimatePresence>
-            </div>
+            <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+            >
+                <SortableContext
+                    items={weatherList.map(w => w.city)}
+                    strategy={rectSortingStrategy}
+                >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4 pb-4">
+                        <AnimatePresence mode='popLayout'>
+                            {weatherList.map((weather, index) => (
+                                <SortableWeatherCard
+                                    key={weather.city}
+                                    weather={weather}
+                                    index={index}
+                                    onClick={handleCardClick}
+                                    onContextMenu={handleCardContextMenu}
+                                />
+                            ))}
+                        </AnimatePresence>
+                    </div>
+                </SortableContext>
+            </DndContext>
 
             {
                 !loading && weatherList.length === 0 && (
