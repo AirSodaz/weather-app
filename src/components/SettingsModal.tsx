@@ -65,6 +65,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
     const [autoRefreshInterval, setAutoRefreshInterval] = useState(0);
     const [startupView, setStartupView] = useState<'home' | 'detail'>('detail');
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
+    const [timeFormat, setTimeFormat] = useState<'24h' | '12h'>('24h');
     const [loading, setLoading] = useState(false);
 
     // Drag and drop state.
@@ -91,6 +92,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
         setAutoRefreshInterval(settings.autoRefreshInterval || 0);
         setStartupView(settings.startupView || 'detail');
         setDetailViewSections(settings.detailViewSections || []);
+        setTimeFormat(settings.timeFormat || '24h');
         setLoading(false);
     };
 
@@ -106,7 +108,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
             apiKeys: apiKeysRef.current,
             autoRefreshInterval,
             startupView,
-            detailViewSections
+            detailViewSections,
+            timeFormat
         };
         await saveSettings(newSettings);
         setLanguage(localLanguage);
@@ -309,6 +312,38 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                             <p id="settings-qweather-host-help" className="text-[10px] text-white/30">{t.settings.qweatherHostHelp}</p>
                         </div>
                     )}
+
+                    {/* Time Format */}
+                    <div className="space-y-3 z-50 relative">
+                        <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
+                            <FaClock /> {t.settings.timeFormat}
+                        </label>
+                        <div className="relative group">
+                            <button className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white text-left flex items-center justify-between transition-colors">
+                                <span>
+                                    {timeFormat === '24h' ? t.settings.timeFormat24 : t.settings.timeFormat12}
+                                </span>
+                                <span className="text-xs opacity-50">▼</span>
+                            </button>
+                            <div className="absolute top-full left-0 right-0 mt-2 glass-dark rounded-2xl border border-white/10 shadow-2xl overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                {[
+                                    { val: '24h', label: t.settings.timeFormat24 },
+                                    { val: '12h', label: t.settings.timeFormat12 }
+                                ].map((opt) => (
+                                    <button
+                                        key={opt.val}
+                                        onClick={() => setTimeFormat(opt.val as '24h' | '12h')}
+                                        className={`w-full px-4 py-3 text-left hover:bg-white/10 flex items-center justify-between
+                                            ${timeFormat === opt.val ? 'text-blue-300 bg-white/5' : 'text-white'}
+                                        `}
+                                    >
+                                        {opt.label}
+                                        {timeFormat === opt.val && <FaCheckSquare className="text-xs" />}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
 
                     {/* API Key Input */}
                     <ApiKeySettings

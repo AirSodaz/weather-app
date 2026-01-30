@@ -43,6 +43,8 @@ export interface AppSettings {
     startupView: 'home' | 'detail';
     /** Configuration for the order and visibility of detail view sections. */
     detailViewSections: SectionConfig[];
+    /** Preferred time format. */
+    timeFormat: '24h' | '12h';
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -61,7 +63,8 @@ const DEFAULT_SETTINGS: AppSettings = {
         { id: 'airQuality', visible: true },
         { id: 'stats', visible: true },
         { id: 'sunrise', visible: true }
-    ]
+    ],
+    timeFormat: '24h'
 };
 
 /**
