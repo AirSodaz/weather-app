@@ -1,6 +1,13 @@
 # Weather App
 
+![Build Status](https://img.shields.io/github/actions/workflow/status/AirSodaz/weather-app/build.yml?style=flat-square)
+![Version](https://img.shields.io/github/package-json/v/AirSodaz/weather-app?style=flat-square)
+![License](https://img.shields.io/github/license/AirSodaz/weather-app?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-blue?style=flat-square)
+
 A modern, beautiful, and highly responsive weather application built with **Tauri 2.0**, **React**, and **Vite**. This application features a premium glassmorphism design, real-time weather updates, and detailed forecast information. It supports Windows, macOS, Linux, and Android.
+
+![App Screenshot](https://via.placeholder.com/800x450.png?text=App+Screenshot+Placeholder)
 
 [English](README.md) | [简体中文](README_zh-CN.md)
 
@@ -26,6 +33,18 @@ A modern, beautiful, and highly responsive weather application built with **Taur
   - Startup view preferences (Dashboard vs. Last Viewed City).
   - Customizable detail view sections.
   - Custom API Host support.
+
+## Configuration
+
+To use the weather features, you need to configure an API key for your preferred weather provider.
+
+1.  Open the application settings.
+2.  Select your weather source:
+    *   **OpenWeatherMap**: Requires an API key from [openweathermap.org](https://openweathermap.org/).
+    *   **WeatherAPI**: Requires an API key from [weatherapi.com](https://www.weatherapi.com/).
+    *   **QWeather**: Requires an API key from [qweather.com](https://www.qweather.com/).
+    *   **Custom**: Allows you to connect to a compatible custom API endpoint.
+3.  Enter your API key and save.
 
 ## Tech Stack
 
