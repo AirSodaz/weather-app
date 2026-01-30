@@ -1,6 +1,13 @@
 # Weather App
 
+![Build Status](https://img.shields.io/github/actions/workflow/status/AirSodaz/weather-app/build.yml?style=flat-square)
+![Version](https://img.shields.io/github/package-json/v/AirSodaz/weather-app?style=flat-square)
+![License](https://img.shields.io/github/license/AirSodaz/weather-app?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-blue?style=flat-square)
+
 一个基于 **Tauri 2.0**、**React** 和 **Vite** 构建的现代、美观且响应式极佳的天气应用。该应用采用高级的玻璃拟态设计，提供实时天气更新和详细的预报信息。支持 Windows、macOS、Linux 和 Android。
+
+![App Screenshot](https://via.placeholder.com/800x450.png?text=App+Screenshot+Placeholder)
 
 [English](README.md) | [简体中文](README_zh-CN.md)
 
@@ -26,6 +33,18 @@
   - 启动视图偏好设置（仪表盘 vs 最后查看的城市）。
   - 可自定义的详情视图板块。
   - 支持自定义 API Host。
+
+## 配置
+
+要使用天气功能，您需要为您首选的天气提供商配置 API 密钥。
+
+1.  打开应用设置。
+2.  选择您的天气数据源：
+    *   **OpenWeatherMap**: 需要来自 [openweathermap.org](https://openweathermap.org/) 的 API 密钥。
+    *   **WeatherAPI**: 需要来自 [weatherapi.com](https://www.weatherapi.com/) 的 API 密钥。
+    *   **QWeather**: 需要来自 [qweather.com](https://www.qweather.com/) 的 API 密钥。
+    *   **Custom**: 允许您连接到兼容的自定义 API 端点。
+3.  输入您的 API 密钥并保存。
 
 ## 技术栈
 
