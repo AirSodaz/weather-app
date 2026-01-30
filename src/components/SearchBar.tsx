@@ -10,11 +10,25 @@ const dropdownVariants: Variants = {
     exit: { opacity: 0, y: -5, scale: 0.95, transition: { duration: 0.15 } }
 };
 
+/**
+ * Props for the SearchBar component.
+ */
 interface SearchBarProps {
+    /**
+     * Callback triggered when a search is submitted or a suggestion is selected.
+     * Should return a promise resolving to true if successful, false otherwise.
+     */
     onSearch: (city: string) => Promise<boolean>;
+    /** Callback triggered when the "Use Current Location" option is selected. */
     onLocationRequest: () => void;
 }
 
+/**
+ * A search bar component with autocomplete suggestions and geolocation support.
+ *
+ * @param {SearchBarProps} props - The component props.
+ * @returns {JSX.Element} The search bar component.
+ */
 const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest }) => {
     const { t, currentLanguage } = useI18n();
     const [searchCity, setSearchCity] = useState('');
@@ -23,7 +37,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest }) =>
     const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const searchRef = useRef<HTMLDivElement>(null);
 
-    // Close suggestions when clicking outside
+    // Close suggestions when clicking outside.
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -36,7 +50,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest }) =>
         };
     }, []);
 
-    // Debounced search for suggestions
+    // Debounced search for suggestions.
     useEffect(() => {
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);

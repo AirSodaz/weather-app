@@ -3,15 +3,31 @@ import { FaKey, FaSync } from 'react-icons/fa';
 import { WeatherSource } from '../utils/config';
 import { verifyConnection } from '../services/weatherApi';
 
+/**
+ * Props for the ApiKeySettings component.
+ */
 interface ApiKeySettingsProps {
+    /** The active weather source (e.g., 'openweathermap'). */
     source: WeatherSource;
+    /** The current API key value. */
     initialValue: string;
+    /** Callback triggered when the API key changes. */
     onChange: (value: string) => void;
+    /** Translation object. */
     t: any;
+    /** Current language code. */
     localLanguage: string;
+    /** Optional custom host for QWeather. */
     qweatherHost: string;
 }
 
+/**
+ * Component for managing API keys for different weather sources.
+ * Includes functionality to test the API connection.
+ *
+ * @param {ApiKeySettingsProps} props - The component props.
+ * @returns {JSX.Element} The API key settings component.
+ */
 const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
     source,
     initialValue,
@@ -28,6 +44,11 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
         setValue(initialValue);
     }, [initialValue]);
 
+    /**
+     * Handles input changes and clears previous test results.
+     *
+     * @param {React.ChangeEvent<HTMLInputElement>} e - The change event.
+     */
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = e.target.value;
         setValue(newValue);
@@ -35,6 +56,9 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
         if (testResult) setTestResult(null);
     };
 
+    /**
+     * Tests the API connection using the current key and source.
+     */
     const handleTestConnection = async () => {
         if (!value) return;
 
@@ -52,7 +76,12 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
         }
     };
 
-    const getApiKeyHelp = () => {
+    /**
+     * Returns the help URL for retrieving an API key for the current source.
+     *
+     * @returns {string} The URL.
+     */
+    const getApiKeyHelp = (): string => {
         switch (source) {
             case 'openweathermap':
                 return 'https://openweathermap.org/';

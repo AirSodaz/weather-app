@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { VscChromeMinimize, VscChromeMaximize, VscChromeClose, VscChromeRestore } from 'react-icons/vsc';
 import { isTauri } from '../utils/env';
 
+/**
+ * Custom title bar component for Tauri applications.
+ * Handles window dragging and window controls (minimize, maximize, close).
+ * Only renders when running in a Tauri desktop environment (hides on Web and Android).
+ *
+ * @returns {JSX.Element | null} The title bar element or null if not applicable.
+ */
 const TitleBar: React.FC = () => {
     const [isMaximized, setIsMaximized] = useState(false);
 
@@ -14,10 +21,10 @@ const TitleBar: React.FC = () => {
             try {
                 const { getCurrentWindow } = await import('@tauri-apps/api/window');
                 const win = getCurrentWindow();
-                // Check initial state
+                // Check initial state.
                 setIsMaximized(await win.isMaximized());
 
-                // Listen for resize events to update state
+                // Listen for resize events to update state.
                 const unlistenResize = await win.onResized(async () => {
                     setIsMaximized(await win.isMaximized());
                 });
@@ -34,7 +41,7 @@ const TitleBar: React.FC = () => {
         };
     }, []);
 
-    // Only show TitleBar in Tauri desktop environment, not on Android
+    // Only show TitleBar in Tauri desktop environment, not on Android.
     const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
     if (!isTauri() || isAndroid) {
         return null;
