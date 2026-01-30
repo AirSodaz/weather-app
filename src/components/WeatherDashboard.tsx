@@ -358,8 +358,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                             const source = typeof item === 'string' ? undefined : item.source;
                             const coords = typeof item === 'string' ? undefined : (item.lat && item.lon ? { lat: item.lat, lon: item.lon } : undefined);
                             try {
-                                // Optimization: Skip forecast for list view
-                                const data = await getWeather(cityName, source, currentLanguage, coords, { skipForecast: true });
+                                const data = await getWeather(cityName, source, currentLanguage, coords);
                                 return { ...data, sourceOverride: source };
                             } catch (e) {
                                 console.error(`Failed to load weather for ${cityName}`, e);
@@ -477,8 +476,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                         const source = (weather as any).sourceOverride;
                         // Use coords from weather data if available
                         const coords = (weather.lat && weather.lon) ? { lat: weather.lat, lon: weather.lon } : undefined;
-                        // Optimization: Skip forecast for list refresh
-                        const newData = await getWeather(weather.city, source, currentLanguage, coords, { skipForecast: true });
+                        const newData = await getWeather(weather.city, source, currentLanguage, coords);
                         return { ...newData, sourceOverride: source };
                     } catch (e) {
                         console.error(`Failed to refresh weather for ${weather.city}`, e);
@@ -512,8 +510,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                             return weather;
                         }
                         const coords = (weather.lat && weather.lon) ? { lat: weather.lat, lon: weather.lon } : undefined;
-                        // Optimization: Skip forecast for list refresh
-                        const newData = await getWeather(weather.city, undefined, currentLanguage, coords, { skipForecast: true });
+                        const newData = await getWeather(weather.city, undefined, currentLanguage, coords);
                         return { ...newData, sourceOverride: undefined };
                     } catch (e) {
                         console.error(`Failed to refresh weather for ${weather.city}`, e);
@@ -547,8 +544,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         }
 
         try {
-            // Optimization: Skip forecast for search result list
-            const data = await getWeather(city, undefined, currentLanguage, undefined, { skipForecast: true });
+            const data = await getWeather(city, undefined, currentLanguage);
             const newList = [...weatherList, data];
             setWeatherList(newList);
             await updateSavedCities(newList);
@@ -569,8 +565,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             async (position) => {
                 try {
                     const { latitude, longitude } = position.coords;
-                    // Optimization: Skip forecast for location add
-                    const data = await getWeather('', undefined, currentLanguage, { lat: latitude, lon: longitude }, { skipForecast: true });
+                    const data = await getWeather('', undefined, currentLanguage, { lat: latitude, lon: longitude });
 
                     if (weatherList.some(w => w.city.toLowerCase() === data.city.toLowerCase())) {
                         setError(t.search.cityExists);
@@ -639,31 +634,9 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     };
 
     const handleCardClick = useCallback((weather: WeatherData) => {
-        // Check if we need to fetch full data (if forecast is missing)
-        const hasForecast = weather.hourlyForecast && weather.hourlyForecast.length > 0;
-
-        if (!hasForecast) {
-            // Optimistically set selected city to show what we have
-            setSelectedCity(weather);
-            window.history.pushState({ city: weather.city }, '', '');
-
-            // Fetch full data in background
-            const coords = (weather.lat && weather.lon) ? { lat: weather.lat, lon: weather.lon } : undefined;
-            getWeather(weather.city, weather.sourceOverride, currentLanguage, coords, { skipForecast: false })
-                .then(fullData => {
-                    const newData = { ...fullData, sourceOverride: weather.sourceOverride };
-                    // Update selected city if it's still the same city
-                    setSelectedCity(prev => (prev && prev.city === newData.city) ? newData : prev);
-
-                    // Update list with full data so next click is instant
-                    setWeatherList(prev => prev.map(w => w.city === newData.city ? newData : w));
-                })
-                .catch(e => console.error("Failed to fetch full details", e));
-        } else {
-            setSelectedCity(weather);
-            window.history.pushState({ city: weather.city }, '', '');
-        }
-    }, [currentLanguage]);
+        setSelectedCity(weather);
+        window.history.pushState({ city: weather.city }, '', '');
+    }, []);
 
     const handleCardContextMenu = useCallback((e: React.MouseEvent, weather: WeatherData) => {
         e.preventDefault();
