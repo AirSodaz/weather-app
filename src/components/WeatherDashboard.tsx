@@ -351,6 +351,8 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                         currentList = new Array(savedData.length).fill(null);
                     }
 
+                    let completedCount = 0;
+
                     results = await processWithConcurrency(
                         savedData,
                         async (item) => {
@@ -368,10 +370,14 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                         5, // Limit concurrency to 5
                         (result, index) => {
                             currentList[index] = result;
-                            
+                            completedCount++;
+
                             // Only set state with valid items to avoid empty holes in UI
-                            const validSoFar = currentList.filter(w => w !== null) as WeatherData[];
-                            setWeatherList(validSoFar);
+                            // Batch updates to reduce re-renders: update every 5 items or on the last one
+                            if (completedCount % 5 === 0 || completedCount === savedData.length) {
+                                const validSoFar = currentList.filter(w => w !== null) as WeatherData[];
+                                setWeatherList(validSoFar);
+                            }
                         }
                     );
 
