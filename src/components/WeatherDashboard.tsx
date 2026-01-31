@@ -547,71 +547,93 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         loadSavedCities();
     }, [currentLanguage]);
 
-    const refreshAllCities = useCallback(async () => {
-        if (weatherList.length === 0 || refreshing) return;
+    const refreshCitiesGeneric = useCallback(async (
+        listToRefresh: WeatherData[],
+        transform: (weather: WeatherData) => Promise<WeatherData>,
+        onComplete?: (results: WeatherData[]) => Promise<void>
+    ) => {
+        if (listToRefresh.length === 0 || refreshing) return;
 
         setRefreshing(true);
+        let pendingUpdates: WeatherData[] = [];
+        let completedCount = 0;
+
         try {
             const results = await processWithConcurrency(
-                weatherList,
-                async (weather) => {
-                    try {
-                        const source = (weather as any).sourceOverride;
-                        // Use coords from weather data if available.
-                        const coords = (weather.lat && weather.lon) ? { lat: weather.lat, lon: weather.lon } : undefined;
-                        const newData = await getWeather(weather.city, source, currentLanguage, coords);
-                        return { ...newData, sourceOverride: source };
-                    } catch (e) {
-                        console.error(`Failed to refresh weather for ${weather.city}`, e);
-                        return weather; // Keep old data on error.
-                    }
-                },
+                listToRefresh,
+                transform,
                 5,
                 (result) => {
-                    setWeatherList(prev => prev.map(w => w.city === result.city ? result : w));
+                    pendingUpdates.push(result);
+                    completedCount++;
+
+                    if (completedCount % 5 === 0) {
+                        const updatesToApply = [...pendingUpdates];
+                        pendingUpdates = [];
+                        setWeatherList(prev => {
+                            const updateMap = new Map(updatesToApply.map(u => [u.city, u]));
+                            return prev.map(w => updateMap.get(w.city) || w);
+                        });
+                    }
                 }
             );
-            setWeatherList(results);
+
+            if (pendingUpdates.length > 0) {
+                setWeatherList(prev => {
+                    const updateMap = new Map(pendingUpdates.map(u => [u.city, u]));
+                    return prev.map(w => updateMap.get(w.city) || w);
+                });
+            }
             setLastRefreshTime(new Date());
+
+            if (onComplete) {
+                await onComplete(results);
+            }
         } finally {
             setRefreshing(false);
         }
-    }, [weatherList, refreshing, currentLanguage]);
+    }, [refreshing]);
+
+    const refreshAllCities = useCallback(async () => {
+        await refreshCitiesGeneric(weatherList, async (weather) => {
+            try {
+                const source = (weather as any).sourceOverride;
+                // Use coords from weather data if available.
+                const coords = (weather.lat && weather.lon) ? { lat: weather.lat, lon: weather.lon } : undefined;
+                const newData = await getWeather(weather.city, source, currentLanguage, coords);
+                return { ...newData, sourceOverride: source };
+            } catch (e) {
+                console.error(`Failed to refresh weather for ${weather.city}`, e);
+                return weather; // Keep old data on error.
+            }
+        }, undefined);
+    }, [weatherList, refreshCitiesGeneric, currentLanguage]);
 
     const refreshDefaultSourceCities = useCallback(async () => {
-        if (weatherList.length === 0 || refreshing) return;
-
-        setRefreshing(true);
-        try {
-            const results = await processWithConcurrency(
-                weatherList,
-                async (weather) => {
-                    try {
-                        const source = (weather as any).sourceOverride;
-                        if (source) {
-                            // Don't refresh if source is manually set.
-                            return weather;
-                        }
-                        const coords = (weather.lat && weather.lon) ? { lat: weather.lat, lon: weather.lon } : undefined;
-                        const newData = await getWeather(weather.city, undefined, currentLanguage, coords);
-                        return { ...newData, sourceOverride: undefined };
-                    } catch (e) {
-                        console.error(`Failed to refresh weather for ${weather.city}`, e);
-                        return weather;
-                    }
-                },
-                5,
-                (result) => {
-                    setWeatherList(prev => prev.map(w => w.city === result.city ? result : w));
+        await refreshCitiesGeneric(weatherList, async (weather) => {
+            try {
+                const source = (weather as any).sourceOverride;
+                if (source) {
+                    // Don't refresh if source is manually set.
+                    return weather;
                 }
+                const coords = (weather.lat && weather.lon) ? { lat: weather.lat, lon: weather.lon } : undefined;
+                const newData = await getWeather(weather.city, undefined, currentLanguage, coords);
+                return { ...newData, sourceOverride: undefined };
+            } catch (e) {
+                console.error(`Failed to refresh weather for ${weather.city}`, e);
+                return weather;
+            }
+        }, async (results) => {
+            // Safely update saved cities respecting concurrent deletions/additions
+            // by merging results into the current list ref.
+            const resultsMap = new Map(results.map(r => [r.city, r]));
+            const listToSave = weatherListRef.current.map(current =>
+                resultsMap.get(current.city) || current
             );
-            setWeatherList(results);
-            setLastRefreshTime(new Date());
-            await updateSavedCities(results);
-        } finally {
-            setRefreshing(false);
-        }
-    }, [weatherList, refreshing, currentLanguage]);
+            await updateSavedCities(listToSave);
+        });
+    }, [weatherList, refreshCitiesGeneric, currentLanguage]);
 
     const handleSearch = async (city: string): Promise<boolean> => {
         if (!city.trim()) return false;
