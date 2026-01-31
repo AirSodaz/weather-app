@@ -153,9 +153,28 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: false
 
       - name: Display downloaded artifacts
         run: ls -R artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release-files
+          # Copy and rename Android APK
+          if [ -f artifacts/android-apk/app-universal-release-unsigned.apk ]; then
+            cp artifacts/android-apk/app-universal-release-unsigned.apk release-files/weather-app-${{ github.ref_name }}-android.apk
+          fi
+          # Copy Windows files
+          find artifacts/desktop-windows-latest -name "*.exe" -exec cp {} release-files/ \; 2>/dev/null || true
+          find artifacts/desktop-windows-latest -name "*.msi" -exec cp {} release-files/ \; 2>/dev/null || true
+          # Copy macOS files
+          find artifacts/desktop-macos-latest -name "*.dmg" -exec cp {} release-files/ \; 2>/dev/null || true
+          # Copy Linux files
+          find artifacts/desktop-ubuntu-latest -name "*.AppImage" -exec cp {} release-files/ \; 2>/dev/null || true
+          find artifacts/desktop-ubuntu-latest -name "*.deb" -exec cp {} release-files/ \; 2>/dev/null || true
+          echo "=== Release files ==="
+          ls -la release-files/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -172,13 +191,7 @@ jobs:
             
             ### Mobile
             - **Android**: `.apk`
-          files: |
-            artifacts/**/*.exe
-            artifacts/**/*.msi
-            artifacts/**/*.dmg
-            artifacts/**/*.AppImage
-            artifacts/**/*.deb
-            artifacts/**/*.apk
+          files: release-files/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
