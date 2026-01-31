@@ -78,7 +78,7 @@ const updateSavedCities = async (list: WeatherData[]) => {
         lat: w.lat,
         lon: w.lon
     }));
-    await storage.set('savedCities', savedCities);
+    await storage.setAsync('savedCities', savedCities);
 };
 
 /**
@@ -235,7 +235,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     // Persist lastRefreshTime.
     useEffect(() => {
         if (lastRefreshTime) {
-            storage.set('lastRefreshTime', lastRefreshTime.toISOString());
+            storage.setAsync('lastRefreshTime', lastRefreshTime.toISOString());
         }
     }, [lastRefreshTime]);
 
@@ -243,7 +243,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     useEffect(() => {
         const saveLastViewed = async () => {
             if (selectedCity) {
-                await storage.set('lastViewedCity', {
+                await storage.setAsync('lastViewedCity', {
                     name: selectedCity.city,
                     source: selectedCity.sourceOverride
                 });
