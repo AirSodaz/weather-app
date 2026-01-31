@@ -1,6 +1,6 @@
 {
     "productName": "Weather App",
-    "version": "0.2.0",
+    "version": "0.2.2",
     "identifier": "com.airsodaz.weatherapp",
     "build": {
         "beforeDevCommand": "npm run react:dev",
