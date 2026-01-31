@@ -449,6 +449,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
                             setShowMenu(!showMenu);
                         }}
                         className="p-4 glass-card rounded-full text-white transition-all hover:bg-white/20 hover:scale-105 active:scale-95"
+                        aria-label="More actions"
                     >
                         <FaEllipsisV className="text-xl" />
                     </button>
