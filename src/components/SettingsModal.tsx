@@ -235,6 +235,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                                 <button
                                     key={opt.val}
                                     onClick={() => setLocalLanguage(opt.val as any)}
+                                    aria-pressed={localLanguage === opt.val}
                                     className={`
                                         py-2 rounded-lg text-sm font-medium transition-all
                                         ${localLanguage === opt.val ? 'bg-white/10 text-white shadow-sm' : 'text-white/50 hover:text-white/80'}
@@ -341,6 +342,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                                     <button
                                         onClick={() => toggleSectionVisibility(index)}
                                         className="text-white/70 hover:text-white transition-colors p-1"
+                                        aria-label={section.visible
+                                            ? `Hide ${t.detailSections?.[section.id] || section.id}`
+                                            : `Show ${t.detailSections?.[section.id] || section.id}`
+                                        }
                                     >
                                         {section.visible ? <FaCheckSquare className="text-blue-400" /> : <FaSquare className="text-white/20" />}
                                     </button>
@@ -378,6 +383,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                                 <button
                                     key={opt.val}
                                     onClick={() => setStartupView(opt.val)}
+                                    aria-pressed={startupView === opt.val}
                                     className={`
                                         py-2 rounded-lg text-sm font-medium transition-all
                                         ${startupView === opt.val ? 'bg-white/10 text-white shadow-sm' : 'text-white/50 hover:text-white/80'}
@@ -418,6 +424,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                                 <button
                                     key={String(opt.val)}
                                     onClick={() => setEnableHardwareAcceleration(opt.val)}
+                                    aria-pressed={enableHardwareAcceleration === opt.val}
                                     className={`
                                         py-2 rounded-lg text-sm font-medium transition-all
                                         ${enableHardwareAcceleration === opt.val ? 'bg-white/10 text-white shadow-sm' : 'text-white/50 hover:text-white/80'}
