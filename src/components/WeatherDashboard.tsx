@@ -840,6 +840,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                             setShowMenu(!showMenu);
                         }}
                         className="p-4 glass-card rounded-full text-white transition-all hover:bg-white/20 hover:scale-105 active:scale-95 border border-white/10"
+                        aria-label="Main menu"
                     >
                         <FaEllipsisV className="text-xl" />
                     </button>
