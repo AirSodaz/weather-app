@@ -45,6 +45,8 @@ export interface AppSettings {
     detailViewSections: SectionConfig[];
     /** Preferred time format. */
     timeFormat: '24h' | '12h';
+    /** Whether to enable hardware acceleration for animations. */
+    enableHardwareAcceleration: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -64,7 +66,8 @@ const DEFAULT_SETTINGS: AppSettings = {
         { id: 'stats', visible: true },
         { id: 'sunrise', visible: true }
     ],
-    timeFormat: '24h'
+    timeFormat: '24h',
+    enableHardwareAcceleration: true
 };
 
 /**

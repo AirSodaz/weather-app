@@ -4,7 +4,7 @@ import { AppSettings, getSettings, saveSettings, WeatherSource, SectionConfig } 
 import { useI18n } from '../contexts/I18nContext';
 import {
     FaTimes, FaSave, FaCog, FaGlobe, FaClock, FaDesktop,
-    FaSync, FaCloud, FaGripLines, FaCheckSquare, FaSquare, FaList, FaGithub
+    FaSync, FaCloud, FaGripLines, FaCheckSquare, FaSquare, FaList, FaGithub, FaBolt
 } from 'react-icons/fa';
 import packageJson from '../../package.json';
 import { motion, Variants } from 'framer-motion';
@@ -67,6 +67,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
     const [startupView, setStartupView] = useState<'home' | 'detail'>('detail');
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
     const [timeFormat, setTimeFormat] = useState<'24h' | '12h'>('24h');
+    const [enableHardwareAcceleration, setEnableHardwareAcceleration] = useState(true);
     const [loading, setLoading] = useState(false);
 
     // Drag and drop state.
@@ -94,6 +95,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
         setStartupView(settings.startupView || 'detail');
         setDetailViewSections(settings.detailViewSections || []);
         setTimeFormat(settings.timeFormat || '24h');
+        setEnableHardwareAcceleration(settings.enableHardwareAcceleration ?? true);
         setLoading(false);
     };
 
@@ -110,7 +112,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
             autoRefreshInterval,
             startupView,
             detailViewSections,
-            timeFormat
+            timeFormat,
+            enableHardwareAcceleration
         };
         await saveSettings(newSettings);
         setLanguage(localLanguage);
@@ -194,6 +197,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                 className="glass-dark border-0 sm:border border-white/10 
                 rounded-none sm:rounded-3xl w-full h-full sm:h-auto sm:max-w-md sm:max-h-[90vh] 
                 shadow-2xl overflow-hidden flex flex-col"
+                style={{
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                    transform: 'translateZ(0)',
+                }}
             >
                 {/* Header */}
                 <div className="flex justify-between items-center p-6 border-b border-white/5 flex-shrink-0">
@@ -362,33 +370,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                         <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
                             <FaDesktop /> {t.settings.startupView}
                         </label>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button
-                                onClick={() => setStartupView('detail')}
-                                className={`
-                                    p-3 rounded-xl text-left border transition-all flex flex-col gap-1
-                                    ${startupView === 'detail'
-                                        ? 'bg-blue-500/20 border-blue-500/50 text-white'
-                                        : 'bg-white/5 border-transparent text-white/60 hover:bg-white/10'
-                                    }
-                                `}
-                            >
-                                <span className="font-medium text-sm">{t.settings.startupViewDetail}</span>
-                                <span className="text-[10px] opacity-60">{t.settings.lastOpenedCity}</span>
-                            </button>
-                            <button
-                                onClick={() => setStartupView('home')}
-                                className={`
-                                    p-3 rounded-xl text-left border transition-all flex flex-col gap-1
-                                    ${startupView === 'home'
-                                        ? 'bg-blue-500/20 border-blue-500/50 text-white'
-                                        : 'bg-white/5 border-transparent text-white/60 hover:bg-white/10'
-                                    }
-                                `}
-                            >
-                                <span className="font-medium text-sm">{t.settings.startupViewHome}</span>
-                                <span className="text-[10px] opacity-60">{t.settings.cityList}</span>
-                            </button>
+                        <div className="grid grid-cols-2 gap-2 p-1 bg-black/20 rounded-xl">
+                            {[
+                                { val: 'detail' as const, label: t.settings.startupViewDetail },
+                                { val: 'home' as const, label: t.settings.startupViewHome }
+                            ].map(opt => (
+                                <button
+                                    key={opt.val}
+                                    onClick={() => setStartupView(opt.val)}
+                                    className={`
+                                        py-2 rounded-lg text-sm font-medium transition-all
+                                        ${startupView === opt.val ? 'bg-white/10 text-white shadow-sm' : 'text-white/50 hover:text-white/80'}
+                                    `}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
@@ -405,6 +402,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                         ]}
                         direction="up"
                     />
+
+                    <div className="w-full h-px bg-white/5" />
+
+                    {/* Hardware Acceleration Toggle */}
+                    <div className="space-y-3">
+                        <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
+                            <FaBolt /> {t.settings.hardwareAcceleration}
+                        </label>
+                        <div className="grid grid-cols-2 gap-2 p-1 bg-black/20 rounded-xl">
+                            {[
+                                { val: true, label: 'ON' },
+                                { val: false, label: 'OFF' }
+                            ].map(opt => (
+                                <button
+                                    key={String(opt.val)}
+                                    onClick={() => setEnableHardwareAcceleration(opt.val)}
+                                    className={`
+                                        py-2 rounded-lg text-sm font-medium transition-all
+                                        ${enableHardwareAcceleration === opt.val ? 'bg-white/10 text-white shadow-sm' : 'text-white/50 hover:text-white/80'}
+                                    `}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-[10px] text-white/30">{t.settings.hardwareAccelerationHelp}</p>
+                    </div>
                 </div>
 
                 {/* Footer */}

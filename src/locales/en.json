@@ -32,7 +32,9 @@
         "detailViewHelp": "Drag to reorder sections. Uncheck to hide.",
         "timeFormat": "Time Format",
         "timeFormat24": "24 Hour (13:00)",
-        "timeFormat12": "12 Hour (1:00 PM)"
+        "timeFormat12": "12 Hour (1:00 PM)",
+        "hardwareAcceleration": "Hardware Acceleration",
+        "hardwareAccelerationHelp": "Enable GPU acceleration for smoother animations"
     },
     "detailSections": {
         "hourly": "Hourly Forecast",

@@ -425,7 +425,12 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
                 will-change-transform
                 ${isTauriEnv ? 'pt-12' : ''}
             `}
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            style={{
+                WebkitOverflowScrolling: 'touch',
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+                transform: 'translateZ(0)',
+            }}
         >
             {/* Header */}
             <div className="w-full flex items-center justify-between p-6 sticky top-0 z-50 transition-all duration-300">

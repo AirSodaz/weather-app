@@ -17,6 +17,8 @@ interface SortableWeatherCardProps {
     onClick: (weather: WeatherData) => void;
     /** Callback fired when the card is right-clicked (context menu). */
     onContextMenu: (e: React.MouseEvent, weather: WeatherData) => void;
+    /** Whether to enable hardware acceleration for animations. */
+    enableHardwareAcceleration?: boolean;
 }
 
 /**
@@ -31,6 +33,7 @@ const SortableWeatherCard: React.FC<SortableWeatherCardProps> = ({
     index,
     onClick,
     onContextMenu,
+    enableHardwareAcceleration = true,
 }) => {
     const {
         attributes,
@@ -42,10 +45,18 @@ const SortableWeatherCard: React.FC<SortableWeatherCardProps> = ({
     } = useSortable({ id: weather.city });
 
     // Combine dnd-kit transform with custom styles
+    // Apply translateZ(0) for hardware acceleration when enabled
     const style: React.CSSProperties = {
-        transform: CSS.Transform.toString(transform),
+        transform: enableHardwareAcceleration
+            ? (CSS.Transform.toString(transform) || '') + ' translateZ(0)'
+            : CSS.Transform.toString(transform),
         transition: transition || undefined,
         touchAction: 'none',
+        // Additional hardware acceleration hints
+        ...(enableHardwareAcceleration && {
+            backfaceVisibility: 'hidden' as const,
+            WebkitBackfaceVisibility: 'hidden' as const,
+        }),
     };
 
     return (

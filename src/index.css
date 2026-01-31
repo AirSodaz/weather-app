@@ -163,6 +163,11 @@ body {
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
+    /* Hardware acceleration hints */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 /* Dark Glass: For modals, dropdowns, tooltips */
@@ -191,21 +196,21 @@ body {
 
     0%,
     100% {
-        transform: translateY(0);
+        transform: translateY(0) translateZ(0);
     }
 
     50% {
-        transform: translateY(-8px);
+        transform: translateY(-8px) translateZ(0);
     }
 }
 
 @keyframes spin-slow {
     from {
-        transform: rotate(0deg);
+        transform: rotate(0deg) translateZ(0);
     }
 
     to {
-        transform: rotate(360deg);
+        transform: rotate(360deg) translateZ(0);
     }
 }
 
@@ -222,51 +227,64 @@ body {
 @keyframes slide-up-fade {
     from {
         opacity: 0;
-        transform: translateY(15px);
+        transform: translateY(15px) translateZ(0);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) translateZ(0);
     }
 }
 
 @keyframes pop-in {
     0% {
-        transform: scale(0.95);
+        transform: scale(0.95) translateZ(0);
         opacity: 0;
     }
 
     40% {
-        transform: scale(1.02);
+        transform: scale(1.02) translateZ(0);
     }
 
     100% {
-        transform: scale(1);
+        transform: scale(1) translateZ(0);
         opacity: 1;
     }
 }
 
 .animate-float {
     animation: float 6s ease-in-out infinite;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 .animate-spin-slow {
     animation: spin-slow 12s linear infinite;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 .animate-fade-in {
     animation: fade-in 0.4s ease-out forwards;
+    will-change: opacity;
 }
 
 .animate-pop-in {
     animation: pop-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 /* .animate-slide-up { animation: slide-up-fade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; } */
 /* Commented out as replaced by framer-motion, but keeping just in case. */
 .animate-slide-up {
     animation: slide-up-fade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 /* Staggered delays */
@@ -528,33 +546,39 @@ body {
 @keyframes menu-appear {
     0% {
         opacity: 0;
-        transform: scale(0.92) translateY(-8px);
+        transform: scale(0.92) translateY(-8px) translateZ(0);
     }
 
     100% {
         opacity: 1;
-        transform: scale(1) translateY(0);
+        transform: scale(1) translateY(0) translateZ(0);
     }
 }
 
 @keyframes submenu-appear {
     0% {
         opacity: 0;
-        transform: translateX(-8px);
+        transform: translateX(-8px) translateZ(0);
     }
 
     100% {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateX(0) translateZ(0);
     }
 }
 
 .animate-menu-in {
     animation: menu-appear 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 .animate-submenu-in {
     animation: submenu-appear 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 /* Danger/Destructive Menu Item */

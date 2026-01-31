@@ -161,6 +161,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
     const contextMenuRef = useRef<HTMLDivElement>(null); // Added ref for context menu.
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
+    const [enableHardwareAcceleration, setEnableHardwareAcceleration] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
     const lastSourceRef = useRef<string | null>(null);
 
@@ -170,6 +171,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     const loadAppConfig = async () => {
         const settings = await getSettings();
         setDetailViewSections(settings.detailViewSections || []);
+        setEnableHardwareAcceleration(settings.enableHardwareAcceleration ?? true);
         if (lastSourceRef.current === null) {
             lastSourceRef.current = settings.source;
         }
@@ -901,6 +903,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                                     index={index}
                                     onClick={handleCardClick}
                                     onContextMenu={handleCardContextMenu}
+                                    enableHardwareAcceleration={enableHardwareAcceleration}
                                 />
                             ))}
                         </AnimatePresence>

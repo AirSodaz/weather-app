@@ -32,7 +32,9 @@
         "detailViewHelp": "拖拽排序，取消勾选以隐藏。",
         "timeFormat": "时间格式",
         "timeFormat24": "24 小时制 (13:00)",
-        "timeFormat12": "12 小时制 (1:00 PM)"
+        "timeFormat12": "12 小时制 (1:00 PM)",
+        "hardwareAcceleration": "硬件加速",
+        "hardwareAccelerationHelp": "启用 GPU 加速以获得更流畅的动画效果"
     },
     "detailSections": {
         "hourly": "逐时预报",
