@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaKey, FaSync } from 'react-icons/fa';
+import { FaKey, FaSync, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { WeatherSource } from '../utils/config';
 import { verifyConnection } from '../services/weatherApi';
 
@@ -39,6 +39,7 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
     const [value, setValue] = useState(initialValue);
     const [testing, setTesting] = useState(false);
     const [testResult, setTestResult] = useState<'success' | 'fail' | null>(null);
+    const [showKey, setShowKey] = useState(false);
 
     useEffect(() => {
         setValue(initialValue);
@@ -99,14 +100,24 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
             <label htmlFor={`api-key-${source}`} className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
                 <FaKey aria-hidden="true" /> {t.settings.apiKey}
             </label>
-            <input
-                id={`api-key-${source}`}
-                type="password"
-                value={value}
-                onChange={handleChange}
-                placeholder={t.settings.apiKeyPlaceholder}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/50 transition-colors placeholder-white/20 text-sm font-mono tracking-widest"
-            />
+            <div className="relative">
+                <input
+                    id={`api-key-${source}`}
+                    type={showKey ? "text" : "password"}
+                    value={value}
+                    onChange={handleChange}
+                    placeholder={t.settings.apiKeyPlaceholder}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-white outline-none focus:border-blue-500/50 transition-colors placeholder-white/20 text-sm font-mono tracking-widest"
+                />
+                <button
+                    type="button"
+                    onClick={() => setShowKey(!showKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors p-1 rounded-full focus:bg-white/10 focus:outline-none"
+                    aria-label={showKey ? "Hide API Key" : "Show API Key"}
+                >
+                    {showKey ? <FaEyeSlash /> : <FaEye />}
+                </button>
+            </div>
             {source !== 'custom' && (
                 <div className="flex justify-between items-center text-[10px] text-white/40 mt-1">
                     <span>{t.settings.apiKeyHelp}</span>
