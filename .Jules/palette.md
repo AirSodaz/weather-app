@@ -5,3 +5,7 @@
 ## 2024-05-22 - Toggle Group Accessibility
 **Learning:** Custom button groups used for settings (like Language or Startup View) relied solely on visual cues (background color) for the selected state, leaving screen reader users unaware of the current selection.
 **Action:** Always apply `aria-pressed` (or `aria-checked` within a radiogroup) to custom selection buttons to programmatically communicate the active state.
+
+## 2024-05-23 - API Key Visibility
+**Learning:** Hiding API keys by default prevents shoulder surfing but increases user error rates during entry. A hardcoded password type offers no fallback for verification.
+**Action:** Implement a visibility toggle for complex input strings (like API keys) to balance security with usability, ensuring the toggle button has a dynamic `aria-label`.
