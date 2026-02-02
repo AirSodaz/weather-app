@@ -80,8 +80,8 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
                         )}
                     </p>
                 </div>
-                <div className="pl-4">
-                    <WeatherIcon condition={weather.condition} className="text-5xl drop-shadow-lg" />
+                <div className="pl-4 mt-8">
+                    <WeatherIcon condition={weather.condition} className="text-6xl drop-shadow-lg" />
                 </div>
             </div>
 
