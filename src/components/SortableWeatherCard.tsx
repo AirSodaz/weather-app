@@ -51,7 +51,7 @@ const SortableWeatherCard = memo<SortableWeatherCardProps>(({
             ? (CSS.Transform.toString(transform) || '') + ' translateZ(0)'
             : CSS.Transform.toString(transform),
         transition: transition || undefined,
-        touchAction: 'none',
+        touchAction: 'manipulation',
         // Additional hardware acceleration hints
         ...(enableHardwareAcceleration && {
             backfaceVisibility: 'hidden' as const,

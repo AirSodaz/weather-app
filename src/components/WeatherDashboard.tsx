@@ -16,7 +16,8 @@ import {
     DndContext,
     closestCenter,
     KeyboardSensor,
-    PointerSensor,
+    MouseSensor,
+    TouchSensor,
     useSensor,
     useSensors,
     DragEndEvent,
@@ -126,12 +127,19 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
     /**
      * Sensors for handling drag interactions.
-     * Starts drag after 8px movement to prevent accidental activation.
+     * Mouse: Starts after 10px movement.
+     * Touch: Requires press and hold (250ms) with 5px tolerance to distinguish from scrolling.
      */
     const sensors = useSensors(
-        useSensor(PointerSensor, {
+        useSensor(MouseSensor, {
             activationConstraint: {
-                distance: 8, // 8px movement required before drag starts (prevents accidental drags on click)
+                distance: 10,
+            },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 250,
+                tolerance: 5,
             },
         }),
         useSensor(KeyboardSensor, {
@@ -745,6 +753,14 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
     const handleCardContextMenu = useCallback((e: React.MouseEvent, weather: WeatherData) => {
         e.preventDefault();
+
+        // On mobile, prevent the context menu from showing on long-press (which fires contextmenu)
+        // to avoid conflict with the long-press drag gesture.
+        // The menu can still be accessed via the ellipsis button (which fires a click event).
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile && e.type === 'contextmenu') {
+            return;
+        }
 
         const { clientX, clientY } = e;
         const { innerWidth, innerHeight } = window;
