@@ -25,3 +25,7 @@
 ## 2026-01-23 - Parallelize QWeather Requests
 **Learning:** QWeather API endpoints accept `lon,lat` directly, allowing the initial City Lookup (for ID) to be parallelized with data requests when coordinates are known.
 **Action:** When refactoring API logic, verify if "dependent" requests actually require the output of the previous step or if they can be fired concurrently using available inputs.
+
+## 2026-01-23 - Memoize SortableContext Items
+**Learning:** Passing a derived array to `SortableContext` (e.g., `list.map(...)`) creates a new reference on every render, forcing dnd-kit to update context and re-evaluate consumers.
+**Action:** Use `useMemo` to stabilize the `items` array passed to `SortableContext` to prevent unnecessary re-renders during unrelated parent updates.

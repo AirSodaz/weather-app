@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { getWeather, WeatherData } from '../services/weatherApi';
 import { getSettings, SectionConfig } from '../utils/config';
 import { FaCloud, FaTrash, FaCog, FaSync, FaInfoCircle, FaEllipsisV } from 'react-icons/fa';
@@ -813,7 +813,11 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         }
     }, [selectedCity, handleUpdateCitySource]);
 
-
+    // Optimization: Memoize the list of IDs for SortableContext.
+    // This prevents SortableContext from updating its consumers (SortableWeatherCard)
+    // whenever unrelated state in WeatherDashboard changes (like isScrolled, loading, etc.),
+    // as weatherList.map() would otherwise create a new array reference on every render.
+    const weatherIds = useMemo(() => weatherList.map(w => w.city), [weatherList]);
 
     return (
         <div
@@ -918,7 +922,7 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                 onDragEnd={handleDragEnd}
             >
                 <SortableContext
-                    items={weatherList.map(w => w.city)}
+                    items={weatherIds}
                     strategy={rectSortingStrategy}
                 >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4 pb-4">
