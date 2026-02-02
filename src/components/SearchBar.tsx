@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaSearch, FaLocationArrow } from 'react-icons/fa';
+import { FaSearch, FaLocationArrow, FaSync } from 'react-icons/fa';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 import { searchCities, CityResult } from '../services/weatherApi';
 import { useI18n } from '../contexts/I18nContext';
@@ -21,6 +21,8 @@ interface SearchBarProps {
     onSearch: (city: string) => Promise<boolean>;
     /** Callback triggered when the "Use Current Location" option is selected. */
     onLocationRequest: () => void;
+    /** Whether a global loading state is active (e.g. fetching weather). */
+    isLoading?: boolean;
 }
 
 /**
@@ -29,7 +31,7 @@ interface SearchBarProps {
  * @param {SearchBarProps} props - The component props.
  * @returns {JSX.Element} The search bar component.
  */
-const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest }) => {
+const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest, isLoading = false }) => {
     const { t, currentLanguage } = useI18n();
     const [searchCity, setSearchCity] = useState('');
     const [suggestions, setSuggestions] = useState<CityResult[]>([]);
@@ -136,13 +138,18 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest }) =>
 
     return (
         <div ref={searchRef} className="flex-1 relative">
-            <form role="search" onSubmit={handleSubmit} className="w-full flex items-center space-x-2 glass-card rounded-full px-4 py-4 transition-all focus-within:bg-white/10 focus-within:shadow-lg focus-within:ring-1 focus-within:ring-white/20">
-                <FaSearch className="text-white/60" aria-hidden="true" />
+            <form role="search" aria-busy={isLoading} onSubmit={handleSubmit} className="w-full flex items-center space-x-2 glass-card rounded-full px-4 py-4 transition-all focus-within:bg-white/10 focus-within:shadow-lg focus-within:ring-1 focus-within:ring-white/20">
+                {isLoading ? (
+                    <FaSync className="text-white/60 animate-spin" aria-label="Loading" />
+                ) : (
+                    <FaSearch className="text-white/60" aria-hidden="true" />
+                )}
                 <input
                     type="text"
                     value={searchCity}
                     onChange={(e) => setSearchCity(e.target.value)}
                     onKeyDown={handleKeyDown}
+                    disabled={isLoading}
                     placeholder={t.search?.placeholder || 'Search city...'}
                     aria-label={t.search?.placeholder || 'Search city'}
                     role="combobox"
@@ -153,12 +160,12 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest }) =>
                         selectedIndex === 0 ? "suggestion-location" :
                         selectedIndex > 0 ? `suggestion-${selectedIndex - 1}` : undefined
                     }
-                    className="bg-transparent border-none outline-none text-white placeholder-white/50 w-full text-base"
+                    className={`bg-transparent border-none outline-none text-white placeholder-white/50 w-full text-base ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onFocus={() => {
-                        setShowSuggestions(true);
+                        if (!isLoading) setShowSuggestions(true);
                     }}
                 />
-                {searchCity && (
+                {searchCity && !isLoading && (
                     <button
                         type="button"
                         onClick={() => setSearchCity('')}
