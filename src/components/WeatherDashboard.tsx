@@ -830,7 +830,11 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
                     }`}
             >
                 {/* Search Bar */}
-                <SearchBar onSearch={handleSearch} onLocationRequest={handleLocationRequest} />
+                <SearchBar
+                    onSearch={handleSearch}
+                    onLocationRequest={handleLocationRequest}
+                    isLoading={loading}
+                />
 
                 {/* Top Right Menu Button */}
                 <div className="relative">
