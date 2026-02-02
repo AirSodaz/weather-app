@@ -16,7 +16,8 @@ import {
     DndContext,
     closestCenter,
     KeyboardSensor,
-    PointerSensor,
+    MouseSensor,
+    TouchSensor,
     useSensor,
     useSensors,
     DragEndEvent,
@@ -126,12 +127,19 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
 
     /**
      * Sensors for handling drag interactions.
-     * Starts drag after 8px movement to prevent accidental activation.
+     * Mouse: Starts after 10px movement.
+     * Touch: Requires press and hold (250ms) with 5px tolerance to distinguish from scrolling.
      */
     const sensors = useSensors(
-        useSensor(PointerSensor, {
+        useSensor(MouseSensor, {
             activationConstraint: {
-                distance: 8, // 8px movement required before drag starts (prevents accidental drags on click)
+                distance: 10,
+            },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 250,
+                tolerance: 5,
             },
         }),
         useSensor(KeyboardSensor, {
