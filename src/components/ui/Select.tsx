@@ -44,6 +44,8 @@ export const Select: React.FC<SelectProps> = ({
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const optionsRef = useRef<(HTMLButtonElement | null)[]>([]);
 
     const selectedOption = options.find(opt => opt.value === value) || options[0];
 
@@ -63,9 +65,46 @@ export const Select: React.FC<SelectProps> = ({
         };
     }, [isOpen]);
 
+    useEffect(() => {
+        if (isOpen) {
+            const index = options.findIndex(opt => opt.value === value);
+            const focusIndex = index >= 0 ? index : 0;
+            requestAnimationFrame(() => {
+                optionsRef.current[focusIndex]?.focus();
+            });
+        } else if (isOpen === false && document.activeElement && containerRef.current?.contains(document.activeElement)) {
+            triggerRef.current?.focus();
+        }
+    }, [isOpen]);
+
     const handleSelect = (val: string | number) => {
         onChange(val);
         setIsOpen(false);
+    };
+
+    const handleTriggerKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsOpen(true);
+        }
+    };
+
+    const handleOptionKeyDown = (e: React.KeyboardEvent, index: number) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const nextIndex = (index + 1) % options.length;
+            optionsRef.current[nextIndex]?.focus();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prevIndex = (index - 1 + options.length) % options.length;
+            optionsRef.current[prevIndex]?.focus();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setIsOpen(false);
+            triggerRef.current?.focus();
+        } else if (e.key === 'Tab') {
+            setIsOpen(false);
+        }
     };
 
     return (
@@ -78,7 +117,9 @@ export const Select: React.FC<SelectProps> = ({
 
             <div className="relative">
                 <button
+                    ref={triggerRef}
                     onClick={() => setIsOpen(!isOpen)}
+                    onKeyDown={handleTriggerKeyDown}
                     className={`
                         w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3
                         text-white text-left flex items-center justify-between transition-all duration-200
@@ -109,17 +150,21 @@ export const Select: React.FC<SelectProps> = ({
                             `}
                         >
                             <div className="py-1" role="listbox">
-                                {options.map((option) => (
+                                {options.map((option, index) => (
                                     <button
                                         key={option.value}
+                                        ref={el => optionsRef.current[index] = el}
                                         onClick={() => handleSelect(option.value)}
+                                        onKeyDown={(e) => handleOptionKeyDown(e, index)}
                                         className={`
                                             w-full px-4 py-3 text-left flex items-center justify-between
-                                            transition-colors duration-150 group
+                                            transition-colors duration-150 group outline-none
+                                            focus:bg-white/10 focus:text-white
                                             ${value === option.value ? 'bg-blue-500/20 text-blue-200' : 'text-white/80 hover:bg-white/10 hover:text-white'}
                                         `}
                                         role="option"
                                         aria-selected={value === option.value}
+                                        tabIndex={-1}
                                     >
                                         <span className="truncate">{option.label}</span>
                                         {value === option.value && (
