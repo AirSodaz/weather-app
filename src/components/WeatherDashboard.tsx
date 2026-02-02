@@ -754,6 +754,14 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
     const handleCardContextMenu = useCallback((e: React.MouseEvent, weather: WeatherData) => {
         e.preventDefault();
 
+        // On mobile, prevent the context menu from showing on long-press (which fires contextmenu)
+        // to avoid conflict with the long-press drag gesture.
+        // The menu can still be accessed via the ellipsis button (which fires a click event).
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile && e.type === 'contextmenu') {
+            return;
+        }
+
         const { clientX, clientY } = e;
         const { innerWidth, innerHeight } = window;
 
