@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { FaChevronDown, FaCheck } from 'react-icons/fa';
 
@@ -46,6 +46,7 @@ export const Select: React.FC<SelectProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
     const optionsRef = useRef<(HTMLButtonElement | null)[]>([]);
+    const selectId = useId();
 
     const selectedOption = options.find(opt => opt.value === value) || options[0];
 
@@ -110,13 +111,13 @@ export const Select: React.FC<SelectProps> = ({
     return (
         <div className="space-y-3 relative z-10" ref={containerRef}>
             {label && (
-                <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
+                <label htmlFor={selectId} className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
                     {icon} {label}
                 </label>
             )}
 
             <div className="relative">
-                <button
+                <button id={selectId}
                     ref={triggerRef}
                     onClick={() => setIsOpen(!isOpen)}
                     onKeyDown={handleTriggerKeyDown}
