@@ -31,7 +31,7 @@ interface SearchBarProps {
  * @param {SearchBarProps} props - The component props.
  * @returns {JSX.Element} The search bar component.
  */
-const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest, isLoading = false }) => {
+function SearchBar({ onSearch, onLocationRequest, isLoading = false }: SearchBarProps): JSX.Element {
     const { t, currentLanguage } = useI18n();
     const [searchCity, setSearchCity] = useState('');
     const [suggestions, setSuggestions] = useState<CityResult[]>([]);
@@ -227,6 +227,6 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, onLocationRequest, isLo
             </AnimatePresence>
         </div>
     );
-};
+}
 
 export default SearchBar;

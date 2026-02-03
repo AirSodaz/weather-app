@@ -28,13 +28,13 @@ interface SortableWeatherCardProps {
  * @param {SortableWeatherCardProps} props - The component props.
  * @returns {JSX.Element} The sortable weather card component.
  */
-const SortableWeatherCard = memo<SortableWeatherCardProps>(({
+function SortableWeatherCard({
     weather,
     index,
     onClick,
     onContextMenu,
     enableHardwareAcceleration = true,
-}) => {
+}: SortableWeatherCardProps): JSX.Element {
     const {
         attributes,
         listeners,
@@ -110,6 +110,6 @@ const SortableWeatherCard = memo<SortableWeatherCardProps>(({
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
         </motion.div>
     );
-});
+}
 
-export default SortableWeatherCard;
+export default memo(SortableWeatherCard);

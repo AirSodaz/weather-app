@@ -99,7 +99,7 @@ interface WeatherDashboardProps {
  * @param {WeatherDashboardProps} props - The component props.
  * @returns {JSX.Element} The weather dashboard component.
  */
-const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgContainerRef }) => {
+function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps): JSX.Element {
     const { t, currentLanguage } = useI18n();
     // Removed search state moved to SearchBar.
     const [weatherList, setWeatherList] = useState<WeatherData[]>([]);
@@ -774,37 +774,15 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
         const isRight = clientX + menuWidth + padding > innerWidth;
         const isBottom = clientY + menuHeight + padding > innerHeight;
 
-        let menuStyle: React.CSSProperties = {};
+        const menuStyle: React.CSSProperties = {
+            transformOrigin: `${isBottom ? 'bottom' : 'top'} ${isRight ? 'right' : 'left'}`
+        };
 
-        if (isBottom && isRight) {
-            // Bottom Right
-            menuStyle = {
-                bottom: innerHeight - clientY,
-                right: innerWidth - clientX,
-                transformOrigin: "bottom right"
-            };
-        } else if (isBottom && !isRight) {
-            // Bottom Left
-            menuStyle = {
-                bottom: innerHeight - clientY,
-                left: clientX,
-                transformOrigin: "bottom left"
-            };
-        } else if (!isBottom && isRight) {
-            // Top Right
-            menuStyle = {
-                top: clientY,
-                right: innerWidth - clientX,
-                transformOrigin: "top right"
-            };
-        } else {
-            // Top Left (Default)
-            menuStyle = {
-                top: clientY,
-                left: clientX,
-                transformOrigin: "top left"
-            };
-        }
+        if (isBottom) menuStyle.bottom = innerHeight - clientY;
+        else menuStyle.top = clientY;
+
+        if (isRight) menuStyle.right = innerWidth - clientX;
+        else menuStyle.left = clientX;
 
         setContextMenu({
             show: true,
@@ -1043,6 +1021,6 @@ const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onBgChange, bgConta
             </AnimatePresence>
         </div>
     );
-};
+}
 
 export default WeatherDashboard;
