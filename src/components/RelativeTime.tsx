@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { formatRelativeTime } from '../utils/helpers';
 import { useI18n } from '../contexts/I18nContext';
 
@@ -16,7 +16,7 @@ interface RelativeTimeProps {
  * @param {RelativeTimeProps} props - The component props.
  * @returns {JSX.Element} The relative time component.
  */
-const RelativeTime: React.FC<RelativeTimeProps> = ({ date }) => {
+function RelativeTime({ date }: RelativeTimeProps): JSX.Element {
     const { t } = useI18n();
     const [, setTick] = useState(0);
 
@@ -28,6 +28,6 @@ const RelativeTime: React.FC<RelativeTimeProps> = ({ date }) => {
     }, []);
 
     return <>{formatRelativeTime(date, t)}</>;
-};
+}
 
 export default RelativeTime;

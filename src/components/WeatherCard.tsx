@@ -21,7 +21,7 @@ interface WeatherCardProps {
  * @param {string} [props.className] - Optional CSS classes.
  * @returns {JSX.Element} The icon component.
  */
-const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ condition, className = "text-5xl" }) => {
+function WeatherIcon({ condition, className = "text-5xl" }: { condition: string; className?: string }): JSX.Element {
     const category = getWeatherCategory(condition);
     switch (category) {
         case WeatherCategory.Sunny:
@@ -35,7 +35,24 @@ const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ cond
         default:
             return <FaCloud className={`${className} text-gray-200 animate-float`} />;
     }
-};
+}
+
+/**
+ * Helper to get the display label for a weather source.
+ *
+ * @param {string} source - The source identifier.
+ * @returns {string} The display label.
+ */
+function getSourceLabel(source: string): string {
+    switch (source) {
+        case 'openweathermap':
+            return 'OWM';
+        case 'weatherapi':
+            return 'WAPI';
+        default:
+            return 'QW';
+    }
+}
 
 /**
  * A card component displaying a summary of weather data for a city.
@@ -44,10 +61,10 @@ const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ cond
  * @param {WeatherCardProps} props - The component props.
  * @returns {JSX.Element} The weather card content.
  */
-const WeatherCard: React.FC<WeatherCardProps> = memo(({
+function WeatherCard({
     weather,
     onShowActions
-}) => {
+}: WeatherCardProps): JSX.Element {
     return (
         <>
             {/* Actions Button */}
@@ -74,8 +91,7 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
                         {weather.condition}
                         {weather.sourceOverride && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 border border-white/10">
-                                {weather.sourceOverride === 'openweathermap' ? 'OWM' :
-                                    weather.sourceOverride === 'weatherapi' ? 'WAPI' : 'QW'}
+                                {getSourceLabel(weather.sourceOverride)}
                             </span>
                         )}
                     </p>
@@ -105,6 +121,6 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
             </div>
         </>
     );
-});
+}
 
-export default WeatherCard;
+export default memo(WeatherCard);
