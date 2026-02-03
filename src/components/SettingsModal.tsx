@@ -221,6 +221,7 @@ export default function SettingsModal({ isOpen, onClose, onSettingsChange }: Set
                         value={localLanguage}
                         onChange={(val) => setLocalLanguage(val as any)}
                         options={[
+                            { value: 'system', label: t.settings.autoLanguage || 'Auto (System)' },
                             { value: 'en', label: 'English' },
                             { value: 'zh', label: '中文' }
                         ]}

@@ -3,6 +3,7 @@
     "settings": {
         "title": "设置",
         "language": "语言",
+        "autoLanguage": "自动 (跟随系统)",
         "weatherSource": "天气数据源",
         "apiKey": "API 密钥",
         "apiKeyPlaceholder": "请输入 API 密钥",

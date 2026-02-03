@@ -3,6 +3,7 @@
     "settings": {
         "title": "Settings",
         "language": "Language",
+        "autoLanguage": "Auto (System)",
         "weatherSource": "Weather Source",
         "apiKey": "API Key",
         "apiKeyPlaceholder": "Enter your API Key",
