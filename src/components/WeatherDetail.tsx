@@ -1,16 +1,16 @@
-import React, { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, memo, useMemo } from 'react';
 import { isTauri } from '../utils/env';
-import { WeatherData } from '../services/weatherApi';
+import { WeatherData, DailyForecast } from '../services/weatherApi';
 import {
     FaArrowLeft, FaTint, FaWind, FaCompressArrowsAlt, FaEye,
     FaSun, FaCloud, FaCloudRain, FaSnowflake, FaSmog, FaMoon,
     FaEllipsisV, FaSync, FaCog, FaInfoCircle, FaClock, FaCalendarAlt
 } from 'react-icons/fa';
-import { useI18n } from '../contexts/I18nContext';
+import { useI18n, Translations } from '../contexts/I18nContext';
 import RelativeTime from './RelativeTime';
 import { SectionConfig, DetailSectionId } from '../utils/config';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
-import { getWeatherBackground, getWeatherCategory, WeatherCategory } from '../utils/weatherUtils';
+import { getWeatherBackground, getWeatherCategory, WeatherCategory, getAqiColor } from '../utils/weatherUtils';
 
 /**
  * Props for the WeatherDetail component.
@@ -37,6 +37,13 @@ interface WeatherDetailProps {
 const DATE_SPLIT_REGEX = /[-/]/;
 
 /**
+ * Interface extending DailyForecast with the localized day name.
+ */
+interface DailyForecastWithDayName extends DailyForecast {
+    dayName: string;
+}
+
+/**
  * Renders the appropriate weather icon based on the condition string.
  *
  * @param {object} props - Component props.
@@ -44,7 +51,18 @@ const DATE_SPLIT_REGEX = /[-/]/;
  * @param {string} [props.className] - Optional CSS classes.
  * @returns {JSX.Element} The icon component.
  */
-const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ condition, className = "text-6xl" }) => {
+interface WeatherIconProps {
+    condition: string;
+    className?: string;
+}
+
+/**
+ * Renders the appropriate weather icon based on the condition string.
+ *
+ * @param {WeatherIconProps} props - Component props.
+ * @returns {JSX.Element} The icon component.
+ */
+function WeatherIcon({ condition, className = "text-6xl" }: WeatherIconProps): JSX.Element {
     const category = getWeatherCategory(condition);
     switch (category) {
         case WeatherCategory.Sunny:
@@ -58,7 +76,204 @@ const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ cond
         default:
             return <FaCloud className={`${className} text-gray-200 animate-float`} />;
     }
-};
+}
+
+
+
+interface HourlyForecastSectionProps {
+    weather: WeatherData;
+    t: Translations;
+}
+
+function HourlyForecastSection({ weather, t }: HourlyForecastSectionProps): JSX.Element | null {
+    if (!weather.hourlyForecast || weather.hourlyForecast.length === 0) return null;
+    return (
+        <motion.div variants={itemVariants} key="hourly" className="w-full glass-card rounded-3xl p-6 mb-6">
+            <h3 className="text-base font-semibold flex items-center gap-2 mb-4">
+                <FaClock className="text-gray-300" />
+                {t.weather.hourlyForecast}
+            </h3>
+            <div className="flex gap-6 overflow-x-auto pb-4 pt-2 -mx-2 px-2 snap-x">
+                {weather.hourlyForecast.map((item, i) => (
+                    <div key={i} className="flex flex-col items-center min-w-[60px] snap-center">
+                        <span className="text-xs text-white/50 mb-3">{item.time}</span>
+                        <WeatherIcon condition={item.condition} className="text-2xl mb-3" />
+                        <span className="font-bold text-lg">{Math.round(item.temperature)}°</span>
+                    </div>
+                ))}
+            </div>
+        </motion.div>
+    );
+}
+
+interface DailyForecastSectionProps {
+    dailyForecast: DailyForecastWithDayName[];
+    t: Translations;
+}
+
+function DailyForecastSection({ dailyForecast, t }: DailyForecastSectionProps): JSX.Element | null {
+    if (!dailyForecast || dailyForecast.length === 0) return null;
+    return (
+        <motion.div variants={itemVariants} key="daily" className="w-full glass-card rounded-3xl p-6 mb-6">
+            <h3 className="text-base font-semibold flex items-center gap-2 mb-6">
+                <FaCalendarAlt className="text-gray-300" />
+                {t.weather.dailyForecast}
+            </h3>
+            <div className="space-y-4">
+                {dailyForecast.map((day, i) => (
+                    <div key={i} className="flex items-center justify-between group hover:bg-white/5 p-2 rounded-xl transition-colors -mx-2">
+                        <div className="w-24">
+                            <span className="font-medium block">
+                                {day.dayName}
+                            </span>
+                            <span className="text-xs text-white/40">{day.date}</span>
+                        </div>
+
+                        <div className="flex-1 flex justify-center">
+                            <div className="flex flex-col items-center gap-1">
+                                <WeatherIcon condition={day.condition} className="text-xl" />
+                                <span className="text-[10px] text-white/40 capitalize">{day.condition}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 w-32 justify-end">
+                            <span className="text-white/40 w-8 text-right font-medium">{Math.round(day.tempMin)}°</span>
+                            <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden relative">
+                                <div
+                                    className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-400 to-amber-400 rounded-full opacity-80"
+                                    style={{
+                                        left: '10%', // Ideally calculated based on min/max of the week.
+                                        right: '10%'
+                                    }}
+                                />
+                            </div>
+                            <span className="font-bold w-8 text-right">{Math.round(day.tempMax)}°</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </motion.div>
+    );
+}
+
+interface AirQualitySectionProps {
+    weather: WeatherData;
+    t: Translations;
+}
+
+function AirQualitySection({ weather, t }: AirQualitySectionProps): JSX.Element | null {
+    if (!weather.airQuality) return null;
+
+    const getAqiLabel = (aqi: number) => {
+        return t.aqi.levels[aqi - 1] || t.aqi.unknown;
+    };
+
+    return (
+        <motion.div variants={itemVariants} key="airQuality" className="w-full glass-card rounded-3xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="text-base font-semibold flex items-center gap-2">
+                    <FaSmog className="text-gray-300" />
+                    <span className="text-base font-semibold flex items-center gap-2">
+                        {t.weather.airQuality}
+                    </span>
+                </h3>
+                <span className={`px-3 py-1 rounded-full bg-white/10 text-sm font-bold ${getAqiColor(weather.airQuality.aqi)}`}>
+                    {getAqiLabel(weather.airQuality.aqi)}
+                </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4">
+                {[
+                    { label: 'PM2.5', value: weather.airQuality.pm25 },
+                    { label: 'PM10', value: weather.airQuality.pm10 },
+                    { label: 'O₃', value: weather.airQuality.o3 },
+                    { label: 'NO₂', value: weather.airQuality.no2 },
+                ].map((item) => (
+                    <div key={item.label} className="text-center p-3 rounded-xl bg-white/5">
+                        <span className="text-xs text-white/40 block mb-1">{item.label}</span>
+                        <span className="font-semibold text-lg">{item.value}</span>
+                    </div>
+                ))}
+            </div>
+        </motion.div>
+    );
+}
+
+interface StatsSectionProps {
+    weather: WeatherData;
+    t: Translations;
+}
+
+function StatsSection({ weather, t }: StatsSectionProps): JSX.Element {
+    return (
+        <motion.div variants={itemVariants} key="stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3 w-full mb-6">
+            <div className="glass-card rounded-2xl p-5 flex flex-col items-start relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <FaTint className="text-6xl" />
+                </div>
+                <div className="relative z-10">
+                    <span className="text-xs uppercase tracking-wider text-white/50 mb-1 block">{t.weather.humidity}</span>
+                    <span className="text-2xl font-bold">{weather.humidity}%</span>
+                </div>
+            </div>
+            <div className="glass-card rounded-2xl p-5 flex flex-col items-start relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <FaWind className="text-6xl" />
+                </div>
+                <div className="relative z-10">
+                    <span className="text-xs uppercase tracking-wider text-white/50 mb-1 block">{t.weather.wind}</span>
+                    <span className="text-2xl font-bold">{weather.windSpeed.toFixed(2)} km/h</span>
+                </div>
+            </div>
+            <div className="glass-card rounded-2xl p-5 flex flex-col items-start relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <FaCompressArrowsAlt className="text-6xl" />
+                </div>
+                <div className="relative z-10">
+                    <span className="text-xs uppercase tracking-wider text-white/50 mb-1 block">{t.weather.pressure}</span>
+                    <span className="text-2xl font-bold">{weather.pressure} hPa</span>
+                </div>
+            </div>
+            <div className="glass-card rounded-2xl p-5 flex flex-col items-start relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <FaEye className="text-6xl" />
+                </div>
+                <div className="relative z-10">
+                    <span className="text-xs uppercase tracking-wider text-white/50 mb-1 block">{t.weather.visibility}</span>
+                    <span className="text-2xl font-bold">{weather.visibility} km</span>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
+interface SunriseSectionProps {
+    weather: WeatherData;
+    t: Translations;
+}
+
+function SunriseSection({ weather, t }: SunriseSectionProps): JSX.Element | null {
+    if (!weather.sunrise || !weather.sunset) return null;
+    return (
+        <motion.div variants={itemVariants} key="sunrise" className="w-full glass-card rounded-3xl p-6 mb-6 flex justify-around items-center">
+            <div className="flex flex-col items-center gap-2">
+                <FaSun className="text-3xl text-amber-300" />
+                <div className="text-center">
+                    <span className="text-xs text-white/50 uppercase tracking-widest block mb-0.5">{t.weather.sunrise}</span>
+                    <span className="text-xl font-medium">{weather.sunrise}</span>
+                </div>
+            </div>
+            <div className="w-px h-12 bg-white/10"></div>
+            <div className="flex flex-col items-center gap-2">
+                <FaMoon className="text-3xl text-indigo-300" />
+                <div className="text-center">
+                    <span className="text-xs text-white/50 uppercase tracking-widest block mb-0.5">{t.weather.sunset}</span>
+                    <span className="text-xl font-medium">{weather.sunset}</span>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
 
 /**
  * Returns the tailwind text color class corresponding to the Air Quality Index (AQI).
@@ -66,10 +281,6 @@ const WeatherIcon: React.FC<{ condition: string; className?: string }> = ({ cond
  * @param {number} aqi - The AQI value (1-5).
  * @returns {string} The tailwind text color class.
  */
-const getAqiColor = (aqi: number): string => {
-    const colors = ['text-emerald-400', 'text-yellow-400', 'text-orange-400', 'text-red-400', 'text-purple-400', 'text-rose-900'];
-    return colors[aqi - 1] || 'text-gray-400';
-};
 
 // Animation variants for staggered children.
 const containerVariants: Variants = {
@@ -123,6 +334,15 @@ const sectionsContainerVariants: Variants = {
     }
 };
 
+function getSourceLabel(src: string, t: Translations): string {
+    switch (src) {
+        case 'openweathermap': return t.settings.openWeatherMap;
+        case 'weatherapi': return t.settings.weatherapi;
+        case 'qweather': return t.settings.qweather;
+        default: return src;
+    }
+}
+
 /**
  * Component for displaying detailed weather information for a specific city.
  * Includes hourly/daily forecasts, air quality, stats, and sun/moon times.
@@ -130,7 +350,7 @@ const sectionsContainerVariants: Variants = {
  * @param {WeatherDetailProps} props - The component props.
  * @returns {JSX.Element} The weather detail view.
  */
-const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
+function WeatherDetail({
     weather,
     lastRefreshTime,
     onBack,
@@ -139,7 +359,7 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
     onOpenSettings,
     sections,
     layoutId
-}) => {
+}: WeatherDetailProps) {
     const { t } = useI18n();
     const [showMenu, setShowMenu] = useState(false);
     const [subMenu, setSubMenu] = useState<string | null>(null);
@@ -190,10 +410,6 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
         }));
     }, [weather.dailyForecast, t]);
 
-    const getAqiLabel = (aqi: number) => {
-        return t.aqi.levels[aqi - 1] || t.aqi.unknown;
-    };
-
     // Handle scroll-based background animation.
     const handleScroll = useCallback(() => {
         if (!ticking.current) {
@@ -243,156 +459,15 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
     const renderSection = (id: DetailSectionId) => {
         switch (id) {
             case 'hourly':
-                return weather.hourlyForecast && weather.hourlyForecast.length > 0 && (
-                    <motion.div variants={itemVariants} key="hourly" className="w-full glass-card rounded-3xl p-6 mb-6">
-                        <h3 className="text-base font-semibold flex items-center gap-2 mb-4">
-                            <FaClock className="text-gray-300" />
-                            {t.weather.hourlyForecast}
-                        </h3>
-                        <div className="flex gap-6 overflow-x-auto pb-4 pt-2 -mx-2 px-2 snap-x">
-                            {weather.hourlyForecast.map((item, i) => (
-                                <div key={i} className="flex flex-col items-center min-w-[60px] snap-center">
-                                    <span className="text-xs text-white/50 mb-3">{item.time}</span>
-                                    <WeatherIcon condition={item.condition} className="text-2xl mb-3" />
-                                    <span className="font-bold text-lg">{Math.round(item.temperature)}°</span>
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
-                );
+                return <HourlyForecastSection weather={weather} t={t} />;
             case 'daily':
-                return dailyForecastWithNames.length > 0 && (
-                    <motion.div variants={itemVariants} key="daily" className="w-full glass-card rounded-3xl p-6 mb-6">
-                        <h3 className="text-base font-semibold flex items-center gap-2 mb-6">
-                            <FaCalendarAlt className="text-gray-300" />
-                            {t.weather.dailyForecast}
-                        </h3>
-                        <div className="space-y-4">
-                            {dailyForecastWithNames.map((day, i) => (
-                                <div key={i} className="flex items-center justify-between group hover:bg-white/5 p-2 rounded-xl transition-colors -mx-2">
-                                    <div className="w-24">
-                                        <span className="font-medium block">
-                                            {day.dayName}
-                                        </span>
-                                        <span className="text-xs text-white/40">{day.date}</span>
-                                    </div>
-
-                                    <div className="flex-1 flex justify-center">
-                                        <div className="flex flex-col items-center gap-1">
-                                            <WeatherIcon condition={day.condition} className="text-xl" />
-                                            <span className="text-[10px] text-white/40 capitalize">{day.condition}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-4 w-32 justify-end">
-                                        <span className="text-white/40 w-8 text-right font-medium">{Math.round(day.tempMin)}°</span>
-                                        <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden relative">
-                                            <div
-                                                className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-400 to-amber-400 rounded-full opacity-80"
-                                                style={{
-                                                    left: '10%', // Ideally calculated based on min/max of the week.
-                                                    right: '10%'
-                                                }}
-                                            />
-                                        </div>
-                                        <span className="font-bold w-8 text-right">{Math.round(day.tempMax)}°</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
-                );
+                return <DailyForecastSection dailyForecast={dailyForecastWithNames} t={t} />;
             case 'airQuality':
-                return weather.airQuality && (
-                    <motion.div variants={itemVariants} key="airQuality" className="w-full glass-card rounded-3xl p-6 mb-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-base font-semibold flex items-center gap-2">
-                                <FaSmog className="text-gray-300" />
-                                <span className="text-base font-semibold flex items-center gap-2">
-                                    {t.weather.airQuality}
-                                </span>
-                            </h3>
-                            <span className={`px-3 py-1 rounded-full bg-white/10 text-sm font-bold ${getAqiColor(weather.airQuality.aqi)}`}>
-                                {getAqiLabel(weather.airQuality.aqi)}
-                            </span>
-                        </div>
-
-                        <div className="grid grid-cols-4 gap-4">
-                            {[
-                                { label: 'PM2.5', value: weather.airQuality.pm25 },
-                                { label: 'PM10', value: weather.airQuality.pm10 },
-                                { label: 'O₃', value: weather.airQuality.o3 },
-                                { label: 'NO₂', value: weather.airQuality.no2 },
-                            ].map((item) => (
-                                <div key={item.label} className="text-center p-3 rounded-xl bg-white/5">
-                                    <span className="text-xs text-white/40 block mb-1">{item.label}</span>
-                                    <span className="font-semibold text-lg">{item.value}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
-                );
+                return <AirQualitySection weather={weather} t={t} />;
             case 'stats':
-                return (
-                    <motion.div variants={itemVariants} key="stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3 w-full mb-6">
-                        <div className="glass-card rounded-2xl p-5 flex flex-col items-start relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <FaTint className="text-6xl" />
-                            </div>
-                            <div className="relative z-10">
-                                <span className="text-xs uppercase tracking-wider text-white/50 mb-1 block">{t.weather.humidity}</span>
-                                <span className="text-2xl font-bold">{weather.humidity}%</span>
-                            </div>
-                        </div>
-                        <div className="glass-card rounded-2xl p-5 flex flex-col items-start relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <FaWind className="text-6xl" />
-                            </div>
-                            <div className="relative z-10">
-                                <span className="text-xs uppercase tracking-wider text-white/50 mb-1 block">{t.weather.wind}</span>
-                                <span className="text-2xl font-bold">{weather.windSpeed.toFixed(2)} km/h</span>
-                            </div>
-                        </div>
-                        <div className="glass-card rounded-2xl p-5 flex flex-col items-start relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <FaCompressArrowsAlt className="text-6xl" />
-                            </div>
-                            <div className="relative z-10">
-                                <span className="text-xs uppercase tracking-wider text-white/50 mb-1 block">{t.weather.pressure}</span>
-                                <span className="text-2xl font-bold">{weather.pressure} hPa</span>
-                            </div>
-                        </div>
-                        <div className="glass-card rounded-2xl p-5 flex flex-col items-start relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <FaEye className="text-6xl" />
-                            </div>
-                            <div className="relative z-10">
-                                <span className="text-xs uppercase tracking-wider text-white/50 mb-1 block">{t.weather.visibility}</span>
-                                <span className="text-2xl font-bold">{weather.visibility} km</span>
-                            </div>
-                        </div>
-                    </motion.div>
-                );
+                return <StatsSection weather={weather} t={t} />;
             case 'sunrise':
-                return weather.sunrise && weather.sunset && (
-                    <motion.div variants={itemVariants} key="sunrise" className="w-full glass-card rounded-3xl p-6 mb-6 flex justify-around items-center">
-                        <div className="flex flex-col items-center gap-2">
-                            <FaSun className="text-3xl text-amber-300" />
-                            <div className="text-center">
-                                <span className="text-xs text-white/50 uppercase tracking-widest block mb-0.5">{t.weather.sunrise}</span>
-                                <span className="text-xl font-medium">{weather.sunrise}</span>
-                            </div>
-                        </div>
-                        <div className="w-px h-12 bg-white/10"></div>
-                        <div className="flex flex-col items-center gap-2">
-                            <FaMoon className="text-3xl text-indigo-300" />
-                            <div className="text-center">
-                                <span className="text-xs text-white/50 uppercase tracking-widest block mb-0.5">{t.weather.sunset}</span>
-                                <span className="text-xl font-medium">{weather.sunset}</span>
-                            </div>
-                        </div>
-                    </motion.div>
-                );
+                return <SunriseSection weather={weather} t={t} />;
             default:
                 return null;
         }
@@ -442,9 +517,9 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
                     <FaArrowLeft className="text-xl group-hover:-translate-x-1 transition-transform" />
                 </button>
 
-                <div 
+                <div
                     className={`absolute left-1/2 flex flex-col items-center transition-all duration-300 glass-card px-6 py-2 rounded-full backdrop-blur-md border border-white/10 ${isScrolled ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                    style={{ 
+                    style={{
                         transform: isScrolled ? 'translate3d(-50%, 0, 0)' : 'translate3d(-50%, -16px, 0)'
                     }}
                 >
@@ -538,27 +613,28 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
                                                         <div className="px-4 py-2 text-xs text-white/40 uppercase tracking-widest font-semibold border-b border-white/5">
                                                             {t.switchSource}
                                                         </div>
-                                                        {['openweathermap', 'weatherapi', 'qweather'].map((src) => (
-                                                            <button
-                                                                key={src}
-                                                                onClick={async () => {
-                                                                    if (onSourceChange) {
-                                                                        onSourceChange(src);
-                                                                        setShowMenu(false);
-                                                                    }
-                                                                }}
-                                                                className={`w-full px-4 py-3 text-left text-sm flex items-center justify-between active:bg-white/10 transition-colors
-                                                                ${weather.source === src || weather.sourceOverride === src ? 'text-blue-300 bg-white/5' : 'text-white/80'}
-                                                            `}
-                                                            >
-                                                                <span>
-                                                                    {src === 'openweathermap' ? t.settings.openWeatherMap :
-                                                                        src === 'weatherapi' ? t.settings.weatherapi :
-                                                                            t.settings.qweather}
-                                                                </span>
-                                                                {(weather.source === src || weather.sourceOverride === src) && <FaInfoCircle className="text-xs" />}
-                                                            </button>
-                                                        ))}
+                                                        {['openweathermap', 'weatherapi', 'qweather'].map((src) => {
+                                                            const isActive = weather.source === src || weather.sourceOverride === src;
+                                                            return (
+                                                                <button
+                                                                    key={src}
+                                                                    onClick={async () => {
+                                                                        if (onSourceChange) {
+                                                                            onSourceChange(src);
+                                                                            setShowMenu(false);
+                                                                        }
+                                                                    }}
+                                                                    className={`w-full px-4 py-3 text-left text-sm flex items-center justify-between active:bg-white/10 transition-colors
+                                                                    ${isActive ? 'text-blue-300 bg-white/5' : 'text-white/80'}
+                                                                `}
+                                                                >
+                                                                    <span>
+                                                                        {getSourceLabel(src, t)}
+                                                                    </span>
+                                                                    {isActive && <FaInfoCircle className="text-xs" />}
+                                                                </button>
+                                                            );
+                                                        })}
                                                         <button
                                                             onClick={() => {
                                                                 if (onSourceChange) {
@@ -580,27 +656,28 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
                                                         <div className="px-5 py-1.5 text-xs text-white/40 uppercase tracking-widest font-semibold">
                                                             {t.switchSource}
                                                         </div>
-                                                        {['openweathermap', 'weatherapi', 'qweather'].map((src) => (
-                                                            <button
-                                                                key={src}
-                                                                onClick={() => {
-                                                                    if (onSourceChange) {
-                                                                        onSourceChange(src);
-                                                                        setShowMenu(false);
-                                                                    }
-                                                                }}
-                                                                className={`w-full px-5 py-2.5 text-left text-base flex items-center justify-between hover:bg-white/10 transition-colors
-                                                                ${weather.source === src || weather.sourceOverride === src ? 'text-blue-300 bg-white/5' : 'text-white/80'}
-                                                            `}
-                                                            >
-                                                                <span>
-                                                                    {src === 'openweathermap' ? t.settings.openWeatherMap :
-                                                                        src === 'weatherapi' ? t.settings.weatherapi :
-                                                                            t.settings.qweather}
-                                                                </span>
-                                                                {(weather.source === src || weather.sourceOverride === src) && <FaInfoCircle className="text-xs" />}
-                                                            </button>
-                                                        ))}
+                                                        {['openweathermap', 'weatherapi', 'qweather'].map((src) => {
+                                                            const isActive = weather.source === src || weather.sourceOverride === src;
+                                                            return (
+                                                                <button
+                                                                    key={src}
+                                                                    onClick={() => {
+                                                                        if (onSourceChange) {
+                                                                            onSourceChange(src);
+                                                                            setShowMenu(false);
+                                                                        }
+                                                                    }}
+                                                                    className={`w-full px-5 py-2.5 text-left text-base flex items-center justify-between hover:bg-white/10 transition-colors
+                                                                    ${isActive ? 'text-blue-300 bg-white/5' : 'text-white/80'}
+                                                                `}
+                                                                >
+                                                                    <span>
+                                                                        {getSourceLabel(src, t)}
+                                                                    </span>
+                                                                    {isActive && <FaInfoCircle className="text-xs" />}
+                                                                </button>
+                                                            );
+                                                        })}
                                                         <div className="border-t border-white/5 my-1"></div>
                                                         <button
                                                             onClick={() => {
@@ -680,6 +757,6 @@ const WeatherDetail: React.FC<WeatherDetailProps> = memo(({
             </div>
         </motion.div>
     );
-});
+}
 
-export default WeatherDetail;
+export default memo(WeatherDetail);

@@ -18,12 +18,12 @@ const CLOUDY_REGEX = /cloud|overcast|云|阴/i;
 const MIST_REGEX = /mist|fog|haze|smoke|dust|sand|ash|squall|tornado|薄雾|雾|霾/i;
 
 /**
- * categorizes a weather condition string into a `WeatherCategory`.
+ * Categorizes a weather condition string into a `WeatherCategory`.
  *
  * @param {string} condition - The raw weather condition string (e.g., "Light Rain").
  * @returns {WeatherCategory} The corresponding weather category.
  */
-export const getWeatherCategory = (condition: string): WeatherCategory => {
+export function getWeatherCategory(condition: string): WeatherCategory {
     if (!condition) return WeatherCategory.Unknown;
     if (SUNNY_REGEX.test(condition)) return WeatherCategory.Sunny;
     if (RAINY_REGEX.test(condition)) return WeatherCategory.Rainy;
@@ -31,7 +31,7 @@ export const getWeatherCategory = (condition: string): WeatherCategory => {
     if (CLOUDY_REGEX.test(condition)) return WeatherCategory.Cloudy;
     if (MIST_REGEX.test(condition)) return WeatherCategory.Mist;
     return WeatherCategory.Unknown;
-};
+}
 
 /**
  * Determines the CSS background class based on the weather condition.
@@ -39,7 +39,7 @@ export const getWeatherCategory = (condition: string): WeatherCategory => {
  * @param {string} condition - The raw weather condition string.
  * @returns {string} The CSS class name for the background.
  */
-export const getWeatherBackground = (condition: string): string => {
+export function getWeatherBackground(condition: string): string {
     const category = getWeatherCategory(condition);
     switch (category) {
         case WeatherCategory.Sunny: return 'bg-sunny';
@@ -49,4 +49,15 @@ export const getWeatherBackground = (condition: string): string => {
         case WeatherCategory.Mist: return 'bg-mist';
         default: return 'bg-default';
     }
-};
+}
+
+/**
+ * Returns the tailwind text color class corresponding to the Air Quality Index (AQI).
+ *
+ * @param {number} aqi - The AQI value (1-5).
+ * @returns {string} The tailwind text color class.
+ */
+export function getAqiColor(aqi: number): string {
+    const colors = ['text-emerald-400', 'text-yellow-400', 'text-orange-400', 'text-red-400', 'text-purple-400', 'text-rose-900'];
+    return colors[aqi - 1] || 'text-gray-400';
+}

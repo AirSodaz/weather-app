@@ -9,6 +9,7 @@ import SearchBar from './SearchBar';
 import { storage } from '../utils/storage';
 import { useI18n } from '../contexts/I18nContext';
 import { getWeatherBackground } from '../utils/weatherUtils';
+import { isMobileDevice } from '../utils/env';
 import RelativeTime from './RelativeTime';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 import { processWithConcurrency } from '../utils/asyncUtils';
@@ -757,7 +758,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
         // On mobile, prevent the context menu from showing on long-press (which fires contextmenu)
         // to avoid conflict with the long-press drag gesture.
         // The menu can still be accessed via the ellipsis button (which fires a click event).
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isMobile = isMobileDevice();
         if (isMobile && e.type === 'contextmenu') {
             return;
         }

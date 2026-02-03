@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import en from '../locales/en.json';
 import zh from '../locales/zh.json';
 import { storage } from '../utils/storage';
@@ -11,7 +11,7 @@ type Language = 'en' | 'zh' | 'system';
 /**
  * Type definition for the translation object based on the English locale file.
  */
-type Translations = typeof en;
+export type Translations = typeof en;
 
 const translations: Record<string, Translations> = { en, zh };
 
@@ -20,11 +20,11 @@ const translations: Record<string, Translations> = { en, zh };
  *
  * @returns {'en' | 'zh'} The detected language code ('en' or 'zh'). Defaults to 'en'.
  */
-const getSystemLanguage = (): 'en' | 'zh' => {
+function getSystemLanguage(): 'en' | 'zh' {
     const lang = navigator.language.toLowerCase();
     if (lang.startsWith('zh')) return 'zh';
     return 'en';
-};
+}
 
 /**
  * Interface defining the shape of the I18n context.
@@ -42,15 +42,18 @@ interface I18nContextType {
 
 const I18nContext = createContext<I18nContextType | null>(null);
 
+interface I18nProviderProps {
+    children: ReactNode;
+}
+
 /**
  * Provider component for internationalization context.
  * Manages language state and persists it to storage.
  *
- * @param {Object} props - The component props.
- * @param {ReactNode} props.children - The child components.
+ * @param {I18nProviderProps} props - The component props.
  * @returns {JSX.Element} The provider component.
  */
-export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export function I18nProvider({ children }: I18nProviderProps): JSX.Element {
     const [language, setLanguageState] = useState<Language>('system');
     const [currentLanguage, setCurrentLanguage] = useState<'en' | 'zh'>(getSystemLanguage());
 
@@ -69,7 +72,7 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     /**
      * Loads the saved language setting from storage.
      */
-    const loadLanguage = async () => {
+    async function loadLanguage(): Promise<void> {
         try {
             const savedLang = await storage.get('language');
             console.log('Language loaded from storage:', savedLang);
@@ -79,14 +82,14 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } catch (e) {
             console.error('Failed to load language setting:', e);
         }
-    };
+    }
 
     /**
      * Updates the language setting and saves it to storage.
      *
      * @param {Language} lang - The new language setting.
      */
-    const setLanguage = async (lang: Language) => {
+    async function setLanguage(lang: Language): Promise<void> {
         setLanguageState(lang);
         try {
             await storage.set('language', lang);
@@ -94,7 +97,7 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } catch (e) {
             console.error('Failed to save language setting:', e);
         }
-    };
+    }
 
     const t = translations[currentLanguage];
 
@@ -103,7 +106,7 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             {children}
         </I18nContext.Provider>
     );
-};
+}
 
 /**
  * Hook to access the internationalization context.
@@ -111,10 +114,10 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
  * @returns {I18nContextType} The I18n context values.
  * @throws {Error} If used outside of an I18nProvider.
  */
-export const useI18n = (): I18nContextType => {
+export function useI18n(): I18nContextType {
     const context = useContext(I18nContext);
     if (!context) {
         throw new Error('useI18n must be used within an I18nProvider');
     }
     return context;
-};
+}

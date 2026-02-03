@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { VscChromeMinimize, VscChromeMaximize, VscChromeClose, VscChromeRestore } from 'react-icons/vsc';
 import { isTauri } from '../utils/env';
 
@@ -9,7 +9,7 @@ import { isTauri } from '../utils/env';
  *
  * @returns {JSX.Element | null} The title bar element or null if not applicable.
  */
-const TitleBar: React.FC = () => {
+function TitleBar(): JSX.Element | null {
     const [isMaximized, setIsMaximized] = useState(false);
 
     useEffect(() => {
@@ -109,6 +109,6 @@ const TitleBar: React.FC = () => {
             </div>
         </div>
     );
-};
+}
 
 export default TitleBar;

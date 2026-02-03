@@ -10,6 +10,7 @@ import packageJson from '../../package.json';
 import { motion, Variants } from 'framer-motion';
 import ApiKeySettings from './ApiKeySettings';
 import { Select } from './ui/Select';
+import { RadioGroup } from './ui/RadioGroup';
 
 /**
  * Props for the SettingsModal component.
@@ -222,30 +223,17 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
 
                 <div className="p-6 space-y-6 flex-1 overflow-y-auto">
                     {/* Language Selection */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                            <FaGlobe /> {t.settings.language}
-                        </label>
-                        <div className="grid grid-cols-3 gap-2 p-1 bg-black/20 rounded-xl">
-                            {[
-                                { val: 'system', label: 'Auto' },
-                                { val: 'en', label: 'EN' },
-                                { val: 'zh', label: '中文' }
-                            ].map(opt => (
-                                <button
-                                    key={opt.val}
-                                    onClick={() => setLocalLanguage(opt.val as any)}
-                                    aria-pressed={localLanguage === opt.val}
-                                    className={`
-                                        py-2 rounded-lg text-sm font-medium transition-all
-                                        ${localLanguage === opt.val ? 'bg-white/10 text-white shadow-sm' : 'text-white/50 hover:text-white/80'}
-                                    `}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    <RadioGroup
+                        label={t.settings.language}
+                        icon={<FaGlobe />}
+                        value={localLanguage}
+                        onChange={(val) => setLocalLanguage(val as any)}
+                        options={[
+                            { value: 'system', label: 'Auto' },
+                            { value: 'en', label: 'EN' },
+                            { value: 'zh', label: '中文' }
+                        ]}
+                    />
 
                     <div className="w-full h-px bg-white/5" />
 
@@ -371,29 +359,16 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
                     />
 
                     {/* Startup View */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                            <FaDesktop /> {t.settings.startupView}
-                        </label>
-                        <div className="grid grid-cols-2 gap-2 p-1 bg-black/20 rounded-xl">
-                            {[
-                                { val: 'detail' as const, label: t.settings.startupViewDetail },
-                                { val: 'home' as const, label: t.settings.startupViewHome }
-                            ].map(opt => (
-                                <button
-                                    key={opt.val}
-                                    onClick={() => setStartupView(opt.val)}
-                                    aria-pressed={startupView === opt.val}
-                                    className={`
-                                        py-2 rounded-lg text-sm font-medium transition-all
-                                        ${startupView === opt.val ? 'bg-white/10 text-white shadow-sm' : 'text-white/50 hover:text-white/80'}
-                                    `}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    <RadioGroup
+                        label={t.settings.startupView}
+                        icon={<FaDesktop />}
+                        value={startupView}
+                        onChange={setStartupView}
+                        options={[
+                            { value: 'detail', label: t.settings.startupViewDetail },
+                            { value: 'home', label: t.settings.startupViewHome }
+                        ]}
+                    />
 
                     <div className="w-full h-px bg-white/5" />
 
@@ -412,30 +387,17 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
                     <div className="w-full h-px bg-white/5" />
 
                     {/* Hardware Acceleration Toggle */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                            <FaBolt /> {t.settings.hardwareAcceleration}
-                        </label>
-                        <div className="grid grid-cols-2 gap-2 p-1 bg-black/20 rounded-xl">
-                            {[
-                                { val: true, label: 'ON' },
-                                { val: false, label: 'OFF' }
-                            ].map(opt => (
-                                <button
-                                    key={String(opt.val)}
-                                    onClick={() => setEnableHardwareAcceleration(opt.val)}
-                                    aria-pressed={enableHardwareAcceleration === opt.val}
-                                    className={`
-                                        py-2 rounded-lg text-sm font-medium transition-all
-                                        ${enableHardwareAcceleration === opt.val ? 'bg-white/10 text-white shadow-sm' : 'text-white/50 hover:text-white/80'}
-                                    `}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                        <p className="text-[10px] text-white/30">{t.settings.hardwareAccelerationHelp}</p>
-                    </div>
+                    <RadioGroup
+                        label={t.settings.hardwareAcceleration}
+                        icon={<FaBolt />}
+                        value={enableHardwareAcceleration}
+                        onChange={setEnableHardwareAcceleration}
+                        helpText={t.settings.hardwareAccelerationHelp}
+                        options={[
+                            { value: true, label: 'ON' },
+                            { value: false, label: 'OFF' }
+                        ]}
+                    />
                 </div>
 
                 {/* Footer */}

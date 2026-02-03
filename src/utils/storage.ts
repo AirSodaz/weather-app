@@ -11,7 +11,7 @@ const pendingResolvers = new Map<number, { resolve: (val: any) => void, reject: 
  *
  * @returns {Worker} The serialization worker instance.
  */
-const getSerializerWorker = (): Worker => {
+function getSerializerWorker(): Worker {
     if (!workerInstance) {
         workerInstance = new SerializationWorker();
         workerInstance.onmessage = (e) => {
@@ -25,7 +25,7 @@ const getSerializerWorker = (): Worker => {
         };
     }
     return workerInstance;
-};
+}
 
 /**
  * Serializes data to a JSON string asynchronously using a web worker.
@@ -33,13 +33,13 @@ const getSerializerWorker = (): Worker => {
  * @param {any} data - The data to serialize.
  * @returns {Promise<string>} A promise that resolves to the JSON string.
  */
-const stringifyAsync = (data: any): Promise<string> => {
+function stringifyAsync(data: any): Promise<string> {
     return new Promise((resolve, reject) => {
         const id = msgId++;
         pendingResolvers.set(id, { resolve, reject });
         getSerializerWorker().postMessage({ id, type: 'stringify', data });
     });
-};
+}
 
 /**
  * Parses a JSON string asynchronously using a web worker.
@@ -47,13 +47,13 @@ const stringifyAsync = (data: any): Promise<string> => {
  * @param {string} json - The JSON string to parse.
  * @returns {Promise<any>} A promise that resolves to the parsed data.
  */
-const parseAsync = (json: string): Promise<any> => {
+function parseAsync(json: string): Promise<any> {
     return new Promise((resolve, reject) => {
         const id = msgId++;
         pendingResolvers.set(id, { resolve, reject });
         getSerializerWorker().postMessage({ id, type: 'parse', data: json });
     });
-};
+}
 
 // Fallback to localStorage for browser environment.
 const localStorageFallback = {

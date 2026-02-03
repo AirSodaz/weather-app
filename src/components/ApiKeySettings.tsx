@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { FaKey, FaSync, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { WeatherSource } from '../utils/config';
 import { verifyConnection } from '../services/weatherApi';
+import { Translations } from '../contexts/I18nContext';
 
 /**
  * Props for the ApiKeySettings component.
@@ -14,7 +15,7 @@ interface ApiKeySettingsProps {
     /** Callback triggered when the API key changes. */
     onChange: (value: string) => void;
     /** Translation object. */
-    t: any;
+    t: Translations;
     /** Current language code. */
     localLanguage: string;
     /** Optional custom host for QWeather. */
@@ -28,14 +29,14 @@ interface ApiKeySettingsProps {
  * @param {ApiKeySettingsProps} props - The component props.
  * @returns {JSX.Element} The API key settings component.
  */
-const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
+function ApiKeySettings({
     source,
     initialValue,
     onChange,
     t,
     localLanguage,
     qweatherHost
-}) => {
+}: ApiKeySettingsProps): JSX.Element {
     const [value, setValue] = useState(initialValue);
     const [testing, setTesting] = useState(false);
     const [testResult, setTestResult] = useState<'success' | 'fail' | null>(null);
@@ -48,19 +49,19 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
     /**
      * Handles input changes and clears previous test results.
      *
-     * @param {React.ChangeEvent<HTMLInputElement>} e - The change event.
+     * @param {ChangeEvent<HTMLInputElement>} e - The change event.
      */
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    function handleChange(e: ChangeEvent<HTMLInputElement>): void {
         const newValue = e.target.value;
         setValue(newValue);
         onChange(newValue);
         if (testResult) setTestResult(null);
-    };
+    }
 
     /**
      * Tests the API connection using the current key and source.
      */
-    const handleTestConnection = async () => {
+    async function handleTestConnection(): Promise<void> {
         if (!value) return;
 
         setTesting(true);
@@ -75,14 +76,14 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
         } finally {
             setTesting(false);
         }
-    };
+    }
 
     /**
      * Returns the help URL for retrieving an API key for the current source.
      *
      * @returns {string} The URL.
      */
-    const getApiKeyHelp = (): string => {
+    function getApiKeyHelp(): string {
         switch (source) {
             case 'openweathermap':
                 return 'https://openweathermap.org/';
@@ -93,7 +94,19 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
             default:
                 return '';
         }
-    };
+    }
+
+    const testButtonContent: JSX.Element = (() => {
+        if (testResult === 'success') return <span>Success</span>;
+        if (testResult === 'fail') return <span>Failed</span>;
+        return <span>Test Connection</span>;
+    })();
+
+    const testQueryResultClass: string = (() => {
+        if (testResult === 'success') return 'text-green-400';
+        if (testResult === 'fail') return 'text-red-400';
+        return 'text-blue-400 hover:text-blue-300';
+    })();
 
     return (
         <div className="space-y-3 animate-fade-in">
@@ -127,20 +140,12 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
                             disabled={testing || !value}
                             className={`
                                 flex items-center gap-1 transition-colors font-medium
-                                ${testResult === 'success' ? 'text-green-400' :
-                                    testResult === 'fail' ? 'text-red-400' :
-                                        'text-blue-400 hover:text-blue-300'}
+                                ${testQueryResultClass}
                                 ${testing ? 'opacity-50 cursor-not-allowed' : ''}
                             `}
                         >
                             {testing && <FaSync className="animate-spin" />}
-                            {testResult === 'success' ? (
-                                <span>Success</span>
-                            ) : testResult === 'fail' ? (
-                                <span>Failed</span>
-                            ) : (
-                                <span>Test Connection</span>
-                            )}
+                            {testButtonContent}
                         </button>
                         <div className="w-px h-3 bg-white/10"></div>
                         <a href={getApiKeyHelp()} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">
@@ -151,6 +156,6 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
             )}
         </div>
     );
-};
+}
 
 export default ApiKeySettings;

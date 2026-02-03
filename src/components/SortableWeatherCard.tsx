@@ -45,11 +45,13 @@ function SortableWeatherCard({
     } = useSortable({ id: weather.city });
 
     // Combine dnd-kit transform with custom styles
-    // Apply translateZ(0) for hardware acceleration when enabled
+    // Use CSS.Translate to avoid unwanted scaling from dnd-kit
+    const dndTransform = CSS.Translate.toString(transform);
+
     const style: React.CSSProperties = {
-        transform: enableHardwareAcceleration
-            ? (CSS.Transform.toString(transform) || '') + ' translateZ(0)'
-            : CSS.Transform.toString(transform),
+        transform: dndTransform
+            ? (enableHardwareAcceleration ? dndTransform + ' translateZ(0)' : dndTransform)
+            : undefined,
         transition: transition || undefined,
         touchAction: 'manipulation',
         // Additional hardware acceleration hints

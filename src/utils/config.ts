@@ -81,7 +81,7 @@ let configVersion = 0;
  *
  * @returns {Promise<AppSettings>} A promise that resolves to the current application settings.
  */
-export const getSettings = (): Promise<AppSettings> => {
+export function getSettings(): Promise<AppSettings> {
     if (cachedSettings) {
         return Promise.resolve(cachedSettings);
     }
@@ -124,7 +124,7 @@ export const getSettings = (): Promise<AppSettings> => {
     })();
 
     return settingsPromise;
-};
+}
 
 /**
  * Saves the application settings to storage.
@@ -133,9 +133,9 @@ export const getSettings = (): Promise<AppSettings> => {
  * @param {AppSettings} settings - The settings object to save.
  * @returns {Promise<void>} A promise that resolves when the settings are saved.
  */
-export const saveSettings = async (settings: AppSettings): Promise<void> => {
+export async function saveSettings(settings: AppSettings): Promise<void> {
     configVersion++; // Invalidate in-flight getSettings
     cachedSettings = null; // Invalidate cache
     settingsPromise = null; // Invalidate current promise
     await storage.set('settings', settings);
-};
+}
