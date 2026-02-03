@@ -52,7 +52,7 @@ const modalVariants: Variants = {
  * @param {SettingsModalProps} props - The component props.
  * @returns {JSX.Element} The settings modal component.
  */
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettingsChange }) => {
+function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps): JSX.Element {
     const { t, language, setLanguage } = useI18n();
     const isTauriEnv = isTauri();
     const [localLanguage, setLocalLanguage] = useState(language);
@@ -465,6 +465,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
             </motion.div>
         </motion.div>
     );
-};
+}
 
 export default SettingsModal;
