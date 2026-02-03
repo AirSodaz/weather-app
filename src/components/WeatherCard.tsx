@@ -65,7 +65,7 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
             )}
 
             {/* Main Content */}
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex justify-between items-start mb-6 gap-4">
                 <div className="min-w-0 flex-1">
                     <h2 className="text-2xl font-bold tracking-tight mb-1 text-white group-hover:text-white/90 transition-colors line-clamp-2 overflow-hidden pr-12">
                         {weather.city}
@@ -80,7 +80,7 @@ const WeatherCard: React.FC<WeatherCardProps> = memo(({
                         )}
                     </p>
                 </div>
-                <div className="pl-8 mt-8 shrink-0">
+                <div className="mt-8 shrink-0">
                     <WeatherIcon condition={weather.condition} className="text-6xl drop-shadow-lg" />
                 </div>
             </div>
