@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { isTauri } from '../utils/env';
 import { AppSettings, getSettings, saveSettings, WeatherSource, SectionConfig } from '../utils/config';
 import { useI18n } from '../contexts/I18nContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import {
     FaTimes, FaSave, FaCog, FaGlobe, FaClock, FaDesktop,
     FaSync, FaCloud, FaGripLines, FaCheckSquare, FaSquare, FaList, FaGithub, FaBolt
@@ -74,6 +75,9 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
     // Drag and drop state.
     const [draggedSectionIndex, setDraggedSectionIndex] = useState<number | null>(null);
     const [dragOverSectionIndex, setDragOverSectionIndex] = useState<number | null>(null);
+
+    const modalRef = useRef<HTMLDivElement>(null);
+    useFocusTrap(modalRef, isOpen, onClose);
 
     useEffect(() => {
         if (isOpen) {
@@ -193,6 +197,7 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
             onClick={onClose}
         >
             <motion.div
+                ref={modalRef}
                 onClick={(e) => e.stopPropagation()}
                 variants={modalVariants}
                 className="glass-dark border-0 sm:border border-white/10 

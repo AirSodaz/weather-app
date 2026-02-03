@@ -13,3 +13,7 @@
 ## 2025-02-20 - Custom Select Label Association
 **Learning:** The custom `Select` component rendered a visual label but failed to associate it programmatically with the trigger button, leaving screen reader users without context for the setting.
 **Action:** Use `React.useId` to generate unique identifiers and link custom form controls to their labels using `htmlFor` and `id` attributes.
+
+## 2026-02-03 - Modal Focus Management
+**Learning:** Modals (`SettingsModal`) lacked focus trapping and Escape key support, allowing users to interact with the background and get lost.
+**Action:** Use a `useFocusTrap` hook for all modal components to ensure focus stays contained and standard keyboard shortcuts (Escape) work.
