@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { isTauri } from '../utils/env';
 import { AppSettings, getSettings, saveSettings, WeatherSource, SectionConfig } from '../utils/config';
 import { useI18n } from '../contexts/I18nContext';
 import {
@@ -53,6 +54,7 @@ const modalVariants: Variants = {
  */
 export default function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps): JSX.Element {
     const { t, language, setLanguage } = useI18n();
+    const isTauriEnv = isTauri();
     const [localLanguage, setLocalLanguage] = useState(language);
     const [source, setSource] = useState<WeatherSource>('openweathermap');
     const [customUrl, setCustomUrl] = useState('');
@@ -156,44 +158,44 @@ export default function SettingsModal({ isOpen, onClose, onSettingsChange }: Set
      */
     function handleSectionDrop(e: React.DragEvent<HTMLDivElement>, dropIndex: number) {
         e.preventDefault();
-        setDragOverSectionIndex(null);
         if (draggedSectionIndex === null) return;
 
-        if (draggedSectionIndex !== dropIndex) {
-            const updatedSections = [...detailViewSections];
-            const [movedSection] = updatedSections.splice(draggedSectionIndex, 1);
-            updatedSections.splice(dropIndex, 0, movedSection);
-            setDetailViewSections(updatedSections);
-        }
+        const newSections = [...detailViewSections];
+        const [movedItem] = newSections.splice(draggedSectionIndex, 1);
+        newSections.splice(dropIndex, 0, movedItem);
+
+        setDetailViewSections(newSections);
         setDraggedSectionIndex(null);
     }
 
     /**
-     * Toggles the visibility of a section.
+     * Toggles the visibility of a detail view section.
      *
      * @param {number} index - The index of the section to toggle.
      */
     function toggleSectionVisibility(index: number) {
-        const updatedSections = [...detailViewSections];
-        updatedSections[index].visible = !updatedSections[index].visible;
-        setDetailViewSections(updatedSections);
+        const newSections = [...detailViewSections];
+        newSections[index].visible = !newSections[index].visible;
+        setDetailViewSections(newSections);
     }
 
     const refreshOptions = [0, 5, 10, 15, 30, 60];
 
     return (
         <motion.div
+            variants={overlayVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
-            variants={overlayVariants}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            className={`absolute inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md ${isTauriEnv ? 'pt-12' : ''}`}
             onClick={onClose}
         >
             <motion.div
-                variants={modalVariants}
-                className="bg-[#1e1e1e] w-full max-w-2xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden flex flex-col max-h-[90vh]"
                 onClick={(e) => e.stopPropagation()}
+                variants={modalVariants}
+                className="glass-dark border-0 sm:border border-white/10
+                rounded-none sm:rounded-3xl w-full h-full sm:h-auto sm:max-w-md sm:max-h-[90vh]
+                shadow-2xl overflow-hidden flex flex-col"
             >
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-white/5 flex-shrink-0">
