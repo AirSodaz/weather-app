@@ -29,3 +29,7 @@
 ## 2026-01-23 - Memoize SortableContext Items
 **Learning:** Passing a derived array to `SortableContext` (e.g., `list.map(...)`) creates a new reference on every render, forcing dnd-kit to update context and re-evaluate consumers.
 **Action:** Use `useMemo` to stabilize the `items` array passed to `SortableContext` to prevent unnecessary re-renders during unrelated parent updates.
+
+## 2026-02-05 - Cache Worker-Based Storage Reads
+**Learning:** `storage.get` uses a web worker for parsing, which is safer but adds message-passing overhead. Frequent reads (e.g., in search debouncing or concurrent fetches) can saturate the worker and block.
+**Action:** Implement in-memory caching and request deduplication (Promise reuse) for frequently accessed, read-heavy configuration data.

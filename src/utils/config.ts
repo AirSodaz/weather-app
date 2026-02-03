@@ -70,36 +70,72 @@ const DEFAULT_SETTINGS: AppSettings = {
     enableHardwareAcceleration: true
 };
 
+// Caching mechanism to avoid frequent storage reads (which involve worker messaging)
+let cachedSettings: AppSettings | null = null;
+let settingsPromise: Promise<AppSettings> | null = null;
+let configVersion = 0;
+
 /**
  * Retrieves the application settings from storage, merging with defaults.
+ * Uses in-memory caching and promise deduplication to optimize performance.
  *
  * @returns {Promise<AppSettings>} A promise that resolves to the current application settings.
  */
-export const getSettings = async (): Promise<AppSettings> => {
-    const settings = await storage.get('settings');
-    const mergedSettings = { ...DEFAULT_SETTINGS, ...settings };
-
-    // Deep merge apiKeys to preserve defaults (env vars) if not present in settings.
-    mergedSettings.apiKeys = {
-        ...DEFAULT_SETTINGS.apiKeys,
-        ...(settings?.apiKeys || {})
-    };
-
-    // If stored key is empty but env var exists, prefer env var.
-    // This fixes the case where an empty key might have been saved.
-    if (!mergedSettings.apiKeys.qweather && DEFAULT_SETTINGS.apiKeys.qweather) {
-        mergedSettings.apiKeys.qweather = DEFAULT_SETTINGS.apiKeys.qweather;
+export const getSettings = (): Promise<AppSettings> => {
+    if (cachedSettings) {
+        return Promise.resolve(cachedSettings);
     }
 
-    return mergedSettings;
+    if (settingsPromise) {
+        return settingsPromise;
+    }
+
+    const currentVersion = configVersion;
+
+    settingsPromise = (async () => {
+        try {
+            const settings = await storage.get('settings');
+            const mergedSettings = { ...DEFAULT_SETTINGS, ...settings };
+
+            // Deep merge apiKeys to preserve defaults (env vars) if not present in settings.
+            mergedSettings.apiKeys = {
+                ...DEFAULT_SETTINGS.apiKeys,
+                ...(settings?.apiKeys || {})
+            };
+
+            // If stored key is empty but env var exists, prefer env var.
+            // This fixes the case where an empty key might have been saved.
+            if (!mergedSettings.apiKeys.qweather && DEFAULT_SETTINGS.apiKeys.qweather) {
+                mergedSettings.apiKeys.qweather = DEFAULT_SETTINGS.apiKeys.qweather;
+            }
+
+            // Only update cache if version hasn't changed (no concurrent save)
+            if (currentVersion === configVersion) {
+                cachedSettings = mergedSettings;
+            }
+
+            return mergedSettings;
+        } finally {
+            // Only clear promise if version hasn't changed
+            if (currentVersion === configVersion) {
+                settingsPromise = null;
+            }
+        }
+    })();
+
+    return settingsPromise;
 };
 
 /**
  * Saves the application settings to storage.
+ * Invalidates the in-memory cache to ensure consistency.
  *
  * @param {AppSettings} settings - The settings object to save.
  * @returns {Promise<void>} A promise that resolves when the settings are saved.
  */
 export const saveSettings = async (settings: AppSettings): Promise<void> => {
+    configVersion++; // Invalidate in-flight getSettings
+    cachedSettings = null; // Invalidate cache
+    settingsPromise = null; // Invalidate current promise
     await storage.set('settings', settings);
 };
