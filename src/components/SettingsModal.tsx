@@ -219,7 +219,7 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
                     </h2>
                     <button
                         onClick={onClose}
-                        className="w-8 h-8 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                        className="w-8 h-8 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                         aria-label="Close"
                     >
                         <FaTimes />
@@ -334,7 +334,7 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
                                     </span>
                                     <button
                                         onClick={() => toggleSectionVisibility(index)}
-                                        className="text-white/70 hover:text-white transition-colors p-1"
+                                        className="text-white/70 hover:text-white transition-colors p-1 rounded focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                                         aria-label={section.visible
                                             ? `Hide ${t.detailSections?.[section.id] || section.id}`
                                             : `Show ${t.detailSections?.[section.id] || section.id}`
@@ -423,6 +423,7 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
                             bg-white text-black hover:bg-gray-200 
                             font-bold py-3 px-8 rounded-xl shadow-lg shadow-white/5
                             transform active:scale-95 transition-all flex items-center gap-2
+                            focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none
                         "
                     >
                         {loading ? <FaSync className="animate-spin" /> : <FaSave />}

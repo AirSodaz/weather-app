@@ -56,7 +56,7 @@ export function RadioGroup<T extends string | number | boolean>({
                         aria-pressed={value === opt.value}
                         type="button"
                         className={`
-                            py-2 rounded-lg text-sm font-medium transition-all
+                            py-2 rounded-lg text-sm font-medium transition-all focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
                             ${value === opt.value
                                 ? 'bg-white/10 text-white shadow-sm'
                                 : 'text-white/50 hover:text-white/80'}

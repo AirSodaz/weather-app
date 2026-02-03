@@ -17,3 +17,7 @@
 ## 2026-02-03 - Modal Focus Management
 **Learning:** Modals (`SettingsModal`) lacked focus trapping and Escape key support, allowing users to interact with the background and get lost.
 **Action:** Use a `useFocusTrap` hook for all modal components to ensure focus stays contained and standard keyboard shortcuts (Escape) work.
+
+## 2026-03-22 - Focus Visible Verification
+**Learning:** Programmatic focus (e.g. `element.focus()`) often fails to trigger `:focus-visible` styles in headless browsers.
+**Action:** Always simulate real keyboard events (like `page.keyboard.press("Tab")`) when verifying focus indicators in Playwright tests.
