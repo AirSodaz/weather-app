@@ -28,14 +28,14 @@ interface ApiKeySettingsProps {
  * @param {ApiKeySettingsProps} props - The component props.
  * @returns {JSX.Element} The API key settings component.
  */
-const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
+export default function ApiKeySettings({
     source,
     initialValue,
     onChange,
     t,
     localLanguage,
     qweatherHost
-}) => {
+}: ApiKeySettingsProps): JSX.Element {
     const [value, setValue] = useState(initialValue);
     const [testing, setTesting] = useState(false);
     const [testResult, setTestResult] = useState<'success' | 'fail' | null>(null);
@@ -50,17 +50,17 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
      *
      * @param {React.ChangeEvent<HTMLInputElement>} e - The change event.
      */
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
         const newValue = e.target.value;
         setValue(newValue);
         onChange(newValue);
         if (testResult) setTestResult(null);
-    };
+    }
 
     /**
      * Tests the API connection using the current key and source.
      */
-    const handleTestConnection = async () => {
+    async function handleTestConnection() {
         if (!value) return;
 
         setTesting(true);
@@ -75,14 +75,14 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
         } finally {
             setTesting(false);
         }
-    };
+    }
 
     /**
      * Returns the help URL for retrieving an API key for the current source.
      *
      * @returns {string} The URL.
      */
-    const getApiKeyHelp = (): string => {
+    function getApiKeyHelp(): string {
         switch (source) {
             case 'openweathermap':
                 return 'https://openweathermap.org/';
@@ -93,6 +93,16 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
             default:
                 return '';
         }
+    }
+
+    const renderButtonLabel = () => {
+        if (testResult === 'success') {
+            return <span>Success</span>;
+        }
+        if (testResult === 'fail') {
+            return <span>Failed</span>;
+        }
+        return <span>Test Connection</span>;
     };
 
     return (
@@ -134,13 +144,7 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
                             `}
                         >
                             {testing && <FaSync className="animate-spin" />}
-                            {testResult === 'success' ? (
-                                <span>Success</span>
-                            ) : testResult === 'fail' ? (
-                                <span>Failed</span>
-                            ) : (
-                                <span>Test Connection</span>
-                            )}
+                            {renderButtonLabel()}
                         </button>
                         <div className="w-px h-3 bg-white/10"></div>
                         <a href={getApiKeyHelp()} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">
@@ -151,6 +155,4 @@ const ApiKeySettings: React.FC<ApiKeySettingsProps> = ({
             )}
         </div>
     );
-};
-
-export default ApiKeySettings;
+}

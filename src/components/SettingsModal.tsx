@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { isTauri } from '../utils/env';
 import { AppSettings, getSettings, saveSettings, WeatherSource, SectionConfig } from '../utils/config';
 import { useI18n } from '../contexts/I18nContext';
 import {
@@ -52,9 +51,8 @@ const modalVariants: Variants = {
  * @param {SettingsModalProps} props - The component props.
  * @returns {JSX.Element} The settings modal component.
  */
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettingsChange }) => {
+export default function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps): JSX.Element {
     const { t, language, setLanguage } = useI18n();
-    const isTauriEnv = isTauri();
     const [localLanguage, setLocalLanguage] = useState(language);
     const [source, setSource] = useState<WeatherSource>('openweathermap');
     const [customUrl, setCustomUrl] = useState('');
@@ -84,7 +82,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
     /**
      * Loads current settings from storage.
      */
-    const loadSettings = async () => {
+    async function loadSettings() {
         setLoading(true);
         const settings = await getSettings();
         setSource(settings.source);
@@ -97,12 +95,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
         setTimeFormat(settings.timeFormat || '24h');
         setEnableHardwareAcceleration(settings.enableHardwareAcceleration ?? true);
         setLoading(false);
-    };
+    }
 
     /**
      * Saves the modified settings to storage and updates the application state.
      */
-    const handleSave = async () => {
+    async function handleSave() {
         setLoading(true);
         const newSettings: AppSettings = {
             source,
@@ -120,7 +118,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
         setLoading(false);
         onSettingsChange?.();
         onClose();
-    };
+    }
 
     // Section Drag Handlers.
 
@@ -130,11 +128,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
      * @param {React.DragEvent<HTMLDivElement>} e - The drag event.
      * @param {number} index - The index of the section being dragged.
      */
-    const handleSectionDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    function handleSectionDragStart(e: React.DragEvent<HTMLDivElement>, index: number) {
         setDraggedSectionIndex(index);
         e.dataTransfer.effectAllowed = 'move';
         // e.dataTransfer.setDragImage(e.currentTarget, 20, 20); // Optional custom drag image.
-    };
+    }
 
     /**
      * Handles the drag over event to update the drop target indicator.
@@ -142,129 +140,109 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
      * @param {React.DragEvent<HTMLDivElement>} e - The drag event.
      * @param {number} index - The index of the section being dragged over.
      */
-    const handleSectionDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    function handleSectionDragOver(e: React.DragEvent<HTMLDivElement>, index: number) {
         e.preventDefault();
         if (draggedSectionIndex === null) return;
         if (draggedSectionIndex !== index) {
             setDragOverSectionIndex(index);
         }
-    };
+    }
 
     /**
-     * Handles the drop event to reorder the sections.
+     * Handles the drop event to reorder sections.
      *
      * @param {React.DragEvent<HTMLDivElement>} e - The drag event.
-     * @param {number} dropIndex - The index where the item is dropped.
+     * @param {number} dropIndex - The index where the section is dropped.
      */
-    const handleSectionDrop = (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
+    function handleSectionDrop(e: React.DragEvent<HTMLDivElement>, dropIndex: number) {
         e.preventDefault();
+        setDragOverSectionIndex(null);
         if (draggedSectionIndex === null) return;
 
-        const newSections = [...detailViewSections];
-        const [movedItem] = newSections.splice(draggedSectionIndex, 1);
-        newSections.splice(dropIndex, 0, movedItem);
-
-        setDetailViewSections(newSections);
+        if (draggedSectionIndex !== dropIndex) {
+            const updatedSections = [...detailViewSections];
+            const [movedSection] = updatedSections.splice(draggedSectionIndex, 1);
+            updatedSections.splice(dropIndex, 0, movedSection);
+            setDetailViewSections(updatedSections);
+        }
         setDraggedSectionIndex(null);
-        setDragOverSectionIndex(null);
-    };
+    }
 
     /**
-     * Toggles the visibility of a detail view section.
+     * Toggles the visibility of a section.
      *
      * @param {number} index - The index of the section to toggle.
      */
-    const toggleSectionVisibility = (index: number) => {
-        const newSections = [...detailViewSections];
-        newSections[index].visible = !newSections[index].visible;
-        setDetailViewSections(newSections);
-    };
+    function toggleSectionVisibility(index: number) {
+        const updatedSections = [...detailViewSections];
+        updatedSections[index].visible = !updatedSections[index].visible;
+        setDetailViewSections(updatedSections);
+    }
 
     const refreshOptions = [0, 5, 10, 15, 30, 60];
 
     return (
         <motion.div
-            variants={overlayVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
-            className={`absolute inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md ${isTauriEnv ? 'pt-12' : ''}`}
+            variants={overlayVariants}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
             onClick={onClose}
         >
             <motion.div
-                onClick={(e) => e.stopPropagation()}
                 variants={modalVariants}
-                className="glass-dark border-0 sm:border border-white/10 
-                rounded-none sm:rounded-3xl w-full h-full sm:h-auto sm:max-w-md sm:max-h-[90vh] 
-                shadow-2xl overflow-hidden flex flex-col"
-                style={{
-                    backfaceVisibility: 'hidden',
-                    WebkitBackfaceVisibility: 'hidden',
-                    transform: 'translateZ(0)',
-                }}
+                className="bg-[#1e1e1e] w-full max-w-2xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden flex flex-col max-h-[90vh]"
+                onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex justify-between items-center p-6 border-b border-white/5 flex-shrink-0">
+                <div className="flex items-center justify-between p-6 border-b border-white/5 flex-shrink-0">
                     <h2 className="text-xl font-bold text-white flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-white/5">
-                            <FaCog className="text-lg text-slate-300" aria-hidden="true" />
-                        </div>
+                        <FaCog className="text-white/50" />
                         {t.settings.title}
                     </h2>
                     <button
                         onClick={onClose}
-                        className="w-8 h-8 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all"
-                        aria-label="Close"
+                        className="text-white/50 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
                     >
                         <FaTimes />
                     </button>
                 </div>
 
-                <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+
                     {/* Language Selection */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                            <FaGlobe /> {t.settings.language}
-                        </label>
-                        <div className="grid grid-cols-3 gap-2 p-1 bg-black/20 rounded-xl">
-                            {[
-                                { val: 'system', label: 'Auto' },
-                                { val: 'en', label: 'EN' },
-                                { val: 'zh', label: '中文' }
-                            ].map(opt => (
-                                <button
-                                    key={opt.val}
-                                    onClick={() => setLocalLanguage(opt.val as any)}
-                                    aria-pressed={localLanguage === opt.val}
-                                    className={`
-                                        py-2 rounded-lg text-sm font-medium transition-all
-                                        ${localLanguage === opt.val ? 'bg-white/10 text-white shadow-sm' : 'text-white/50 hover:text-white/80'}
-                                    `}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    <Select
+                        label={t.settings.language}
+                        icon={<FaGlobe />}
+                        value={localLanguage}
+                        onChange={(val) => setLocalLanguage(val as any)}
+                        options={[
+                            { value: 'en', label: 'English' },
+                            { value: 'zh', label: '中文' }
+                        ]}
+                    />
 
                     <div className="w-full h-px bg-white/5" />
 
+                    {/* Weather Source Selection */}
                     <Select
                         label={t.settings.weatherSource}
                         icon={<FaCloud />}
                         value={source}
                         onChange={(val) => setSource(val as WeatherSource)}
                         options={[
-                            { value: 'openweathermap', label: t.settings.openWeatherMap },
-                            { value: 'weatherapi', label: t.settings.weatherapi },
-                            { value: 'qweather', label: t.settings.qweather },
-                            { value: 'custom', label: t.settings.custom }
+                            { value: 'openweathermap', label: 'OpenWeatherMap' },
+                            { value: 'weatherapi', label: 'WeatherAPI' },
+                            { value: 'qweather', label: 'QWeather (和风天气)' },
+                            { value: 'custom', label: 'Custom' }
                         ]}
                     />
 
-                    {/* Custom URL Input */}
+                    {/* Custom Source Configuration */}
                     {source === 'custom' && (
-                        <div className="space-y-3 animate-fade-in">
+                        <div className="space-y-2 animate-fade-in">
                             <label htmlFor="settings-custom-url" className="text-xs font-semibold text-white/50 uppercase tracking-widest">
                                 {t.settings.apiUrl}
                             </label>
@@ -273,19 +251,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
                                 type="text"
                                 value={customUrl}
                                 onChange={(e) => setCustomUrl(e.target.value)}
-                                placeholder={t.settings.apiUrlPlaceholder}
+                                placeholder={t.settings.apiUrlPlaceholder || "http://localhost:3000/api/weather"}
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/50 transition-colors placeholder-white/20 text-sm font-mono"
-                                aria-describedby="settings-custom-url-help"
                             />
-                            <p id="settings-custom-url-help" className="text-[10px] text-white/30">{t.settings.apiUrlHelp}</p>
+                            <p className="text-[10px] text-white/30">{t.settings.apiUrlHelp}</p>
                         </div>
                     )}
 
-                    {/* QWeather Host Input */}
+                    {/* QWeather Host Configuration */}
                     {source === 'qweather' && (
-                        <div className="space-y-3 animate-fade-in">
-                            <label htmlFor="settings-qweather-host" className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                                <FaGlobe aria-hidden="true" /> {t.settings.qweatherHost}
+                        <div className="space-y-2 animate-fade-in">
+                            <label htmlFor="settings-qweather-host" className="text-xs font-semibold text-white/50 uppercase tracking-widest">
+                                {t.settings.qweatherHost}
                             </label>
                             <input
                                 id="settings-qweather-host"
@@ -465,6 +442,4 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSettin
             </motion.div>
         </motion.div>
     );
-};
-
-export default SettingsModal;
+}
