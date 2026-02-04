@@ -125,7 +125,6 @@ export function useWeatherCities() {
 
             if (savedData.length > 0) {
                 const shouldFetch = !cachedWeather || isStale;
-                let finalList: WeatherData[] = cachedWeather || [];
 
                 let results: (WeatherData | null)[] | undefined;
 
@@ -167,7 +166,6 @@ export function useWeatherCities() {
                     const validResults = results.filter((w) => w !== null) as WeatherData[];
 
                     if (validResults.length > 0) {
-                        finalList = validResults;
                         setWeatherList(validResults);
                         setLastRefreshTime(new Date());
 
