@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { getWeather, WeatherData } from '../services/weatherApi';
 import { getSettings, SectionConfig } from '../utils/config';
-import { FaCloud, FaTrash, FaCog, FaSync, FaInfoCircle, FaEllipsisV } from 'react-icons/fa';
+import { FaCloud, FaTrash, FaCog, FaSync, FaInfoCircle, FaEllipsisV, FaCheck } from 'react-icons/fa';
 import WeatherDetail from './WeatherDetail';
 import SortableWeatherCard from './SortableWeatherCard';
 import SettingsModal from './SettingsModal';
@@ -122,6 +122,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
     const [contextMenu, setContextMenu] = useState<ContextMenuState>({
         show: false, x: 0, y: 0, weather: null, subMenu: null
     });
+    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
     const [showMenu, setShowMenu] = useState(false);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const ticking = useRef(false);
@@ -792,6 +793,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
             weather: weather,
             menuStyle
         });
+        setConfirmDelete(null);
     }, []);
 
     const handleDetailBack = useCallback(() => window.history.back(), []);
@@ -1004,16 +1006,27 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
                                     {t.contextMenu?.viewDetails || 'View Details'}
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        if (contextMenu.weather) {
-                                            handleRemoveCity(contextMenu.weather.city);
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirmDelete === contextMenu.weather?.city) {
+                                            if (contextMenu.weather) {
+                                                handleRemoveCity(contextMenu.weather.city);
+                                            }
+                                            setContextMenu(prev => ({ ...prev, show: false }));
+                                            setConfirmDelete(null);
+                                        } else {
+                                            setConfirmDelete(contextMenu.weather?.city || null);
                                         }
-                                        setContextMenu(prev => ({ ...prev, show: false }));
                                     }}
-                                    className="menu-item menu-item-danger"
+                                    className={`menu-item ${confirmDelete === contextMenu.weather?.city ? 'bg-red-500/20 text-red-200' : 'menu-item-danger'}`}
                                 >
-                                    <span className="menu-item-icon"><FaTrash className="text-red-400" /></span>
-                                    {t.remove}
+                                    <span className="menu-item-icon">
+                                        {confirmDelete === contextMenu.weather?.city
+                                            ? <FaCheck className="text-red-400" />
+                                            : <FaTrash className="text-red-400" />
+                                        }
+                                    </span>
+                                    {confirmDelete === contextMenu.weather?.city ? `${t.remove}?` : t.remove}
                                 </button>
                             </motion.div>
                         </>
