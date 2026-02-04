@@ -21,3 +21,7 @@
 ## 2026-03-22 - Focus Visible Verification
 **Learning:** Programmatic focus (e.g. `element.focus()`) often fails to trigger `:focus-visible` styles in headless browsers.
 **Action:** Always simulate real keyboard events (like `page.keyboard.press("Tab")`) when verifying focus indicators in Playwright tests.
+
+## 2026-06-15 - Transient Deletion Confirmation
+**Learning:** Destructive actions (like deleting a city) in transient menus (context menus) risk accidental triggers if executed immediately. A modal is too heavy for such frequent actions.
+**Action:** Implement a two-step confirmation pattern directly within the menu item (e.g., "Remove" -> "Confirm?"), using state to track the pending confirmation before executing.
