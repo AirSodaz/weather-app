@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
-import { FaSun, FaCloud, FaCloudRain, FaSnowflake, FaWind, FaTint, FaSmog, FaEllipsisV } from 'react-icons/fa';
+import { FaWind, FaTint, FaEllipsisV } from 'react-icons/fa';
 import { WeatherData } from '../services/weatherApi';
-import { getWeatherCategory, WeatherCategory } from '../utils/weatherUtils';
+import WeatherIcon from './WeatherIcon';
 
 /**
  * Props for the WeatherCard component.
@@ -11,30 +11,6 @@ interface WeatherCardProps {
     weather: WeatherData;
     /** Optional callback to show actions menu. */
     onShowActions?: (e: React.MouseEvent) => void;
-}
-
-/**
- * Renders the appropriate weather icon based on the condition string.
- *
- * @param {object} props - Component props.
- * @param {string} props.condition - The weather condition string.
- * @param {string} [props.className] - Optional CSS classes.
- * @returns {JSX.Element} The icon component.
- */
-function WeatherIcon({ condition, className = "text-5xl" }: { condition: string; className?: string }): JSX.Element {
-    const category = getWeatherCategory(condition);
-    switch (category) {
-        case WeatherCategory.Sunny:
-            return <FaSun className={`${className} text-amber-300 animate-spin-slow`} />;
-        case WeatherCategory.Rainy:
-            return <FaCloudRain className={`${className} text-blue-300 animate-float`} />;
-        case WeatherCategory.Snowy:
-            return <FaSnowflake className={`${className} text-white animate-float`} />;
-        case WeatherCategory.Mist:
-            return <FaSmog className={`${className} text-gray-300 animate-float`} />;
-        default:
-            return <FaCloud className={`${className} text-gray-200 animate-float`} />;
-    }
 }
 
 /**

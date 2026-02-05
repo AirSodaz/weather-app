@@ -3,14 +3,15 @@ import { isTauri } from '../utils/env';
 import { WeatherData, DailyForecast } from '../services/weatherApi';
 import {
     FaArrowLeft, FaTint, FaWind, FaCompressArrowsAlt, FaEye,
-    FaSun, FaCloud, FaCloudRain, FaSnowflake, FaSmog, FaMoon,
-    FaEllipsisV, FaSync, FaCog, FaInfoCircle, FaClock, FaCalendarAlt
+    FaSun, FaMoon, FaEllipsisV, FaSync, FaCog, FaInfoCircle,
+    FaClock, FaCalendarAlt, FaSmog, FaCloud
 } from 'react-icons/fa';
 import { useI18n, Translations } from '../contexts/I18nContext';
 import RelativeTime from './RelativeTime';
 import { SectionConfig, DetailSectionId } from '../utils/config';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
-import { getWeatherBackground, getWeatherCategory, WeatherCategory, getAqiColor } from '../utils/weatherUtils';
+import { getWeatherBackground, getAqiColor } from '../utils/weatherUtils';
+import WeatherIcon from './WeatherIcon';
 
 /**
  * Props for the WeatherDetail component.
@@ -42,43 +43,6 @@ const DATE_SPLIT_REGEX = /[-/]/;
 interface DailyForecastWithDayName extends DailyForecast {
     dayName: string;
 }
-
-/**
- * Renders the appropriate weather icon based on the condition string.
- *
- * @param {object} props - Component props.
- * @param {string} props.condition - The weather condition string.
- * @param {string} [props.className] - Optional CSS classes.
- * @returns {JSX.Element} The icon component.
- */
-interface WeatherIconProps {
-    condition: string;
-    className?: string;
-}
-
-/**
- * Renders the appropriate weather icon based on the condition string.
- *
- * @param {WeatherIconProps} props - Component props.
- * @returns {JSX.Element} The icon component.
- */
-function WeatherIcon({ condition, className = "text-6xl" }: WeatherIconProps): JSX.Element {
-    const category = getWeatherCategory(condition);
-    switch (category) {
-        case WeatherCategory.Sunny:
-            return <FaSun className={`${className} text-amber-300 animate-spin-slow`} />;
-        case WeatherCategory.Rainy:
-            return <FaCloudRain className={`${className} text-blue-300 animate-float`} />;
-        case WeatherCategory.Snowy:
-            return <FaSnowflake className={`${className} text-white animate-float`} />;
-        case WeatherCategory.Mist:
-            return <FaSmog className={`${className} text-gray-300 animate-float`} />;
-        default:
-            return <FaCloud className={`${className} text-gray-200 animate-float`} />;
-    }
-}
-
-
 
 interface HourlyForecastSectionProps {
     weather: WeatherData;
