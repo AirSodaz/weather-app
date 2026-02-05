@@ -96,17 +96,21 @@ function ApiKeySettings({
         }
     }
 
-    const testButtonContent: JSX.Element = (() => {
-        if (testResult === 'success') return <span>Success</span>;
-        if (testResult === 'fail') return <span>Failed</span>;
-        return <span>Test Connection</span>;
-    })();
+    let testButtonContent: JSX.Element;
+    if (testResult === 'success') {
+        testButtonContent = <span>Success</span>;
+    } else if (testResult === 'fail') {
+        testButtonContent = <span>Failed</span>;
+    } else {
+        testButtonContent = <span>Test Connection</span>;
+    }
 
-    const testQueryResultClass: string = (() => {
-        if (testResult === 'success') return 'text-green-400';
-        if (testResult === 'fail') return 'text-red-400';
-        return 'text-blue-400 hover:text-blue-300';
-    })();
+    let testQueryResultClass = 'text-blue-400 hover:text-blue-300';
+    if (testResult === 'success') {
+        testQueryResultClass = 'text-green-400';
+    } else if (testResult === 'fail') {
+        testQueryResultClass = 'text-red-400';
+    }
 
     return (
         <div className="space-y-3 animate-fade-in">

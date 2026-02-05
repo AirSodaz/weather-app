@@ -8,7 +8,7 @@ const DATE_SEPARATOR_REGEX = /-/g;
 const CACHE_KEY = 'weather_cache_v1';
 
 /**
- * Formats a date object to HH:mm string manually.
+ * Formats a date object to HH:mm string.
  *
  * @param {Date} date - The date to format.
  * @param {boolean} [use24h=true] - Whether to use 24-hour format.
@@ -38,7 +38,6 @@ function formatTime(date: Date, use24h: boolean = true): string {
  * @returns {string} The formatted time string.
  */
 function formatTimeString(timeStr: string, use24h: boolean = true): string {
-    // Check if input is 12h (has AM/PM) or 24h (HH:mm)
     const is12hInput = /AM|PM/i.test(timeStr);
     let hours = 0;
     let minutes = 0;
@@ -86,14 +85,16 @@ async function getCache(): Promise<WeatherCacheStore> {
     if (memoryCache) return memoryCache;
     if (cacheLoadPromise) return cacheLoadPromise;
 
-    cacheLoadPromise = storage.get(CACHE_KEY).then(c => {
-        memoryCache = c || {};
+    cacheLoadPromise = (async () => {
+        try {
+            const c = await storage.get(CACHE_KEY);
+            memoryCache = c || {};
+        } catch (e) {
+            console.error('Failed to load weather cache:', e);
+            memoryCache = {};
+        }
         return memoryCache!;
-    }).catch(e => {
-        console.error('Failed to load weather cache:', e);
-        memoryCache = {};
-        return memoryCache;
-    });
+    })();
     return cacheLoadPromise;
 }
 
@@ -111,6 +112,66 @@ function getCacheKey(city: string, source: string, lang: string, coords?: { lat:
         return `${source}:${lang}:lat_${coords.lat.toFixed(2)}_lon_${coords.lon.toFixed(2)}`;
     }
     return `${source}:${lang}:${city.toLowerCase()}`;
+}
+
+/**
+ * Helper to get cached weather data.
+ */
+async function getWeatherCache(
+    city: string,
+    source: string,
+    lang: string,
+    coords: { lat: number, lon: number } | undefined,
+    ttl: number,
+    currentTimeFormat: '24h' | '12h'
+): Promise<WeatherData | null> {
+    try {
+        const cache = await getCache();
+        const key = getCacheKey(city, source, lang, coords);
+        const now = Date.now();
+
+        if (cache[key]) {
+            const entry = cache[key];
+            const isFormatMatch = entry.timeFormat === currentTimeFormat;
+
+            if (now - entry.timestamp < ttl && isFormatMatch) {
+                console.log(`[Cache Hit] Returning cached weather data for ${key}`);
+                return entry.data;
+            } else {
+                delete cache[key]; // Clean up expired
+            }
+        }
+    } catch (e) {
+        console.warn('Cache check failed:', e);
+    }
+    return null;
+}
+
+/**
+ * Helper to set weather data to cache.
+ */
+async function setWeatherCache(
+    city: string,
+    source: string,
+    lang: string,
+    coords: { lat: number, lon: number } | undefined,
+    data: WeatherData,
+    currentTimeFormat: '24h' | '12h'
+): Promise<void> {
+    try {
+        const cache = await getCache();
+        const key = getCacheKey(city, source, lang, coords);
+        cache[key] = {
+            data: data,
+            timestamp: Date.now(),
+            lang,
+            source,
+            timeFormat: currentTimeFormat
+        };
+        await storage.set(CACHE_KEY, cache);
+    } catch (e) {
+        console.warn('Failed to update cache:', e);
+    }
 }
 
 /**
@@ -204,14 +265,13 @@ function transformOpenWeatherData(
     aqDataRaw: any,
     use24h: boolean
 ): WeatherData {
-    let hourlyForecast: HourlyForecast[] = [];
-    let dailyForecast: DailyForecast[] = [];
+    const hourlyForecast: HourlyForecast[] = [];
+    const dailyForecast: DailyForecast[] = [];
 
     if (forecastData && forecastData.list) {
         // Process hourly forecast (next 24 hours, 8 x 3-hour intervals).
         const limit = 8;
-        for (let i = 0; i < forecastData.list.length; i++) {
-            if (hourlyForecast.length >= limit) break;
+        for (let i = 0; i < Math.min(forecastData.list.length, limit); i++) {
             const item = forecastData.list[i];
             hourlyForecast.push({
                 time: formatTime(new Date(item.dt * 1000), use24h),
@@ -249,7 +309,7 @@ function transformOpenWeatherData(
     }
 
     let airQuality: AirQuality | undefined;
-    if (aqDataRaw && aqDataRaw.list && aqDataRaw.list.length > 0) {
+    if (aqDataRaw?.list?.length > 0) {
         const aqData = aqDataRaw.list[0];
         airQuality = {
             aqi: aqData.main.aqi,
@@ -259,9 +319,6 @@ function transformOpenWeatherData(
             no2: Math.round(aqData.components.no2)
         };
     }
-
-    const sunrise = formatTime(new Date(data.sys.sunrise * 1000), use24h);
-    const sunset = formatTime(new Date(data.sys.sunset * 1000), use24h);
 
     return {
         city: data.name,
@@ -273,8 +330,8 @@ function transformOpenWeatherData(
         pressure: data.main.pressure,
         visibility: data.visibility / 1000,
         uvIndex: 0,
-        sunrise,
-        sunset,
+        sunrise: formatTime(new Date(data.sys.sunrise * 1000), use24h),
+        sunset: formatTime(new Date(data.sys.sunset * 1000), use24h),
         hourlyForecast,
         dailyForecast,
         airQuality,
@@ -331,7 +388,7 @@ async function fetchOpenWeatherMap(
         // Optimistically start AQ fetch if coords known
         let aqPromise: Promise<any> | null = null;
         if (coords) {
-            aqPromise = axios.get(`${OPENWEATHER_BASE_URL}/air_pollution`, {
+             aqPromise = axios.get(`${OPENWEATHER_BASE_URL}/air_pollution`, {
                 params: { lat: coords.lat, lon: coords.lon, appid: apiKey }
             }).then(res => res.data).catch(e => {
                 console.error('Failed to fetch air quality:', e);
@@ -342,7 +399,7 @@ async function fetchOpenWeatherMap(
         const weatherResponse = await weatherPromise;
         const data = weatherResponse.data;
 
-        // If not started yet, fetch AQ now
+        // If not started yet, fetch AQ now using returned coords
         if (!aqPromise) {
             aqPromise = axios.get(`${OPENWEATHER_BASE_URL}/air_pollution`, {
                 params: { lat: data.coord.lat, lon: data.coord.lon, appid: apiKey }
@@ -734,25 +791,10 @@ export async function getWeather(
     const currentTimeFormat = settings.timeFormat || '24h';
     const use24h = currentTimeFormat !== '12h';
 
-    // Check cache
-    try {
-        const cache = await getCache();
-        const key = getCacheKey(city, sourceToUse, lang, coords);
-        const now = Date.now();
-
-        if (cache[key]) {
-            const entry = cache[key];
-            const isFormatMatch = entry.timeFormat === currentTimeFormat;
-
-            if (now - entry.timestamp < ttl && isFormatMatch) {
-                console.log(`[Cache Hit] Returning cached weather data for ${key}`);
-                return entry.data;
-            } else {
-                delete cache[key];
-            }
-        }
-    } catch (e) {
-        console.warn('Cache check failed, proceeding to fetch:', e);
+    // Try to get from cache
+    const cachedData = await getWeatherCache(city, sourceToUse, lang, coords, ttl, currentTimeFormat);
+    if (cachedData) {
+        return cachedData;
     }
 
     let weatherData: WeatherData;
@@ -783,20 +825,7 @@ export async function getWeather(
     }
 
     // Save to cache
-    try {
-        const cache = await getCache();
-        const key = getCacheKey(city, sourceToUse, lang, coords);
-        cache[key] = {
-            data: weatherData,
-            timestamp: Date.now(),
-            lang,
-            source: sourceToUse,
-            timeFormat: currentTimeFormat
-        };
-        storage.set(CACHE_KEY, cache).catch(e => console.error('Failed to save cache:', e));
-    } catch (e) {
-        console.warn('Failed to update cache:', e);
-    }
+    await setWeatherCache(city, sourceToUse, lang, coords, weatherData, currentTimeFormat);
 
     return weatherData;
 }
