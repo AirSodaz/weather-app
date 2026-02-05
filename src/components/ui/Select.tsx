@@ -124,7 +124,7 @@ export const Select: React.FC<SelectProps> = ({
                     className={`
                         w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3
                         text-white text-left flex items-center justify-between transition-all duration-200
-                        hover:bg-white/10 focus:outline-none focus:border-white/20
+                        hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
                         ${isOpen ? 'bg-white/10 border-white/20 ring-1 ring-white/10' : ''}
                     `}
                     aria-haspopup="listbox"

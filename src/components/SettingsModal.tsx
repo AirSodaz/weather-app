@@ -267,7 +267,7 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
                                 value={customUrl}
                                 onChange={(e) => setCustomUrl(e.target.value)}
                                 placeholder={t.settings.apiUrlPlaceholder}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/50 transition-colors placeholder-white/20 text-sm font-mono"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white transition-colors placeholder-white/20 text-sm font-mono focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                                 aria-describedby="settings-custom-url-help"
                             />
                             <p id="settings-custom-url-help" className="text-[10px] text-white/30">{t.settings.apiUrlHelp}</p>
@@ -286,7 +286,7 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
                                 value={qweatherHost}
                                 onChange={(e) => setQWeatherHost(e.target.value)}
                                 placeholder={t.settings.qweatherHostPlaceholder}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/50 transition-colors placeholder-white/20 text-sm font-mono"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white transition-colors placeholder-white/20 text-sm font-mono focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                                 aria-describedby="settings-qweather-host-help"
                             />
                             <p id="settings-qweather-host-help" className="text-[10px] text-white/30">{t.settings.qweatherHostHelp}</p>

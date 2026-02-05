@@ -124,12 +124,12 @@ function ApiKeySettings({
                     value={value}
                     onChange={handleChange}
                     placeholder={t.settings.apiKeyPlaceholder}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-white outline-none focus:border-blue-500/50 transition-colors placeholder-white/20 text-sm font-mono tracking-widest"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-white transition-colors placeholder-white/20 text-sm font-mono tracking-widest focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                 />
                 <button
                     type="button"
                     onClick={() => setShowKey(!showKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors p-1 rounded-full focus:bg-white/10 focus:outline-none"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors p-1 rounded-full focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                     aria-label={showKey ? "Hide API Key" : "Show API Key"}
                 >
                     {showKey ? <FaEyeSlash /> : <FaEye />}
@@ -143,7 +143,7 @@ function ApiKeySettings({
                             onClick={handleTestConnection}
                             disabled={testing || !value}
                             className={`
-                                flex items-center gap-1 transition-colors font-medium
+                                flex items-center gap-1 transition-colors font-medium rounded-lg p-1 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
                                 ${testQueryResultClass}
                                 ${testing ? 'opacity-50 cursor-not-allowed' : ''}
                             `}
