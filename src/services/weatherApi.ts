@@ -75,6 +75,28 @@ interface WeatherCacheStore {
 
 let memoryCache: WeatherCacheStore | null = null;
 let cacheLoadPromise: Promise<WeatherCacheStore> | null = null;
+let saveCacheTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const CACHE_SAVE_DEBOUNCE_MS = 2000;
+
+/**
+ * Persists the cache to storage with debouncing to prevent excessive writes.
+ *
+ * @param {WeatherCacheStore} cache - The cache object to save.
+ */
+function saveCacheDebounced(cache: WeatherCacheStore) {
+    if (saveCacheTimeout) {
+        clearTimeout(saveCacheTimeout);
+    }
+    saveCacheTimeout = setTimeout(async () => {
+        saveCacheTimeout = null;
+        try {
+            await storage.set(CACHE_KEY, cache);
+        } catch (e) {
+            console.warn('Failed to save weather cache:', e);
+        }
+    }, CACHE_SAVE_DEBOUNCE_MS);
+}
 
 /**
  * Loads the weather cache from storage or memory.
@@ -168,7 +190,7 @@ async function setWeatherCache(
             source,
             timeFormat: currentTimeFormat
         };
-        await storage.set(CACHE_KEY, cache);
+        saveCacheDebounced(cache);
     } catch (e) {
         console.warn('Failed to update cache:', e);
     }
