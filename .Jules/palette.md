@@ -25,3 +25,7 @@
 ## 2026-06-15 - Transient Deletion Confirmation
 **Learning:** Destructive actions (like deleting a city) in transient menus (context menus) risk accidental triggers if executed immediately. A modal is too heavy for such frequent actions.
 **Action:** Implement a two-step confirmation pattern directly within the menu item (e.g., "Remove" -> "Confirm?"), using state to track the pending confirmation before executing.
+
+## 2026-02-05 - Glassmorphism Focus Consistency
+**Learning:** Default browser focus rings or subtle border color changes are insufficient on glassmorphism backgrounds (dark, semi-transparent). High contrast rings (e.g. `ring-white/50`) are necessary for visibility.
+**Action:** Standardize all interactive elements (Inputs, Select triggers, Icon buttons) to use `focus-visible:ring-2 focus-visible:ring-white/50` for consistent accessibility.
