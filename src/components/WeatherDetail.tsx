@@ -308,6 +308,93 @@ function getSourceLabel(src: string, t: Translations): string {
 }
 
 /**
+ * Renders the source selection submenu.
+ */
+function SourceSubMenu({
+    weather,
+    t,
+    onSourceChange,
+    onClose,
+    isMobile
+}: {
+    weather: WeatherData,
+    t: Translations,
+    onSourceChange: (s: string | undefined) => void,
+    onClose: () => void,
+    isMobile: boolean
+}) {
+    const sources = ['openweathermap', 'weatherapi', 'qweather'];
+
+    const handleSelect = (src?: string) => {
+        onSourceChange(src);
+        onClose();
+    };
+
+    if (isMobile) {
+        return (
+            <div className="block sm:hidden bg-white/5 rounded-xl mx-2 mb-2 overflow-hidden animate-fade-in">
+                <div className="px-4 py-2 text-xs text-white/40 uppercase tracking-widest font-semibold border-b border-white/5">
+                    {t.switchSource}
+                </div>
+                {sources.map((src) => {
+                    const isActive = weather.source === src || weather.sourceOverride === src;
+                    return (
+                        <button
+                            key={src}
+                            onClick={() => handleSelect(src)}
+                            className={`w-full px-4 py-3 text-left text-sm flex items-center justify-between active:bg-white/10 transition-colors
+                            ${isActive ? 'text-blue-300 bg-white/5' : 'text-white/80'}
+                        `}
+                        >
+                            <span>{getSourceLabel(src, t)}</span>
+                            {isActive && <FaInfoCircle className="text-xs" />}
+                        </button>
+                    );
+                })}
+                <button
+                    onClick={() => handleSelect(undefined)}
+                    className="w-full px-4 py-3 text-left text-sm flex items-center gap-2 text-white/50 italic active:bg-white/10 transition-colors"
+                >
+                    <span>{t.default || 'Default (Global)'}</span>
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div
+            className="hidden sm:block absolute right-full top-0 mr-1 glass-card rounded-2xl py-2 shadow-2xl min-w-[160px] animate-context-menu z-[110]"
+        >
+            <div className="px-5 py-1.5 text-xs text-white/40 uppercase tracking-widest font-semibold">
+                {t.switchSource}
+            </div>
+            {sources.map((src) => {
+                const isActive = weather.source === src || weather.sourceOverride === src;
+                return (
+                    <button
+                        key={src}
+                        onClick={() => handleSelect(src)}
+                        className={`w-full px-5 py-2.5 text-left text-base flex items-center justify-between hover:bg-white/10 transition-colors
+                        ${isActive ? 'text-blue-300 bg-white/5' : 'text-white/80'}
+                    `}
+                    >
+                        <span>{getSourceLabel(src, t)}</span>
+                        {isActive && <FaInfoCircle className="text-xs" />}
+                    </button>
+                );
+            })}
+            <div className="border-t border-white/5 my-1"></div>
+            <button
+                onClick={() => handleSelect(undefined)}
+                className="w-full px-5 py-2.5 text-left text-base flex items-center gap-2 hover:bg-white/10 text-white/50 italic transition-colors"
+            >
+                <span>{t.default || 'Default (Global)'}</span>
+            </button>
+        </div>
+    );
+}
+
+/**
  * Component for displaying detailed weather information for a specific city.
  * Includes hourly/daily forecasts, air quality, stats, and sun/moon times.
  *
@@ -572,89 +659,26 @@ function WeatherDetail({
 
                                             {subMenu === 'source' && (
                                                 <>
-                                                    {/* Mobile Submenu (Inline, simpler style) */}
-                                                    <div className="block sm:hidden bg-white/5 rounded-xl mx-2 mb-2 overflow-hidden animate-fade-in">
-                                                        <div className="px-4 py-2 text-xs text-white/40 uppercase tracking-widest font-semibold border-b border-white/5">
-                                                            {t.switchSource}
-                                                        </div>
-                                                        {['openweathermap', 'weatherapi', 'qweather'].map((src) => {
-                                                            const isActive = weather.source === src || weather.sourceOverride === src;
-                                                            return (
-                                                                <button
-                                                                    key={src}
-                                                                    onClick={async () => {
-                                                                        if (onSourceChange) {
-                                                                            onSourceChange(src);
-                                                                            setShowMenu(false);
-                                                                        }
-                                                                    }}
-                                                                    className={`w-full px-4 py-3 text-left text-sm flex items-center justify-between active:bg-white/10 transition-colors
-                                                                    ${isActive ? 'text-blue-300 bg-white/5' : 'text-white/80'}
-                                                                `}
-                                                                >
-                                                                    <span>
-                                                                        {getSourceLabel(src, t)}
-                                                                    </span>
-                                                                    {isActive && <FaInfoCircle className="text-xs" />}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                        <button
-                                                            onClick={() => {
-                                                                if (onSourceChange) {
-                                                                    onSourceChange(undefined);
-                                                                    setShowMenu(false);
-                                                                }
-                                                            }}
-                                                            className={`w-full px-4 py-3 text-left text-sm flex items-center gap-2 text-white/50 italic active:bg-white/10 transition-colors`}
-                                                        >
-                                                            <span>{t.default || 'Default (Global)'}</span>
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Desktop Submenu (Popup, Glass Card style) */}
-                                                    <div
-                                                        className="hidden sm:block absolute right-full top-0 mr-1 glass-card rounded-2xl py-2 shadow-2xl min-w-[160px] animate-context-menu z-[110]"
-                                                        onMouseEnter={() => setSubMenu('source')}
-                                                    >
-                                                        <div className="px-5 py-1.5 text-xs text-white/40 uppercase tracking-widest font-semibold">
-                                                            {t.switchSource}
-                                                        </div>
-                                                        {['openweathermap', 'weatherapi', 'qweather'].map((src) => {
-                                                            const isActive = weather.source === src || weather.sourceOverride === src;
-                                                            return (
-                                                                <button
-                                                                    key={src}
-                                                                    onClick={() => {
-                                                                        if (onSourceChange) {
-                                                                            onSourceChange(src);
-                                                                            setShowMenu(false);
-                                                                        }
-                                                                    }}
-                                                                    className={`w-full px-5 py-2.5 text-left text-base flex items-center justify-between hover:bg-white/10 transition-colors
-                                                                    ${isActive ? 'text-blue-300 bg-white/5' : 'text-white/80'}
-                                                                `}
-                                                                >
-                                                                    <span>
-                                                                        {getSourceLabel(src, t)}
-                                                                    </span>
-                                                                    {isActive && <FaInfoCircle className="text-xs" />}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                        <div className="border-t border-white/5 my-1"></div>
-                                                        <button
-                                                            onClick={() => {
-                                                                if (onSourceChange) {
-                                                                    onSourceChange(undefined);
-                                                                    setShowMenu(false);
-                                                                }
-                                                            }}
-                                                            className={`w-full px-5 py-2.5 text-left text-base flex items-center gap-2 hover:bg-white/10 text-white/50 italic transition-colors`}
-                                                        >
-                                                            <span>{t.default || 'Default (Global)'}</span>
-                                                        </button>
-                                                    </div>
+                                                    <SourceSubMenu
+                                                        weather={weather}
+                                                        t={t}
+                                                        onSourceChange={(src) => {
+                                                            onSourceChange(src);
+                                                            setShowMenu(false);
+                                                        }}
+                                                        onClose={() => setShowMenu(false)}
+                                                        isMobile={true}
+                                                    />
+                                                    <SourceSubMenu
+                                                        weather={weather}
+                                                        t={t}
+                                                        onSourceChange={(src) => {
+                                                            onSourceChange(src);
+                                                            setShowMenu(false);
+                                                        }}
+                                                        onClose={() => setShowMenu(false)}
+                                                        isMobile={false}
+                                                    />
                                                 </>
                                             )}
                                         </div>
