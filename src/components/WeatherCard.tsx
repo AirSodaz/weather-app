@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useCallback } from 'react';
 import { FaWind, FaTint, FaEllipsisV } from 'react-icons/fa';
 import { WeatherData } from '../services/weatherApi';
 import WeatherIcon from './WeatherIcon';
@@ -41,15 +41,18 @@ function WeatherCard({
     weather,
     onShowActions
 }: WeatherCardProps): JSX.Element {
+
+    const handleActionsClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        onShowActions?.(e);
+    }, [onShowActions]);
+
     return (
         <>
             {/* Actions Button */}
             {onShowActions && (
                 <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onShowActions(e);
-                    }}
+                    onClick={handleActionsClick}
                     className="absolute top-4 right-4 p-2 text-white/40 hover:text-white rounded-full transition-colors hover:bg-white/10 active:scale-95 focus-visible:bg-white/20 focus-visible:outline-none z-10"
                     aria-label="More actions"
                 >
