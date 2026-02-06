@@ -138,7 +138,7 @@ function SearchBar({ onSearch, onLocationRequest, isLoading = false }: SearchBar
 
     return (
         <div ref={searchRef} className="flex-1 relative">
-            <form role="search" aria-busy={isLoading} onSubmit={handleSubmit} className="w-full flex items-center space-x-2 glass-card rounded-full px-4 py-4 transition-all focus-within:bg-white/10 focus-within:shadow-lg focus-within:ring-1 focus-within:ring-white/20">
+            <form role="search" aria-busy={isLoading} onSubmit={handleSubmit} className="w-full flex items-center space-x-2 glass-card rounded-full px-4 py-4 transition-all focus-within:bg-white/10 focus-within:shadow-lg focus-within:ring-2 focus-within:ring-white/50">
                 {isLoading ? (
                     <FaSync className="text-white/60 animate-spin" aria-label="Loading" />
                 ) : (
@@ -169,7 +169,7 @@ function SearchBar({ onSearch, onLocationRequest, isLoading = false }: SearchBar
                     <button
                         type="button"
                         onClick={() => setSearchCity('')}
-                        className="text-white/40 hover:text-white transition-colors p-1"
+                        className="text-white/40 hover:text-white transition-colors p-1 rounded-full focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                         aria-label="Clear search"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">

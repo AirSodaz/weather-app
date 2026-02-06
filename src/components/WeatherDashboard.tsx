@@ -292,7 +292,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
                 <div className="relative">
                     <button
                         onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
-                        className="p-4 glass-card rounded-full text-white transition-all hover:bg-white/20 hover:scale-105 active:scale-95 border border-white/10"
+                        className="p-4 glass-card rounded-full text-white transition-all hover:bg-white/20 hover:scale-105 active:scale-95 border border-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                         aria-label="Main menu"
                     >
                         <FaEllipsisV className="text-xl" />
@@ -318,14 +318,14 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
                                     <button
                                         onClick={() => { refreshAllCities(); setShowMenu(false); }}
                                         disabled={refreshing}
-                                        className="w-full px-5 py-3 text-left text-base text-white hover:bg-white/10 flex items-center gap-3 transition-colors disabled:opacity-50"
+                                        className="w-full px-5 py-3 text-left text-base text-white hover:bg-white/10 flex items-center gap-3 transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                                     >
                                         <FaSync className={`text-blue-300 ${refreshing ? 'animate-spin' : ''}`} />
                                         {refreshing ? t.refresh.refreshing : t.refresh.button}
                                     </button>
                                     <button
                                         onClick={() => { setShowSettings(true); window.history.pushState({ modal: 'settings' }, '', ''); setShowMenu(false); }}
-                                        className="w-full px-5 py-3 text-left text-base text-white hover:bg-white/10 flex items-center gap-3 transition-colors"
+                                        className="w-full px-5 py-3 text-left text-base text-white hover:bg-white/10 flex items-center gap-3 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
                                     >
                                         <FaCog className="text-slate-300" />
                                         {t.settings.title}
