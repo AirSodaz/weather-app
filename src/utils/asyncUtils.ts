@@ -16,7 +16,7 @@ export async function processWithConcurrency<T, R>(
     onProgress?: (result: R, index: number) => void
 ): Promise<R[]> {
     const results: R[] = new Array(items.length);
-    const executing: Promise<void>[] = [];
+    const executing = new Set<Promise<void>>();
 
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
@@ -32,22 +32,14 @@ export async function processWithConcurrency<T, R>(
         });
 
         // We wrap p again to create a promise that removes itself from the executing list when done.
-        // We cast to 'any' to avoid TS strict checks on splice for promises,
-        // though strictly we should track IDs.
-        // But since we are modifying the array we are iterating (in Promise.race), we need a stable reference.
-
-        // Correct approach:
         const e: Promise<void> = p.then(() => {
             // Remove 'e' from executing.
-            const idx = executing.indexOf(e);
-            if (idx !== -1) {
-                executing.splice(idx, 1);
-            }
+            executing.delete(e);
         });
 
-        executing.push(e);
+        executing.add(e);
 
-        if (executing.length >= concurrencyLimit) {
+        if (executing.size >= concurrencyLimit) {
             await Promise.race(executing);
         }
     }
