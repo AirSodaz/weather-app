@@ -51,7 +51,7 @@ describe('WeatherApi Performance', () => {
         const cities = ['London', 'Paris', 'Berlin', 'Madrid', 'Rome'];
 
         // Mock unique return for each city
-        (axios.get as any).mockImplementation((url: string, config: any) => {
+        (axios.get as any).mockImplementation((_url: string, config: any) => {
              return Promise.resolve({
                 data: {
                     name: config?.params?.q || 'City',
