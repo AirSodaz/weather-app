@@ -340,6 +340,12 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
                 console.error(`Failed to refresh weather for ${weather.city}`, e);
                 return weather;
             }
+        }, async (results) => {
+            const resultsMap = new Map(results.map(r => [r.city, r]));
+            const listToSave = weatherListRef.current.map(current =>
+                resultsMap.get(current.city) || current
+            );
+            await updateSavedCities(listToSave);
         });
     }, [weatherList, refreshCitiesGeneric, currentLanguage]);
 
