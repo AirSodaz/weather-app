@@ -49,7 +49,7 @@ interface HourlyForecastSectionProps {
     t: Translations;
 }
 
-function HourlyForecastSection({ weather, t }: HourlyForecastSectionProps): JSX.Element | null {
+const HourlyForecastSection = memo(function HourlyForecastSection({ weather, t }: HourlyForecastSectionProps): JSX.Element | null {
     if (!weather.hourlyForecast || weather.hourlyForecast.length === 0) return null;
     return (
         <motion.div variants={itemVariants} key="hourly" className="w-full glass-card rounded-3xl p-6 mb-6">
@@ -68,14 +68,14 @@ function HourlyForecastSection({ weather, t }: HourlyForecastSectionProps): JSX.
             </div>
         </motion.div>
     );
-}
+});
 
 interface DailyForecastSectionProps {
     dailyForecast: DailyForecastWithDayName[];
     t: Translations;
 }
 
-function DailyForecastSection({ dailyForecast, t }: DailyForecastSectionProps): JSX.Element | null {
+const DailyForecastSection = memo(function DailyForecastSection({ dailyForecast, t }: DailyForecastSectionProps): JSX.Element | null {
     if (!dailyForecast || dailyForecast.length === 0) return null;
     return (
         <motion.div variants={itemVariants} key="daily" className="w-full glass-card rounded-3xl p-6 mb-6">
@@ -118,14 +118,14 @@ function DailyForecastSection({ dailyForecast, t }: DailyForecastSectionProps): 
             </div>
         </motion.div>
     );
-}
+});
 
 interface AirQualitySectionProps {
     weather: WeatherData;
     t: Translations;
 }
 
-function AirQualitySection({ weather, t }: AirQualitySectionProps): JSX.Element | null {
+const AirQualitySection = memo(function AirQualitySection({ weather, t }: AirQualitySectionProps): JSX.Element | null {
     if (!weather.airQuality) return null;
 
     const getAqiLabel = (aqi: number) => {
@@ -161,14 +161,14 @@ function AirQualitySection({ weather, t }: AirQualitySectionProps): JSX.Element 
             </div>
         </motion.div>
     );
-}
+});
 
 interface StatsSectionProps {
     weather: WeatherData;
     t: Translations;
 }
 
-function StatsSection({ weather, t }: StatsSectionProps): JSX.Element {
+const StatsSection = memo(function StatsSection({ weather, t }: StatsSectionProps): JSX.Element {
     return (
         <motion.div variants={itemVariants} key="stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3 w-full mb-6">
             <div className="glass-card rounded-2xl p-5 flex flex-col items-start relative overflow-hidden group">
@@ -209,14 +209,14 @@ function StatsSection({ weather, t }: StatsSectionProps): JSX.Element {
             </div>
         </motion.div>
     );
-}
+});
 
 interface SunriseSectionProps {
     weather: WeatherData;
     t: Translations;
 }
 
-function SunriseSection({ weather, t }: SunriseSectionProps): JSX.Element | null {
+const SunriseSection = memo(function SunriseSection({ weather, t }: SunriseSectionProps): JSX.Element | null {
     if (!weather.sunrise || !weather.sunset) return null;
     return (
         <motion.div variants={itemVariants} key="sunrise" className="w-full glass-card rounded-3xl p-6 mb-6 flex justify-around items-center">
@@ -237,7 +237,7 @@ function SunriseSection({ weather, t }: SunriseSectionProps): JSX.Element | null
             </div>
         </motion.div>
     );
-}
+});
 
 /**
  * Returns the tailwind text color class corresponding to the Air Quality Index (AQI).
