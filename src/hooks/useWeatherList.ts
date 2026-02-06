@@ -63,37 +63,18 @@ export function useWeatherList() {
         if (listToRefresh.length === 0 || refreshing) return;
 
         setRefreshing(true);
-        let completedCount = 0;
-        let pendingUpdates: WeatherData[] = [];
 
         try {
             const results = await processWithConcurrency(
                 listToRefresh,
                 transform,
-                5,
-                (result) => {
-                    pendingUpdates.push(result);
-                    completedCount++;
-
-                    // Batch updates every 5 items
-                    if (completedCount % 5 === 0) {
-                        const batch = [...pendingUpdates];
-                        pendingUpdates = [];
-                        setWeatherList(prev => {
-                            const updateMap = new Map(batch.map(u => [u.city, u]));
-                            return prev.map(w => updateMap.get(w.city) || w);
-                        });
-                    }
-                }
+                5
             );
 
-            // Flush remaining updates
-            if (pendingUpdates.length > 0) {
-                setWeatherList(prev => {
-                    const updateMap = new Map(pendingUpdates.map(u => [u.city, u]));
-                    return prev.map(w => updateMap.get(w.city) || w);
-                });
-            }
+            setWeatherList(prev => {
+                const updateMap = new Map(results.map(u => [u.city, u]));
+                return prev.map(w => updateMap.get(w.city) || w);
+            });
 
             setLastRefreshTime(new Date());
             if (onComplete) await onComplete(results);
@@ -202,11 +183,6 @@ export function useWeatherList() {
             const shouldFetch = !cachedWeather || isStale;
 
             if (shouldFetch) {
-                let currentList = (cachedWeather && cachedWeather.length === savedData.length)
-                                  ? [...cachedWeather]
-                                  : new Array(savedData.length).fill(null);
-
-                let completedCount = 0;
                 const results = await processWithConcurrency(
                     savedData,
                     async (item): Promise<WeatherData | null> => {
@@ -221,14 +197,7 @@ export function useWeatherList() {
                             return null;
                         }
                     },
-                    5,
-                    (result, index) => {
-                        currentList[index] = result;
-                        completedCount++;
-                        if (completedCount % 5 === 0 || completedCount === savedData.length) {
-                            setWeatherList(currentList.filter(w => w !== null) as WeatherData[]);
-                        }
-                    }
+                    5
                 );
 
                 const validResults = results.filter((w): w is WeatherData => w !== null);
