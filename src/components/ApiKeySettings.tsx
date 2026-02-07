@@ -22,6 +22,18 @@ interface ApiKeySettingsProps {
     qweatherHost: string;
 }
 
+const HELP_URLS: Record<string, string> = {
+    openweathermap: 'https://openweathermap.org/',
+    weatherapi: 'https://www.weatherapi.com/',
+    qweather: 'https://dev.qweather.com/',
+};
+
+const STATUS_CONFIG = {
+    success: { text: 'Success', color: 'text-green-400' },
+    fail: { text: 'Failed', color: 'text-red-400' },
+    default: { text: 'Test Connection', color: 'text-blue-400 hover:text-blue-300' }
+};
+
 /**
  * Component for managing API keys for different weather sources.
  * Includes functionality to test the API connection.
@@ -78,39 +90,7 @@ function ApiKeySettings({
         }
     }
 
-    /**
-     * Returns the help URL for retrieving an API key for the current source.
-     *
-     * @returns {string} The URL.
-     */
-    function getApiKeyHelp(): string {
-        switch (source) {
-            case 'openweathermap':
-                return 'https://openweathermap.org/';
-            case 'weatherapi':
-                return 'https://www.weatherapi.com/';
-            case 'qweather':
-                return 'https://dev.qweather.com/';
-            default:
-                return '';
-        }
-    }
-
-    let testButtonContent: JSX.Element;
-    if (testResult === 'success') {
-        testButtonContent = <span>Success</span>;
-    } else if (testResult === 'fail') {
-        testButtonContent = <span>Failed</span>;
-    } else {
-        testButtonContent = <span>Test Connection</span>;
-    }
-
-    let testQueryResultClass = 'text-blue-400 hover:text-blue-300';
-    if (testResult === 'success') {
-        testQueryResultClass = 'text-green-400';
-    } else if (testResult === 'fail') {
-        testQueryResultClass = 'text-red-400';
-    }
+    const status = testResult ? STATUS_CONFIG[testResult] : STATUS_CONFIG.default;
 
     return (
         <div className="space-y-3 animate-fade-in">
@@ -144,15 +124,15 @@ function ApiKeySettings({
                             disabled={testing || !value}
                             className={`
                                 flex items-center gap-1 transition-colors font-medium rounded-lg p-1 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
-                                ${testQueryResultClass}
+                                ${status.color}
                                 ${testing ? 'opacity-50 cursor-not-allowed' : ''}
                             `}
                         >
                             {testing && <FaSync className="animate-spin" />}
-                            {testButtonContent}
+                            <span>{status.text}</span>
                         </button>
                         <div className="w-px h-3 bg-white/10"></div>
-                        <a href={getApiKeyHelp()} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">
+                        <a href={HELP_URLS[source] || ''} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline">
                             Get Key
                         </a>
                     </div>
