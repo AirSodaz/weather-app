@@ -15,18 +15,16 @@ const CACHE_KEY = 'weather_cache_v1';
  * @returns {string} The formatted time string.
  */
 function formatTime(date: Date, use24h: boolean = true): string {
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+
     if (use24h) {
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        return `${hours}:${minutes}`;
-    } else {
-        let hours = date.getHours();
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        hours = hours ? hours : 12; // the hour '0' should be '12'
-        return `${hours}:${minutes} ${ampm}`;
+        return `${hours.toString().padStart(2, '0')}:${minutes}`;
     }
+
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${minutes} ${ampm}`;
 }
 
 /**
@@ -38,9 +36,9 @@ function formatTime(date: Date, use24h: boolean = true): string {
  * @returns {string} The formatted time string.
  */
 function formatTimeString(timeStr: string, use24h: boolean = true): string {
-    const is12hInput = /AM|PM/i.test(timeStr);
     let hours = 0;
     let minutes = 0;
+    const is12hInput = /AM|PM/i.test(timeStr);
 
     if (is12hInput) {
         const [time, modifier] = timeStr.split(' ');
@@ -49,7 +47,7 @@ function formatTimeString(timeStr: string, use24h: boolean = true): string {
         minutes = parseInt(m, 10);
 
         if (hours === 12) hours = 0;
-        if (modifier && modifier.toUpperCase() === 'PM') hours += 12;
+        if (modifier?.toUpperCase() === 'PM') hours += 12;
     } else {
         const [h, m] = timeStr.split(':');
         hours = parseInt(h, 10);
@@ -304,20 +302,21 @@ function transformOpenWeatherData(
         }
 
         // Process daily forecast (group by day).
-        const dailyMap = new Map<string, any>();
-        forecastData.list.forEach((item: any) => {
+        const dailyMap = new Map<string, { temps: number[], condition: string, icon: string }>();
+
+        for (const item of forecastData.list) {
             const dateStr = item.dt_txt.split(' ')[0]; // YYYY-MM-DD
             const date = dateStr.replace(DATE_SEPARATOR_REGEX, '/');
+
             if (!dailyMap.has(date)) {
                 dailyMap.set(date, {
                     temps: [],
                     condition: item.weather[0].description,
-                    icon: item.weather[0].icon,
-                    dt: item.dt
+                    icon: item.weather[0].icon
                 });
             }
-            dailyMap.get(date).temps.push(item.main.temp);
-        });
+            dailyMap.get(date)!.temps.push(item.main.temp);
+        }
 
         dailyMap.forEach((value, key) => {
             dailyForecast.push({
@@ -384,7 +383,7 @@ async function fetchOpenWeatherMap(
     console.log('Using OpenWeatherMap API', lang, coords ? `with coords: ${coords.lat},${coords.lon}` : '');
     const apiLang = lang === 'zh' ? 'zh_cn' : 'en';
 
-    const params: any = {
+    const params: Record<string, string | number> = {
         appid: apiKey,
         units: 'metric',
         lang: apiLang
@@ -397,24 +396,27 @@ async function fetchOpenWeatherMap(
         params.q = city;
     }
 
+    const fetchOptional = async (url: string, p: any) => {
+        try {
+            const res = await axios.get(url, { params: p });
+            return res.data;
+        } catch (e) {
+            console.error(`Failed to fetch optional data from ${url}:`, e);
+            return null;
+        }
+    };
+
     try {
         const weatherPromise = axios.get(`${OPENWEATHER_BASE_URL}/weather`, { params });
-
-        const forecastPromise = axios.get(`${OPENWEATHER_BASE_URL}/forecast`, { params })
-            .then(res => res.data)
-            .catch(e => {
-                console.error('Failed to fetch forecast:', e);
-                return null;
-            });
+        const forecastPromise = fetchOptional(`${OPENWEATHER_BASE_URL}/forecast`, params);
 
         // Optimistically start AQ fetch if coords known
         let aqPromise: Promise<any> | null = null;
         if (coords) {
-             aqPromise = axios.get(`${OPENWEATHER_BASE_URL}/air_pollution`, {
-                params: { lat: coords.lat, lon: coords.lon, appid: apiKey }
-            }).then(res => res.data).catch(e => {
-                console.error('Failed to fetch air quality:', e);
-                return null;
+            aqPromise = fetchOptional(`${OPENWEATHER_BASE_URL}/air_pollution`, {
+                lat: coords.lat,
+                lon: coords.lon,
+                appid: apiKey
             });
         }
 
@@ -423,11 +425,10 @@ async function fetchOpenWeatherMap(
 
         // If not started yet, fetch AQ now using returned coords
         if (!aqPromise) {
-            aqPromise = axios.get(`${OPENWEATHER_BASE_URL}/air_pollution`, {
-                params: { lat: data.coord.lat, lon: data.coord.lon, appid: apiKey }
-            }).then(res => res.data).catch(e => {
-                console.error('Failed to fetch air quality:', e);
-                return null;
+            aqPromise = fetchOptional(`${OPENWEATHER_BASE_URL}/air_pollution`, {
+                lat: data.coord.lat,
+                lon: data.coord.lon,
+                appid: apiKey
             });
         }
 
@@ -823,27 +824,25 @@ export async function getWeather(
 
     if (sourceToUse === 'custom' && settings.customUrl) {
         weatherData = await fetchCustom(city, settings.customUrl, settings.apiKeys.custom, lang);
-    } else {
-        if (sourceToUse && (sourceToUse in settings.apiKeys)) {
-            const apiKey = settings.apiKeys[sourceToUse as keyof typeof settings.apiKeys];
-            if (!apiKey) throw new Error(`API key for ${sourceToUse} is invalid or missing.`);
+    } else if (sourceToUse && (sourceToUse in settings.apiKeys)) {
+        const apiKey = settings.apiKeys[sourceToUse as keyof typeof settings.apiKeys];
+        if (!apiKey) throw new Error(`API key for ${sourceToUse} is invalid or missing.`);
 
-            switch (sourceToUse) {
-                case 'openweathermap':
-                    weatherData = await fetchOpenWeatherMap(city, apiKey, lang, coords, use24h);
-                    break;
-                case 'weatherapi':
-                    weatherData = await fetchWeatherAPI(city, apiKey, lang, coords, use24h);
-                    break;
-                case 'qweather':
-                    weatherData = await fetchQWeather(city, apiKey, lang, settings.qweatherHost, coords, use24h);
-                    break;
-                default:
-                    throw new Error('Unknown weather source');
-            }
-        } else {
-            throw new Error('Please configure a weather source and API key in settings.');
+        switch (sourceToUse) {
+            case 'openweathermap':
+                weatherData = await fetchOpenWeatherMap(city, apiKey, lang, coords, use24h);
+                break;
+            case 'weatherapi':
+                weatherData = await fetchWeatherAPI(city, apiKey, lang, coords, use24h);
+                break;
+            case 'qweather':
+                weatherData = await fetchQWeather(city, apiKey, lang, settings.qweatherHost, coords, use24h);
+                break;
+            default:
+                throw new Error('Unknown weather source');
         }
+    } else {
+        throw new Error('Please configure a weather source and API key in settings.');
     }
 
     // Save to cache
