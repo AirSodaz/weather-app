@@ -29,3 +29,7 @@
 ## 2026-02-05 - Glassmorphism Focus Consistency
 **Learning:** Default browser focus rings or subtle border color changes are insufficient on glassmorphism backgrounds (dark, semi-transparent). High contrast rings (e.g. `ring-white/50`) are necessary for visibility.
 **Action:** Standardize all interactive elements (Inputs, Select triggers, Icon buttons) to use `focus-visible:ring-2 focus-visible:ring-white/50` for consistent accessibility.
+
+## 2026-02-08 - Nested Focus Visibility
+**Learning:** Icon-only buttons (like "Clear search") often lack sufficient visual affordance for keyboard users if they rely on parent `focus-within` styles, making it hard to distinguish which specific element is focused.
+**Action:** Always add explicit `focus-visible` styles to nested interactive elements, even if the container has focus styles.
