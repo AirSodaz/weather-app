@@ -232,7 +232,7 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
                         label={t.settings.language}
                         icon={<FaGlobe />}
                         value={localLanguage}
-                        onChange={(val) => setLocalLanguage(val as any)}
+                        onChange={(val) => setLocalLanguage(val as 'en' | 'zh' | 'system')}
                         options={[
                             { value: 'system', label: 'Auto' },
                             { value: 'en', label: 'EN' },

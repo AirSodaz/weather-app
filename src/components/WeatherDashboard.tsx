@@ -7,7 +7,7 @@ import SortableWeatherCard from './SortableWeatherCard';
 import SettingsModal from './SettingsModal';
 import SearchBar from './SearchBar';
 import { storage } from '../utils/storage';
-import { useI18n } from '../contexts/I18nContext';
+import { useI18n, Translations } from '../contexts/I18nContext';
 import { getWeatherBackground } from '../utils/weatherUtils';
 import { isMobileDevice } from '../utils/env';
 import RelativeTime from './RelativeTime';
@@ -47,6 +47,73 @@ interface ContextMenuState {
     y: number;
     weather: WeatherData | null;
     menuStyle?: React.CSSProperties;
+}
+
+interface DashboardMenuProps {
+    t: Translations;
+    lastRefreshTime: Date | null;
+    refreshing: boolean;
+    onRefresh: () => void;
+    onSettings: () => void;
+    onClose: () => void;
+}
+
+function DashboardMenu({ t, lastRefreshTime, refreshing, onRefresh, onSettings, onClose }: DashboardMenuProps): JSX.Element {
+    return (
+        <motion.div
+            key="dashboard-menu"
+            variants={dropdownVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="absolute right-0 top-full mt-3 w-56 glass-card rounded-2xl py-2 shadow-2xl flex flex-col z-50 border border-white/10 backdrop-blur-xl"
+        >
+            {lastRefreshTime && (
+                <div className="px-5 py-3 text-sm font-medium text-white/40 border-b border-white/10 uppercase tracking-wider">
+                    {t.refresh.lastUpdate}: <RelativeTime date={lastRefreshTime} />
+                </div>
+            )}
+            <button
+                onClick={() => { onRefresh(); onClose(); }}
+                disabled={refreshing}
+                className="w-full px-5 py-3 text-left text-base text-white hover:bg-white/10 flex items-center gap-3 transition-colors disabled:opacity-50"
+            >
+                <FaSync className={`text-blue-300 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? t.refresh.refreshing : t.refresh.button}
+            </button>
+            <button
+                onClick={() => { onSettings(); onClose(); }}
+                className="w-full px-5 py-3 text-left text-base text-white hover:bg-white/10 flex items-center gap-3 transition-colors"
+            >
+                <FaCog className="text-slate-300" />
+                {t.settings.title}
+            </button>
+        </motion.div>
+    );
+}
+
+/**
+ * Calculates the position and transform origin for a context menu based on click coordinates.
+ *
+ * @param {number} clientX - The x-coordinate of the click.
+ * @param {number} clientY - The y-coordinate of the click.
+ * @param {number} innerWidth - The width of the viewport.
+ * @param {number} innerHeight - The height of the viewport.
+ * @returns {React.CSSProperties} The style object containing positioning properties.
+ */
+function calculateMenuPosition(clientX: number, clientY: number, innerWidth: number, innerHeight: number): React.CSSProperties {
+    const menuWidth = 200;
+    const menuHeight = 150;
+    const padding = 3;
+
+    const isRight = clientX + menuWidth + padding > innerWidth;
+    const isBottom = clientY + menuHeight + padding > innerHeight;
+
+    return {
+        transformOrigin: `${isBottom ? 'bottom' : 'top'} ${isRight ? 'right' : 'left'}`,
+        [isBottom ? 'bottom' : 'top']: isBottom ? innerHeight - clientY : clientY,
+        [isRight ? 'right' : 'left']: isRight ? innerWidth - clientX : clientX
+    };
 }
 
 interface WeatherDashboardProps {
@@ -183,26 +250,25 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
 
     // Handle scroll-based background animation
     const handleScroll = useCallback(() => {
-        if (!ticking.current) {
-            window.requestAnimationFrame(() => {
-                const container = scrollContainerRef.current;
-                if (!container) {
-                    ticking.current = false;
-                    return;
-                }
-                const scrollTop = container.scrollTop;
-                setIsScrolled(scrollTop > 10);
-                const scrollHeight = container.scrollHeight - container.clientHeight;
-                const scrollPercent = scrollHeight > 0 ? Math.min(scrollTop / scrollHeight, 1) : 0;
+        if (ticking.current) return;
 
-                if (bgContainerRef && bgContainerRef.current) {
-                    bgContainerRef.current.style.setProperty('--scroll-shift', `${scrollPercent * 45}deg`);
-                    bgContainerRef.current.style.setProperty('--intensity', String(scrollPercent));
-                }
-                ticking.current = false;
-            });
-            ticking.current = true;
-        }
+        ticking.current = true;
+        window.requestAnimationFrame(() => {
+            ticking.current = false;
+            const container = scrollContainerRef.current;
+            if (!container) return;
+
+            const { scrollTop, scrollHeight, clientHeight } = container;
+            setIsScrolled(scrollTop > 10);
+
+            if (bgContainerRef?.current) {
+                const maxScroll = scrollHeight - clientHeight;
+                const scrollPercent = maxScroll > 0 ? Math.min(scrollTop / maxScroll, 1) : 0;
+
+                bgContainerRef.current.style.setProperty('--scroll-shift', `${scrollPercent * 45}deg`);
+                bgContainerRef.current.style.setProperty('--intensity', String(scrollPercent));
+            }
+        });
     }, [bgContainerRef]);
 
     useEffect(() => {
@@ -252,18 +318,8 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
 
         const { clientX, clientY } = e;
         const { innerWidth, innerHeight } = window;
-        const menuWidth = 200;
-        const menuHeight = 150;
-        const padding = 3;
 
-        const isRight = clientX + menuWidth + padding > innerWidth;
-        const isBottom = clientY + menuHeight + padding > innerHeight;
-
-        const menuStyle: React.CSSProperties = {
-            transformOrigin: `${isBottom ? 'bottom' : 'top'} ${isRight ? 'right' : 'left'}`,
-            [isBottom ? 'bottom' : 'top']: isBottom ? innerHeight - clientY : clientY,
-            [isRight ? 'right' : 'left']: isRight ? innerWidth - clientX : clientX
-        };
+        const menuStyle = calculateMenuPosition(clientX, clientY, innerWidth, innerHeight);
 
         setContextMenu({ show: true, x: clientX, y: clientY, weather, menuStyle });
         setConfirmDelete(null);
@@ -302,35 +358,14 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
                         {showMenu && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)}></div>
-                                <motion.div
-                                    key="dashboard-menu"
-                                    variants={dropdownVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                    className="absolute right-0 top-full mt-3 w-56 glass-card rounded-2xl py-2 shadow-2xl flex flex-col z-50 border border-white/10 backdrop-blur-xl"
-                                >
-                                    {lastRefreshTime && (
-                                        <div className="px-5 py-3 text-sm font-medium text-white/40 border-b border-white/10 uppercase tracking-wider">
-                                            {t.refresh.lastUpdate}: <RelativeTime date={lastRefreshTime} />
-                                        </div>
-                                    )}
-                                    <button
-                                        onClick={() => { refreshAllCities(); setShowMenu(false); }}
-                                        disabled={refreshing}
-                                        className="w-full px-5 py-3 text-left text-base text-white hover:bg-white/10 flex items-center gap-3 transition-colors disabled:opacity-50"
-                                    >
-                                        <FaSync className={`text-blue-300 ${refreshing ? 'animate-spin' : ''}`} />
-                                        {refreshing ? t.refresh.refreshing : t.refresh.button}
-                                    </button>
-                                    <button
-                                        onClick={() => { setShowSettings(true); window.history.pushState({ modal: 'settings' }, '', ''); setShowMenu(false); }}
-                                        className="w-full px-5 py-3 text-left text-base text-white hover:bg-white/10 flex items-center gap-3 transition-colors"
-                                    >
-                                        <FaCog className="text-slate-300" />
-                                        {t.settings.title}
-                                    </button>
-                                </motion.div>
+                                <DashboardMenu
+                                    t={t}
+                                    lastRefreshTime={lastRefreshTime}
+                                    refreshing={refreshing}
+                                    onRefresh={refreshAllCities}
+                                    onSettings={() => { setShowSettings(true); window.history.pushState({ modal: 'settings' }, '', ''); }}
+                                    onClose={() => setShowMenu(false)}
+                                />
                             </>
                         )}
                     </AnimatePresence>

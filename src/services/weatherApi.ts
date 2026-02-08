@@ -15,18 +15,16 @@ const CACHE_KEY = 'weather_cache_v1';
  * @returns {string} The formatted time string.
  */
 function formatTime(date: Date, use24h: boolean = true): string {
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+
     if (use24h) {
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        return `${hours}:${minutes}`;
-    } else {
-        let hours = date.getHours();
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        hours = hours ? hours : 12; // the hour '0' should be '12'
-        return `${hours}:${minutes} ${ampm}`;
+        return `${hours.toString().padStart(2, '0')}:${minutes}`;
     }
+
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${minutes} ${ampm}`;
 }
 
 /**
@@ -38,26 +36,21 @@ function formatTime(date: Date, use24h: boolean = true): string {
  * @returns {string} The formatted time string.
  */
 function formatTimeString(timeStr: string, use24h: boolean = true): string {
+    const date = new Date();
     const is12hInput = /AM|PM/i.test(timeStr);
-    let hours = 0;
-    let minutes = 0;
 
     if (is12hInput) {
         const [time, modifier] = timeStr.split(' ');
-        const [h, m] = time.split(':');
-        hours = parseInt(h, 10);
-        minutes = parseInt(m, 10);
+        let [h, m] = time.split(':').map(Number);
 
-        if (hours === 12) hours = 0;
-        if (modifier && modifier.toUpperCase() === 'PM') hours += 12;
+        if (h === 12) h = 0;
+        if (modifier.toUpperCase() === 'PM') h += 12;
+        date.setHours(h, m);
     } else {
-        const [h, m] = timeStr.split(':');
-        hours = parseInt(h, 10);
-        minutes = parseInt(m, 10);
+        const [h, m] = timeStr.split(':').map(Number);
+        date.setHours(h, m);
     }
 
-    const date = new Date();
-    date.setHours(hours, minutes);
     return formatTime(date, use24h);
 }
 
@@ -203,9 +196,9 @@ async function setWeatherCache(
  * @returns {{ base: string, geo: string }} An object containing the base and geo API URLs.
  */
 function getQWeatherUrls(customHost?: string): { base: string, geo: string } {
-    let host = customHost || import.meta.env.VITE_QWEATHER_API_HOST;
+    const rawHost = customHost || import.meta.env.VITE_QWEATHER_API_HOST;
 
-    if (!host) {
+    if (!rawHost) {
         return {
             base: 'https://devapi.qweather.com/v7',
             geo: 'https://geoapi.qweather.com/v2'
@@ -213,7 +206,7 @@ function getQWeatherUrls(customHost?: string): { base: string, geo: string } {
     }
 
     // Normalize host
-    host = host.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const host = rawHost.replace(/^https?:\/\//, '').replace(/\/$/, '');
     return {
         base: `https://${host}/v7`,
         geo: `https://${host}/geo/v2`
@@ -279,6 +272,58 @@ export interface WeatherData {
 }
 
 /**
+ * Process hourly forecast data from OpenWeatherMap.
+ */
+function processHourlyForecast(forecastList: any[], use24h: boolean): HourlyForecast[] {
+    const hourlyForecast: HourlyForecast[] = [];
+    const limit = 8;
+    for (let i = 0; i < Math.min(forecastList.length, limit); i++) {
+        const item = forecastList[i];
+        hourlyForecast.push({
+            time: formatTime(new Date(item.dt * 1000), use24h),
+            temperature: Math.round(item.main.temp),
+            condition: item.weather[0].description,
+            icon: item.weather[0].icon
+        });
+    }
+    return hourlyForecast;
+}
+
+/**
+ * Process daily forecast data from OpenWeatherMap.
+ */
+function processDailyForecast(forecastList: any[]): DailyForecast[] {
+    const dailyMap = new Map<string, any>();
+    const dailyForecast: DailyForecast[] = [];
+
+    forecastList.forEach((item: any) => {
+        const dateStr = item.dt_txt.split(' ')[0]; // YYYY-MM-DD
+        const date = dateStr.replace(DATE_SEPARATOR_REGEX, '/');
+        if (!dailyMap.has(date)) {
+            dailyMap.set(date, {
+                temps: [],
+                condition: item.weather[0].description,
+                icon: item.weather[0].icon,
+                dt: item.dt
+            });
+        }
+        dailyMap.get(date).temps.push(item.main.temp);
+    });
+
+    dailyMap.forEach((value, key) => {
+        dailyForecast.push({
+            date: key,
+            tempMin: Math.round(Math.min(...value.temps)),
+            tempMax: Math.round(Math.max(...value.temps)),
+            condition: value.condition,
+            icon: value.icon
+        });
+    });
+
+    return dailyForecast;
+}
+
+/**
  * Transforms OpenWeatherMap API response into WeatherData.
  */
 function transformOpenWeatherData(
@@ -287,47 +332,12 @@ function transformOpenWeatherData(
     aqDataRaw: any,
     use24h: boolean
 ): WeatherData {
-    const hourlyForecast: HourlyForecast[] = [];
-    const dailyForecast: DailyForecast[] = [];
+    let hourlyForecast: HourlyForecast[] = [];
+    let dailyForecast: DailyForecast[] = [];
 
     if (forecastData && forecastData.list) {
-        // Process hourly forecast (next 24 hours, 8 x 3-hour intervals).
-        const limit = 8;
-        for (let i = 0; i < Math.min(forecastData.list.length, limit); i++) {
-            const item = forecastData.list[i];
-            hourlyForecast.push({
-                time: formatTime(new Date(item.dt * 1000), use24h),
-                temperature: Math.round(item.main.temp),
-                condition: item.weather[0].description,
-                icon: item.weather[0].icon
-            });
-        }
-
-        // Process daily forecast (group by day).
-        const dailyMap = new Map<string, any>();
-        forecastData.list.forEach((item: any) => {
-            const dateStr = item.dt_txt.split(' ')[0]; // YYYY-MM-DD
-            const date = dateStr.replace(DATE_SEPARATOR_REGEX, '/');
-            if (!dailyMap.has(date)) {
-                dailyMap.set(date, {
-                    temps: [],
-                    condition: item.weather[0].description,
-                    icon: item.weather[0].icon,
-                    dt: item.dt
-                });
-            }
-            dailyMap.get(date).temps.push(item.main.temp);
-        });
-
-        dailyMap.forEach((value, key) => {
-            dailyForecast.push({
-                date: key,
-                tempMin: Math.round(Math.min(...value.temps)),
-                tempMax: Math.round(Math.max(...value.temps)),
-                condition: value.condition,
-                icon: value.icon
-            });
-        });
+        hourlyForecast = processHourlyForecast(forecastData.list, use24h);
+        dailyForecast = processDailyForecast(forecastData.list);
     }
 
     let airQuality: AirQuality | undefined;

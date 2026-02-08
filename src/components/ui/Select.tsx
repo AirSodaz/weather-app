@@ -34,14 +34,14 @@ const dropdownVariantsUp: Variants = {
     exit: { opacity: 0, y: 10, scale: 0.95, transition: { duration: 0.15 } }
 };
 
-export const Select: React.FC<SelectProps> = ({
+export function Select({
     label,
     value,
     options,
     onChange,
     direction = 'down',
     icon
-}) => {
+}: SelectProps): JSX.Element {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLButtonElement>(null);
