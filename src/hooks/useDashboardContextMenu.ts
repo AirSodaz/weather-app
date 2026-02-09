@@ -10,10 +10,19 @@ export interface ContextMenuState {
     menuStyle?: React.CSSProperties;
 }
 
+export interface DashboardContextMenuHook {
+    contextMenu: ContextMenuState;
+    setContextMenu: React.Dispatch<React.SetStateAction<ContextMenuState>>;
+    confirmDelete: string | null;
+    setConfirmDelete: React.Dispatch<React.SetStateAction<string | null>>;
+    handleCardContextMenu: (e: React.MouseEvent, weather: WeatherData) => void;
+    closeContextMenu: () => void;
+}
+
 /**
  * Hook to manage the dashboard context menu state and positioning.
  */
-export function useDashboardContextMenu() {
+export function useDashboardContextMenu(): DashboardContextMenuHook {
     const [contextMenu, setContextMenu] = useState<ContextMenuState>({
         show: false, x: 0, y: 0, weather: null
     });

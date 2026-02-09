@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { FaEllipsisV, FaSync, FaCog } from 'react-icons/fa';
 import { useI18n } from '../contexts/I18nContext';
@@ -26,7 +25,7 @@ export default function DashboardMenu({
     refreshing,
     lastRefreshTime,
     onSettingsClick
-}: DashboardMenuProps) {
+}: DashboardMenuProps): JSX.Element {
     const { t } = useI18n();
 
     return (

@@ -6,6 +6,8 @@ import {
     TouchSensor,
     KeyboardSensor,
     DragEndEvent,
+    SensorDescriptor,
+    SensorOptions,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { WeatherData } from '../services/weatherApi';
@@ -17,10 +19,15 @@ import { WeatherData } from '../services/weatherApi';
  * @param {(oldIndex: number, newIndex: number) => void} reorderCities - Function to reorder cities.
  * @returns {object} The sensors and drag end handler.
  */
+export interface WeatherDragDropHook {
+    sensors: SensorDescriptor<SensorOptions>[];
+    handleDragEnd: (event: DragEndEvent) => void;
+}
+
 export function useWeatherDragDrop(
     weatherList: WeatherData[],
     reorderCities: (oldIndex: number, newIndex: number) => void
-) {
+): WeatherDragDropHook {
     const sensors = useSensors(
         useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
         useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
