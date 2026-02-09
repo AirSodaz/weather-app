@@ -5,7 +5,8 @@ import { useI18n } from '../contexts/I18nContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import {
     FaTimes, FaSave, FaCog, FaGlobe, FaClock, FaDesktop,
-    FaSync, FaCloud, FaGripLines, FaCheckSquare, FaSquare, FaList, FaGithub, FaBolt
+    FaSync, FaCloud, FaGripLines, FaCheckSquare, FaSquare, FaList, FaGithub, FaBolt,
+    FaChevronUp, FaChevronDown
 } from 'react-icons/fa';
 import packageJson from '../../package.json';
 import { motion, Variants } from 'framer-motion';
@@ -185,6 +186,22 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
         setDetailViewSections(newSections);
     };
 
+    /**
+     * Moves a section up or down in the list.
+     *
+     * @param {number} index - The current index of the section.
+     * @param {'up' | 'down'} direction - The direction to move.
+     */
+    const moveSection = (index: number, direction: 'up' | 'down') => {
+        const newSections = [...detailViewSections];
+        if (direction === 'up' && index > 0) {
+            [newSections[index], newSections[index - 1]] = [newSections[index - 1], newSections[index]];
+        } else if (direction === 'down' && index < newSections.length - 1) {
+            [newSections[index], newSections[index + 1]] = [newSections[index + 1], newSections[index]];
+        }
+        setDetailViewSections(newSections);
+    };
+
     const refreshOptions = [0, 5, 10, 15, 30, 60];
 
     return (
@@ -332,6 +349,24 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
                                     <span className="flex-1 text-sm font-medium">
                                         {t.detailSections?.[section.id] || section.id}
                                     </span>
+                                    <div className="flex items-center gap-1 mr-2">
+                                        <button
+                                            onClick={() => moveSection(index, 'up')}
+                                            disabled={index === 0}
+                                            className="text-white/50 hover:text-white disabled:opacity-20 transition-colors p-1 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none rounded"
+                                            aria-label={t.detailSections?.[section.id] ? `Move ${t.detailSections[section.id]} up` : `Move ${section.id} up`}
+                                        >
+                                            <FaChevronUp className="text-xs" />
+                                        </button>
+                                        <button
+                                            onClick={() => moveSection(index, 'down')}
+                                            disabled={index === detailViewSections.length - 1}
+                                            className="text-white/50 hover:text-white disabled:opacity-20 transition-colors p-1 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none rounded"
+                                            aria-label={t.detailSections?.[section.id] ? `Move ${t.detailSections[section.id]} down` : `Move ${section.id} down`}
+                                        >
+                                            <FaChevronDown className="text-xs" />
+                                        </button>
+                                    </div>
                                     <button
                                         onClick={() => toggleSectionVisibility(index)}
                                         className="text-white/70 hover:text-white transition-colors p-1 rounded focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
