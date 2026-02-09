@@ -13,6 +13,12 @@ interface WeatherCardProps {
     onShowActions?: (e: React.MouseEvent) => void;
 }
 
+const SOURCE_LABELS: Record<string, string> = {
+    openweathermap: 'OWM',
+    weatherapi: 'WAPI',
+    qweather: 'QW'
+};
+
 /**
  * Helper to get the display label for a weather source.
  *
@@ -20,14 +26,7 @@ interface WeatherCardProps {
  * @returns {string} The display label.
  */
 function getSourceLabel(source: string): string {
-    switch (source) {
-        case 'openweathermap':
-            return 'OWM';
-        case 'weatherapi':
-            return 'WAPI';
-        default:
-            return 'QW';
-    }
+    return SOURCE_LABELS[source] || 'QW';
 }
 
 /**
