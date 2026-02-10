@@ -33,3 +33,7 @@
 ## 2026-02-08 - Nested Focus Visibility
 **Learning:** Icon-only buttons (like "Clear search") often lack sufficient visual affordance for keyboard users if they rely on parent `focus-within` styles, making it hard to distinguish which specific element is focused.
 **Action:** Always add explicit `focus-visible` styles to nested interactive elements, even if the container has focus styles.
+
+## 2026-02-10 - Ambiguous Action Buttons in Lists
+**Learning:** Repetitive "More actions" buttons in list items (like weather cards) confuse screen reader users by lacking context about which item they control.
+**Action:** Always include the item's unique identifier (e.g., city name) in the `aria-label` (e.g., "More actions for London") to distinguish identical controls.

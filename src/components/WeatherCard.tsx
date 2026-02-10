@@ -53,7 +53,7 @@ function WeatherCard({
                 <button
                     onClick={handleActionsClick}
                     className="absolute top-4 right-4 p-2 text-white/40 hover:text-white rounded-full transition-colors hover:bg-white/10 active:scale-95 focus-visible:bg-white/20 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none z-10"
-                    aria-label="More actions"
+                    aria-label={`More actions for ${weather.city}`}
                 >
                     <FaEllipsisV />
                 </button>
