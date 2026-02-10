@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { WeatherData } from '../services/weatherApi';
 import { getSettings, SectionConfig } from '../utils/config';
-import { FaCloud, FaTrash, FaCog, FaSync, FaInfoCircle, FaEllipsisV, FaCheck } from 'react-icons/fa';
+import { FaCloud, FaTrash, FaInfoCircle, FaCheck } from 'react-icons/fa';
 import WeatherDetail from './WeatherDetail';
 import SortableWeatherCard from './SortableWeatherCard';
 import SettingsModal from './SettingsModal';
@@ -9,45 +9,25 @@ import SearchBar from './SearchBar';
 import { storage } from '../utils/storage';
 import { useI18n } from '../contexts/I18nContext';
 import { getWeatherBackground } from '../utils/weatherUtils';
-import { isMobileDevice } from '../utils/env';
-import RelativeTime from './RelativeTime';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 import { useWeatherList } from '../hooks/useWeatherList';
 import {
     DndContext,
     closestCenter,
-    KeyboardSensor,
-    MouseSensor,
-    TouchSensor,
-    useSensor,
-    useSensors,
-    DragEndEvent,
 } from '@dnd-kit/core';
 import {
     SortableContext,
-    sortableKeyboardCoordinates,
     rectSortingStrategy,
 } from '@dnd-kit/sortable';
-
-const dropdownVariants: Variants = {
-    hidden: { opacity: 0, y: -10, scale: 0.95 },
-    visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.2 } },
-    exit: { opacity: 0, y: -5, scale: 0.95, transition: { duration: 0.15 } }
-};
+import { useDashboardContextMenu } from '../hooks/useDashboardContextMenu';
+import { useWeatherDragDrop } from '../hooks/useWeatherDragDrop';
+import { DashboardMenu } from './DashboardMenu';
 
 const contextMenuVariants: Variants = {
     hidden: { opacity: 0, scale: 0.9 },
     visible: { opacity: 1, scale: 1, transition: { duration: 0.2 } },
     exit: { opacity: 0, scale: 0.95, transition: { duration: 0.1 } }
 };
-
-interface ContextMenuState {
-    show: boolean;
-    x: number;
-    y: number;
-    weather: WeatherData | null;
-    menuStyle?: React.CSSProperties;
-}
 
 interface WeatherDashboardProps {
     onBgChange?: (bgClass: string) => void;
@@ -73,32 +53,26 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
 
     const [selectedCity, setSelectedCity] = useState<WeatherData | null>(null);
     const [showSettings, setShowSettings] = useState(false);
-    const [contextMenu, setContextMenu] = useState<ContextMenuState>({
-        show: false, x: 0, y: 0, weather: null
+
+    // Hooks
+    const {
+        contextMenu,
+        handleCardContextMenu,
+        closeContextMenu,
+        contextMenuRef,
+        confirmDelete,
+        setConfirmDelete
+    } = useDashboardContextMenu();
+
+    const { sensors, handleDragEnd } = useWeatherDragDrop({
+        weatherList,
+        reorderCities
     });
-    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-    const [showMenu, setShowMenu] = useState(false);
+
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const ticking = useRef(false);
     const hasCheckedStartup = useRef(false);
 
-    // Sensors for drag interactions
-    const sensors = useSensors(
-        useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
-        useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-    );
-
-    const handleDragEnd = useCallback((event: DragEndEvent) => {
-        const { active, over } = event;
-        if (over && active.id !== over.id) {
-            const oldIndex = weatherList.findIndex((w) => w.city === active.id);
-            const newIndex = weatherList.findIndex((w) => w.city === over.id);
-            reorderCities(oldIndex, newIndex);
-        }
-    }, [weatherList, reorderCities]);
-
-    const contextMenuRef = useRef<HTMLDivElement>(null);
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
     const [enableHardwareAcceleration, setEnableHardwareAcceleration] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
@@ -145,23 +119,6 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
     }, [selectedCity, showSettings]);
-
-    // Close menus when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (contextMenu.show && contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
-                setContextMenu(prev => ({ ...prev, show: false }));
-            }
-        };
-        if (contextMenu.show || showMenu) {
-            document.addEventListener('mousedown', handleClickOutside, true);
-            document.addEventListener('contextmenu', handleClickOutside, true);
-        }
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside, true);
-            document.removeEventListener('contextmenu', handleClickOutside, true);
-        };
-    }, [contextMenu.show, showMenu]);
 
     const dominantCondition = weatherList.length > 0 ? weatherList[0].condition : 'default';
 
@@ -246,29 +203,6 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
         window.history.pushState({ city: weather.city }, '', '');
     }, []);
 
-    const handleCardContextMenu = useCallback((e: React.MouseEvent, weather: WeatherData) => {
-        e.preventDefault();
-        if (isMobileDevice() && e.type === 'contextmenu') return;
-
-        const { clientX, clientY } = e;
-        const { innerWidth, innerHeight } = window;
-        const menuWidth = 200;
-        const menuHeight = 150;
-        const padding = 3;
-
-        const isRight = clientX + menuWidth + padding > innerWidth;
-        const isBottom = clientY + menuHeight + padding > innerHeight;
-
-        const menuStyle: React.CSSProperties = {
-            transformOrigin: `${isBottom ? 'bottom' : 'top'} ${isRight ? 'right' : 'left'}`,
-            [isBottom ? 'bottom' : 'top']: isBottom ? innerHeight - clientY : clientY,
-            [isRight ? 'right' : 'left']: isRight ? innerWidth - clientX : clientX
-        };
-
-        setContextMenu({ show: true, x: clientX, y: clientY, weather, menuStyle });
-        setConfirmDelete(null);
-    }, []);
-
     const handleDetailBack = useCallback(() => window.history.back(), []);
 
     const handleDetailOpenSettings = useCallback(() => {
@@ -289,52 +223,15 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
                 <SearchBar onSearch={handleSearch} onLocationRequest={handleLocationRequest} isLoading={loading} />
 
                 {/* Top Right Menu Button */}
-                <div className="relative">
-                    <button
-                        onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
-                        className="p-4 glass-card rounded-full text-white transition-all hover:bg-white/20 hover:scale-105 active:scale-95 border border-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-                        aria-label="Main menu"
-                    >
-                        <FaEllipsisV className="text-xl" />
-                    </button>
-
-                    <AnimatePresence>
-                        {showMenu && (
-                            <>
-                                <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)}></div>
-                                <motion.div
-                                    key="dashboard-menu"
-                                    variants={dropdownVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                    className="absolute right-0 top-full mt-3 w-56 glass-card rounded-2xl py-2 shadow-2xl flex flex-col z-50 border border-white/10 backdrop-blur-xl"
-                                >
-                                    {lastRefreshTime && (
-                                        <div className="px-5 py-3 text-sm font-medium text-white/40 border-b border-white/10 uppercase tracking-wider">
-                                            {t.refresh.lastUpdate}: <RelativeTime date={lastRefreshTime} />
-                                        </div>
-                                    )}
-                                    <button
-                                        onClick={() => { refreshAllCities(); setShowMenu(false); }}
-                                        disabled={refreshing}
-                                        className="w-full px-5 py-3 text-left text-base text-white hover:bg-white/10 flex items-center gap-3 transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-                                    >
-                                        <FaSync className={`text-blue-300 ${refreshing ? 'animate-spin' : ''}`} />
-                                        {refreshing ? t.refresh.refreshing : t.refresh.button}
-                                    </button>
-                                    <button
-                                        onClick={() => { setShowSettings(true); window.history.pushState({ modal: 'settings' }, '', ''); setShowMenu(false); }}
-                                        className="w-full px-5 py-3 text-left text-base text-white hover:bg-white/10 flex items-center gap-3 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
-                                    >
-                                        <FaCog className="text-slate-300" />
-                                        {t.settings.title}
-                                    </button>
-                                </motion.div>
-                            </>
-                        )}
-                    </AnimatePresence>
-                </div>
+                <DashboardMenu
+                    onRefresh={refreshAllCities}
+                    onSettings={() => {
+                        setShowSettings(true);
+                        window.history.pushState({ modal: 'settings' }, '', '');
+                    }}
+                    lastRefreshTime={lastRefreshTime}
+                    isRefreshing={refreshing}
+                />
             </div>
 
             {error && <div className="mb-4 text-red-200 bg-red-500/20 glass px-4 py-2 rounded-lg text-sm">{error}</div>}
@@ -418,7 +315,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
                         <button
                             onClick={() => {
                                 setSelectedCity(contextMenu.weather);
-                                setContextMenu(prev => ({ ...prev, show: false }));
+                                closeContextMenu();
                             }}
                             className="menu-item"
                         >
@@ -430,8 +327,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
                                 e.stopPropagation();
                                 if (confirmDelete === contextMenu.weather?.city) {
                                     if (contextMenu.weather) handleRemoveCityWrapper(contextMenu.weather.city);
-                                    setContextMenu(prev => ({ ...prev, show: false }));
-                                    setConfirmDelete(null);
+                                    closeContextMenu();
                                 } else {
                                     setConfirmDelete(contextMenu.weather?.city || null);
                                 }
