@@ -17,15 +17,15 @@ function WeatherIcon({ condition, className = "text-5xl" }: WeatherIconProps): J
     const category = getWeatherCategory(condition);
     switch (category) {
         case WeatherCategory.Sunny:
-            return <FaSun className={`${className} text-amber-300 animate-spin-slow`} />;
+            return <FaSun className={`${className} text-amber-300 animate-spin-slow`} aria-hidden="true" />;
         case WeatherCategory.Rainy:
-            return <FaCloudRain className={`${className} text-blue-300 animate-float`} />;
+            return <FaCloudRain className={`${className} text-blue-300 animate-float`} aria-hidden="true" />;
         case WeatherCategory.Snowy:
-            return <FaSnowflake className={`${className} text-white animate-float`} />;
+            return <FaSnowflake className={`${className} text-white animate-float`} aria-hidden="true" />;
         case WeatherCategory.Mist:
-            return <FaSmog className={`${className} text-gray-300 animate-float`} />;
+            return <FaSmog className={`${className} text-gray-300 animate-float`} aria-hidden="true" />;
         default:
-            return <FaCloud className={`${className} text-gray-200 animate-float`} />;
+            return <FaCloud className={`${className} text-gray-200 animate-float`} aria-hidden="true" />;
     }
 }
 
