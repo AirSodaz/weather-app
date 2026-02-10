@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FaEllipsisV, FaSync, FaCog } from 'react-icons/fa';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 import RelativeTime from './RelativeTime';
