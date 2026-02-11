@@ -8,6 +8,21 @@ const DATE_SEPARATOR_REGEX = /-/g;
 const CACHE_KEY = 'weather_cache_v1';
 
 /**
+ * Helper to format hours and minutes into a string.
+ */
+function formatHoursMinutes(hours: number, minutes: number, use24h: boolean): string {
+    const minStr = minutes.toString().padStart(2, '0');
+
+    if (use24h) {
+        return `${hours.toString().padStart(2, '0')}:${minStr}`;
+    }
+
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${minStr} ${ampm}`;
+}
+
+/**
  * Formats a date object to HH:mm string.
  *
  * @param {Date} date - The date to format.
@@ -15,16 +30,7 @@ const CACHE_KEY = 'weather_cache_v1';
  * @returns {string} The formatted time string.
  */
 function formatTime(date: Date, use24h: boolean = true): string {
-    const hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-
-    if (use24h) {
-        return `${hours.toString().padStart(2, '0')}:${minutes}`;
-    }
-
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${minutes} ${ampm}`;
+    return formatHoursMinutes(date.getHours(), date.getMinutes(), use24h);
 }
 
 /**
@@ -54,9 +60,7 @@ function formatTimeString(timeStr: string, use24h: boolean = true): string {
         minutes = parseInt(m, 10);
     }
 
-    const date = new Date();
-    date.setHours(hours, minutes);
-    return formatTime(date, use24h);
+    return formatHoursMinutes(hours, minutes, use24h);
 }
 
 interface CacheEntry {
@@ -71,128 +75,106 @@ interface WeatherCacheStore {
     [key: string]: CacheEntry;
 }
 
-let memoryCache: WeatherCacheStore | null = null;
-let cacheLoadPromise: Promise<WeatherCacheStore> | null = null;
-let saveCacheTimeout: ReturnType<typeof setTimeout> | null = null;
+class WeatherCacheManager {
+    private memoryCache: WeatherCacheStore | null = null;
+    private loadPromise: Promise<WeatherCacheStore> | null = null;
+    private saveTimeout: ReturnType<typeof setTimeout> | null = null;
+    private readonly DEBOUNCE_MS = 2000;
 
-const CACHE_SAVE_DEBOUNCE_MS = 2000;
+    private async getStore(): Promise<WeatherCacheStore> {
+        if (this.memoryCache) return this.memoryCache;
+        if (this.loadPromise) return this.loadPromise;
 
-/**
- * Persists the cache to storage with debouncing to prevent excessive writes.
- *
- * @param {WeatherCacheStore} cache - The cache object to save.
- */
-function saveCacheDebounced(cache: WeatherCacheStore) {
-    if (saveCacheTimeout) {
-        clearTimeout(saveCacheTimeout);
-    }
-    saveCacheTimeout = setTimeout(async () => {
-        saveCacheTimeout = null;
-        try {
-            await storage.set(CACHE_KEY, cache);
-        } catch (e) {
-            console.warn('Failed to save weather cache:', e);
-        }
-    }, CACHE_SAVE_DEBOUNCE_MS);
-}
-
-/**
- * Loads the weather cache from storage or memory.
- *
- * @returns {Promise<WeatherCacheStore>} A promise that resolves to the cache store.
- */
-async function getCache(): Promise<WeatherCacheStore> {
-    if (memoryCache) return memoryCache;
-    if (cacheLoadPromise) return cacheLoadPromise;
-
-    cacheLoadPromise = (async () => {
-        try {
-            const c = await storage.get(CACHE_KEY);
-            memoryCache = c || {};
-        } catch (e) {
-            console.error('Failed to load weather cache:', e);
-            memoryCache = {};
-        }
-        return memoryCache!;
-    })();
-    return cacheLoadPromise;
-}
-
-/**
- * Generates a unique cache key for a weather request.
- *
- * @param {string} city - The name of the city.
- * @param {string} source - The weather data source.
- * @param {string} lang - The language code.
- * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
- * @returns {string} The generated cache key.
- */
-function getCacheKey(city: string, source: string, lang: string, coords?: { lat: number, lon: number }): string {
-    if (coords) {
-        return `${source}:${lang}:lat_${coords.lat.toFixed(2)}_lon_${coords.lon.toFixed(2)}`;
-    }
-    return `${source}:${lang}:${city.toLowerCase()}`;
-}
-
-/**
- * Helper to get cached weather data.
- */
-async function getWeatherCache(
-    city: string,
-    source: string,
-    lang: string,
-    coords: { lat: number, lon: number } | undefined,
-    ttl: number,
-    currentTimeFormat: '24h' | '12h'
-): Promise<WeatherData | null> {
-    try {
-        const cache = await getCache();
-        const key = getCacheKey(city, source, lang, coords);
-        const now = Date.now();
-
-        if (cache[key]) {
-            const entry = cache[key];
-            const isFormatMatch = entry.timeFormat === currentTimeFormat;
-
-            if (now - entry.timestamp < ttl && isFormatMatch) {
-                console.log(`[Cache Hit] Returning cached weather data for ${key}`);
-                return entry.data;
-            } else {
-                delete cache[key]; // Clean up expired
+        this.loadPromise = (async () => {
+            try {
+                const c = await storage.get(CACHE_KEY);
+                this.memoryCache = c || {};
+            } catch (e) {
+                console.error('Failed to load weather cache:', e);
+                this.memoryCache = {};
             }
-        }
-    } catch (e) {
-        console.warn('Cache check failed:', e);
+            return this.memoryCache!;
+        })();
+        return this.loadPromise;
     }
-    return null;
+
+    private saveDebounced(store: WeatherCacheStore) {
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+        }
+        this.saveTimeout = setTimeout(async () => {
+            this.saveTimeout = null;
+            try {
+                await storage.set(CACHE_KEY, store);
+            } catch (e) {
+                console.warn('Failed to save weather cache:', e);
+            }
+        }, this.DEBOUNCE_MS);
+    }
+
+    private getKey(city: string, source: string, lang: string, coords?: { lat: number, lon: number }): string {
+        if (coords) {
+            return `${source}:${lang}:lat_${coords.lat.toFixed(2)}_lon_${coords.lon.toFixed(2)}`;
+        }
+        return `${source}:${lang}:${city.toLowerCase()}`;
+    }
+
+    public async get(
+        city: string,
+        source: string,
+        lang: string,
+        coords: { lat: number, lon: number } | undefined,
+        ttl: number,
+        currentTimeFormat: '24h' | '12h'
+    ): Promise<WeatherData | null> {
+        try {
+            const cache = await this.getStore();
+            const key = this.getKey(city, source, lang, coords);
+            const now = Date.now();
+
+            if (cache[key]) {
+                const entry = cache[key];
+                const isFormatMatch = entry.timeFormat === currentTimeFormat;
+
+                if (now - entry.timestamp < ttl && isFormatMatch) {
+                    console.log(`[Cache Hit] Returning cached weather data for ${key}`);
+                    return entry.data;
+                } else {
+                    delete cache[key]; // Clean up expired
+                }
+            }
+        } catch (e) {
+            console.warn('Cache check failed:', e);
+        }
+        return null;
+    }
+
+    public async set(
+        city: string,
+        source: string,
+        lang: string,
+        coords: { lat: number, lon: number } | undefined,
+        data: WeatherData,
+        currentTimeFormat: '24h' | '12h'
+    ): Promise<void> {
+        try {
+            const cache = await this.getStore();
+            const key = this.getKey(city, source, lang, coords);
+            cache[key] = {
+                data: data,
+                timestamp: Date.now(),
+                lang,
+                source,
+                timeFormat: currentTimeFormat
+            };
+            this.saveDebounced(cache);
+        } catch (e) {
+            console.warn('Failed to update cache:', e);
+        }
+    }
 }
 
-/**
- * Helper to set weather data to cache.
- */
-async function setWeatherCache(
-    city: string,
-    source: string,
-    lang: string,
-    coords: { lat: number, lon: number } | undefined,
-    data: WeatherData,
-    currentTimeFormat: '24h' | '12h'
-): Promise<void> {
-    try {
-        const cache = await getCache();
-        const key = getCacheKey(city, source, lang, coords);
-        cache[key] = {
-            data: data,
-            timestamp: Date.now(),
-            lang,
-            source,
-            timeFormat: currentTimeFormat
-        };
-        saveCacheDebounced(cache);
-    } catch (e) {
-        console.warn('Failed to update cache:', e);
-    }
-}
+const weatherCache = new WeatherCacheManager();
 
 /**
  * Constructs the API URLs for QWeather, respecting custom host configurations.
@@ -783,6 +765,14 @@ async function fetchCustom(
     }
 }
 
+type WeatherFetcher = (city: string, apiKey: string, lang: 'zh' | 'en', host: string | undefined, coords?: { lat: number, lon: number }, use24h?: boolean) => Promise<WeatherData>;
+
+const weatherProviders: Record<string, WeatherFetcher> = {
+    openweathermap: (city, key, lang, _, coords, use24h) => fetchOpenWeatherMap(city, key, lang, coords, use24h),
+    weatherapi: (city, key, lang, _, coords, use24h) => fetchWeatherAPI(city, key, lang, coords, use24h),
+    qweather: (city, key, lang, host, coords, use24h) => fetchQWeather(city, key, lang, host, coords, use24h)
+};
+
 /**
  * Main function to fetch weather data from the configured or specified source.
  * Handles caching, source selection, and fallback logic.
@@ -815,7 +805,7 @@ export async function getWeather(
     const use24h = currentTimeFormat !== '12h';
 
     // Try to get from cache
-    const cachedData = await getWeatherCache(city, sourceToUse, lang, coords, ttl, currentTimeFormat);
+    const cachedData = await weatherCache.get(city, sourceToUse, lang, coords, ttl, currentTimeFormat);
     if (cachedData) {
         return cachedData;
     }
@@ -828,25 +818,16 @@ export async function getWeather(
         const apiKey = settings.apiKeys[sourceToUse as keyof typeof settings.apiKeys];
         if (!apiKey) throw new Error(`API key for ${sourceToUse} is invalid or missing.`);
 
-        switch (sourceToUse) {
-            case 'openweathermap':
-                weatherData = await fetchOpenWeatherMap(city, apiKey, lang, coords, use24h);
-                break;
-            case 'weatherapi':
-                weatherData = await fetchWeatherAPI(city, apiKey, lang, coords, use24h);
-                break;
-            case 'qweather':
-                weatherData = await fetchQWeather(city, apiKey, lang, settings.qweatherHost, coords, use24h);
-                break;
-            default:
-                throw new Error('Unknown weather source');
-        }
+        const provider = weatherProviders[sourceToUse];
+        if (!provider) throw new Error('Unknown weather source');
+
+        weatherData = await provider(city, apiKey, lang, settings.qweatherHost, coords, use24h);
     } else {
         throw new Error('Please configure a weather source and API key in settings.');
     }
 
     // Save to cache
-    await setWeatherCache(city, sourceToUse, lang, coords, weatherData, currentTimeFormat);
+    await weatherCache.set(city, sourceToUse, lang, coords, weatherData, currentTimeFormat);
 
     return weatherData;
 }
@@ -938,6 +919,14 @@ async function searchQWeather(
     }
 }
 
+type CitySearcher = (query: string, apiKey: string, lang: 'zh' | 'en', host?: string) => Promise<CityResult[]>;
+
+const citySearchers: Record<string, CitySearcher> = {
+    openweathermap: (q, k, l) => searchOpenWeatherMap(q, k, l),
+    weatherapi: (q, k) => searchWeatherAPI(q, k),
+    qweather: (q, k, l, h) => searchQWeather(q, k, l, h)
+};
+
 /**
  * Searches for cities based on the configured weather source.
  */
@@ -950,16 +939,11 @@ export async function searchCities(
 
     const apiKey = settings.apiKeys[settings.source]!;
 
-    switch (settings.source) {
-        case 'openweathermap':
-            return searchOpenWeatherMap(query, apiKey, lang);
-        case 'weatherapi':
-            return searchWeatherAPI(query, apiKey);
-        case 'qweather':
-            return searchQWeather(query, apiKey, lang, settings.qweatherHost);
-        default:
-            return [];
+    const searcher = citySearchers[settings.source];
+    if (searcher) {
+        return searcher(query, apiKey, lang, settings.qweatherHost);
     }
+    return [];
 }
 
 /**
@@ -972,24 +956,13 @@ export async function verifyConnection(
     host?: string
 ): Promise<boolean> {
     try {
-        let result: any[] = [];
-        const testQuery = 'Beijing'; // Standard test city.
+        if (source === 'custom') return true;
 
-        switch (source) {
-            case 'openweathermap':
-                result = await searchOpenWeatherMap(testQuery, apiKey, lang);
-                break;
-            case 'weatherapi':
-                result = await searchWeatherAPI(testQuery, apiKey);
-                break;
-            case 'qweather':
-                result = await searchQWeather(testQuery, apiKey, lang, host);
-                break;
-            case 'custom':
-                return true;
-            default:
-                throw new Error('Unknown source');
-        }
+        const searcher = citySearchers[source];
+        if (!searcher) throw new Error('Unknown source');
+
+        const testQuery = 'Beijing'; // Standard test city.
+        const result = await searcher(testQuery, apiKey, lang, host);
 
         return result.length > 0;
     } catch (e) {
