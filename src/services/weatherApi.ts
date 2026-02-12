@@ -15,16 +15,12 @@ const CACHE_KEY = 'weather_cache_v1';
  * @returns {string} The formatted time string.
  */
 function formatTime(date: Date, use24h: boolean = true): string {
-    const hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-
-    if (use24h) {
-        return `${hours.toString().padStart(2, '0')}:${minutes}`;
-    }
-
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${minutes} ${ampm}`;
+    return new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: !use24h,
+        hourCycle: use24h ? 'h23' : 'h12' // Ensure 0-23 for 24h
+    }).format(date);
 }
 
 /**
@@ -364,14 +360,6 @@ function transformOpenWeatherData(
 
 /**
  * Fetches weather data from OpenWeatherMap.
- *
- * @param {string} city - The city name.
- * @param {string} apiKey - The API key.
- * @param {'zh' | 'en'} [lang='zh'] - The language code.
- * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
- * @param {boolean} [use24h=true] - Whether to use 24-hour format.
- * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
- * @throws {Error} If the API request fails.
  */
 async function fetchOpenWeatherMap(
     city: string,
@@ -410,7 +398,6 @@ async function fetchOpenWeatherMap(
         const weatherPromise = axios.get(`${OPENWEATHER_BASE_URL}/weather`, { params });
         const forecastPromise = fetchOptional(`${OPENWEATHER_BASE_URL}/forecast`, params);
 
-        // Optimistically start AQ fetch if coords known
         let aqPromise: Promise<any> | null = null;
         if (coords) {
             aqPromise = fetchOptional(`${OPENWEATHER_BASE_URL}/air_pollution`, {
@@ -423,7 +410,6 @@ async function fetchOpenWeatherMap(
         const weatherResponse = await weatherPromise;
         const data = weatherResponse.data;
 
-        // If not started yet, fetch AQ now using returned coords
         if (!aqPromise) {
             aqPromise = fetchOptional(`${OPENWEATHER_BASE_URL}/air_pollution`, {
                 lat: data.coord.lat,
@@ -475,10 +461,8 @@ function transformWeatherAPIData(
         icon: item.day.condition.icon
     }));
 
-    // Map US AQI to 1-5 scale roughly.
     const usEpaIndex = current.air_quality ? current.air_quality['us-epa-index'] : 1;
 
-    // Process history data if available.
     if (historyDataRaw?.forecast?.forecastday?.length > 0) {
         const historyData = historyDataRaw.forecast.forecastday[0];
         dailyForecast.unshift({
@@ -519,14 +503,6 @@ function transformWeatherAPIData(
 
 /**
  * Fetches weather data from WeatherAPI.com.
- *
- * @param {string} city - The city name.
- * @param {string} apiKey - The API key.
- * @param {'zh' | 'en'} [lang='zh'] - The language code.
- * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
- * @param {boolean} [use24h=true] - Whether to use 24-hour format.
- * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
- * @throws {Error} If the API request fails.
  */
 async function fetchWeatherAPI(
     city: string,
@@ -643,15 +619,6 @@ function transformQWeatherData(
 
 /**
  * Fetches weather data from QWeather.
- *
- * @param {string} city - The city name.
- * @param {string} apiKey - The API key.
- * @param {'zh' | 'en'} [lang='zh'] - The language code.
- * @param {string} [host] - Optional custom host.
- * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
- * @param {boolean} [use24h=true] - Whether to use 24-hour format.
- * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
- * @throws {Error} If the API request fails.
  */
 async function fetchQWeather(
     city: string,
@@ -751,13 +718,6 @@ async function fetchQWeather(
 
 /**
  * Fetches weather data from a custom URL.
- *
- * @param {string} city - The city name.
- * @param {string} url - The custom API URL.
- * @param {string} [apiKey] - The optional API key.
- * @param {'zh' | 'en'} [lang='zh'] - The language code.
- * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
- * @throws {Error} If the API request fails or response format is invalid.
  */
 async function fetchCustom(
     city: string,
@@ -781,74 +741,6 @@ async function fetchCustom(
         console.error('API Error:', error.response?.data || error.message);
         throw new Error(`Failed to fetch from Custom URL: ${error.response?.data?.message || error.message}`);
     }
-}
-
-/**
- * Main function to fetch weather data from the configured or specified source.
- * Handles caching, source selection, and fallback logic.
- *
- * @param {string} city - The city name.
- * @param {string} [preferredSource] - Optionally override the configured source.
- * @param {'zh' | 'en'} [lang='zh'] - The language code.
- * @param {{ lat: number, lon: number }} [coords] - Optional coordinates for precise lookup.
- * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
- * @throws {Error} If no API key is configured or the fetch fails.
- */
-export async function getWeather(
-    city: string,
-    preferredSource?: string,
-    lang: 'zh' | 'en' = 'zh',
-    coords?: { lat: number, lon: number }
-): Promise<WeatherData> {
-    const settings = await getSettings();
-    console.log('Current settings:', settings);
-
-    const ttlMinutes = settings.autoRefreshInterval > 0 ? settings.autoRefreshInterval : 15;
-    const ttl = ttlMinutes * 60 * 1000;
-
-    let sourceToUse = preferredSource || settings.source;
-    if (settings.source === 'custom' && settings.customUrl) {
-        sourceToUse = 'custom';
-    }
-
-    const currentTimeFormat = settings.timeFormat || '24h';
-    const use24h = currentTimeFormat !== '12h';
-
-    // Try to get from cache
-    const cachedData = await getWeatherCache(city, sourceToUse, lang, coords, ttl, currentTimeFormat);
-    if (cachedData) {
-        return cachedData;
-    }
-
-    let weatherData: WeatherData;
-
-    if (sourceToUse === 'custom' && settings.customUrl) {
-        weatherData = await fetchCustom(city, settings.customUrl, settings.apiKeys.custom, lang);
-    } else if (sourceToUse && (sourceToUse in settings.apiKeys)) {
-        const apiKey = settings.apiKeys[sourceToUse as keyof typeof settings.apiKeys];
-        if (!apiKey) throw new Error(`API key for ${sourceToUse} is invalid or missing.`);
-
-        switch (sourceToUse) {
-            case 'openweathermap':
-                weatherData = await fetchOpenWeatherMap(city, apiKey, lang, coords, use24h);
-                break;
-            case 'weatherapi':
-                weatherData = await fetchWeatherAPI(city, apiKey, lang, coords, use24h);
-                break;
-            case 'qweather':
-                weatherData = await fetchQWeather(city, apiKey, lang, settings.qweatherHost, coords, use24h);
-                break;
-            default:
-                throw new Error('Unknown weather source');
-        }
-    } else {
-        throw new Error('Please configure a weather source and API key in settings.');
-    }
-
-    // Save to cache
-    await setWeatherCache(city, sourceToUse, lang, coords, weatherData, currentTimeFormat);
-
-    return weatherData;
 }
 
 /**
@@ -938,6 +830,85 @@ async function searchQWeather(
     }
 }
 
+const weatherProviders: Record<string, {
+    fetch: (city: string, apiKey: string, lang: 'zh' | 'en', coords?: { lat: number, lon: number }, use24h?: boolean, host?: string) => Promise<WeatherData>;
+    search: (query: string, apiKey: string, lang: 'zh' | 'en', host?: string) => Promise<CityResult[]>;
+}> = {
+    openweathermap: {
+        fetch: (city, apiKey, lang, coords, use24h) => fetchOpenWeatherMap(city, apiKey, lang, coords, use24h),
+        search: (query, apiKey, lang) => searchOpenWeatherMap(query, apiKey, lang)
+    },
+    weatherapi: {
+        fetch: (city, apiKey, lang, coords, use24h) => fetchWeatherAPI(city, apiKey, lang, coords, use24h),
+        search: (query, apiKey) => searchWeatherAPI(query, apiKey)
+    },
+    qweather: {
+        fetch: (city, apiKey, lang, coords, use24h, host) => fetchQWeather(city, apiKey, lang, host, coords, use24h),
+        search: (query, apiKey, lang, host) => searchQWeather(query, apiKey, lang, host)
+    }
+};
+
+/**
+ * Main function to fetch weather data from the configured or specified source.
+ * Handles caching, source selection, and fallback logic.
+ *
+ * @param {string} city - The city name.
+ * @param {string} [preferredSource] - Optionally override the configured source.
+ * @param {'zh' | 'en'} [lang='zh'] - The language code.
+ * @param {{ lat: number, lon: number }} [coords] - Optional coordinates for precise lookup.
+ * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
+ * @throws {Error} If no API key is configured or the fetch fails.
+ */
+export async function getWeather(
+    city: string,
+    preferredSource?: string,
+    lang: 'zh' | 'en' = 'zh',
+    coords?: { lat: number, lon: number }
+): Promise<WeatherData> {
+    const settings = await getSettings();
+    console.log('Current settings:', settings);
+
+    const ttlMinutes = settings.autoRefreshInterval > 0 ? settings.autoRefreshInterval : 15;
+    const ttl = ttlMinutes * 60 * 1000;
+
+    let sourceToUse = preferredSource || settings.source;
+    if (settings.source === 'custom' && settings.customUrl) {
+        sourceToUse = 'custom';
+    }
+
+    const currentTimeFormat = settings.timeFormat || '24h';
+    const use24h = currentTimeFormat !== '12h';
+
+    // Try to get from cache
+    const cachedData = await getWeatherCache(city, sourceToUse, lang, coords, ttl, currentTimeFormat);
+    if (cachedData) {
+        return cachedData;
+    }
+
+    let weatherData: WeatherData;
+
+    if (sourceToUse === 'custom' && settings.customUrl) {
+        weatherData = await fetchCustom(city, settings.customUrl, settings.apiKeys.custom, lang);
+    } else if (sourceToUse && (sourceToUse in settings.apiKeys)) {
+        const apiKey = settings.apiKeys[sourceToUse as keyof typeof settings.apiKeys];
+        if (!apiKey) throw new Error(`API key for ${sourceToUse} is invalid or missing.`);
+
+        const provider = weatherProviders[sourceToUse];
+        if (provider) {
+            weatherData = await provider.fetch(city, apiKey, lang, coords, use24h, settings.qweatherHost);
+        } else {
+            throw new Error('Unknown weather source');
+        }
+    } else {
+        throw new Error('Please configure a weather source and API key in settings.');
+    }
+
+    // Save to cache
+    await setWeatherCache(city, sourceToUse, lang, coords, weatherData, currentTimeFormat);
+
+    return weatherData;
+}
+
 /**
  * Searches for cities based on the configured weather source.
  */
@@ -949,17 +920,12 @@ export async function searchCities(
     if (!settings.source || !settings.apiKeys[settings.source]) return [];
 
     const apiKey = settings.apiKeys[settings.source]!;
+    const provider = weatherProviders[settings.source];
 
-    switch (settings.source) {
-        case 'openweathermap':
-            return searchOpenWeatherMap(query, apiKey, lang);
-        case 'weatherapi':
-            return searchWeatherAPI(query, apiKey);
-        case 'qweather':
-            return searchQWeather(query, apiKey, lang, settings.qweatherHost);
-        default:
-            return [];
+    if (provider) {
+        return provider.search(query, apiKey, lang, settings.qweatherHost);
     }
+    return [];
 }
 
 /**
@@ -972,24 +938,13 @@ export async function verifyConnection(
     host?: string
 ): Promise<boolean> {
     try {
-        let result: any[] = [];
-        const testQuery = 'Beijing'; // Standard test city.
+        if (source === 'custom') return true;
 
-        switch (source) {
-            case 'openweathermap':
-                result = await searchOpenWeatherMap(testQuery, apiKey, lang);
-                break;
-            case 'weatherapi':
-                result = await searchWeatherAPI(testQuery, apiKey);
-                break;
-            case 'qweather':
-                result = await searchQWeather(testQuery, apiKey, lang, host);
-                break;
-            case 'custom':
-                return true;
-            default:
-                throw new Error('Unknown source');
-        }
+        const provider = weatherProviders[source];
+        if (!provider) throw new Error('Unknown source');
+
+        const testQuery = 'Beijing'; // Standard test city.
+        const result = await provider.search(testQuery, apiKey, lang, host);
 
         return result.length > 0;
     } catch (e) {
