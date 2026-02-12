@@ -187,6 +187,8 @@ jobs:
             ### Mobile
             - **Android**: `.apk`
           files: release-files/*
+          draft: true
+          prerelease: false
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
