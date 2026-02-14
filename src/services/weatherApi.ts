@@ -1,63 +1,20 @@
 import axios from 'axios';
 import { getSettings } from '../utils/config';
 import { storage } from '../utils/storage';
+import { WeatherData, CityResult } from './types';
+import {
+    transformOpenWeatherData,
+    transformWeatherAPIData,
+    transformQWeatherData
+} from './weatherTransformers';
+
+// Export types for consumers
+export type { WeatherData, CityResult, HourlyForecast, DailyForecast, AirQuality } from './types';
 
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
 const WEATHERAPI_BASE_URL = 'https://api.weatherapi.com/v1';
-const DATE_SEPARATOR_REGEX = /-/g;
 const CACHE_KEY = 'weather_cache_v1';
-
-/**
- * Formats a date object to HH:mm string.
- *
- * @param {Date} date - The date to format.
- * @param {boolean} [use24h=true] - Whether to use 24-hour format.
- * @returns {string} The formatted time string.
- */
-function formatTime(date: Date, use24h: boolean = true): string {
-    const hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-
-    if (use24h) {
-        return `${hours.toString().padStart(2, '0')}:${minutes}`;
-    }
-
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${minutes} ${ampm}`;
-}
-
-/**
- * Formats a time string (e.g., "05:00 AM" or "13:00") to the desired format.
- * Assuming input is either 12h with AM/PM or 24h.
- *
- * @param {string} timeStr - The time string to format.
- * @param {boolean} [use24h=true] - Whether to use 24-hour format.
- * @returns {string} The formatted time string.
- */
-function formatTimeString(timeStr: string, use24h: boolean = true): string {
-    let hours = 0;
-    let minutes = 0;
-    const is12hInput = /AM|PM/i.test(timeStr);
-
-    if (is12hInput) {
-        const [time, modifier] = timeStr.split(' ');
-        const [h, m] = time.split(':');
-        hours = parseInt(h, 10);
-        minutes = parseInt(m, 10);
-
-        if (hours === 12) hours = 0;
-        if (modifier?.toUpperCase() === 'PM') hours += 12;
-    } else {
-        const [h, m] = timeStr.split(':');
-        hours = parseInt(h, 10);
-        minutes = parseInt(m, 10);
-    }
-
-    const date = new Date();
-    date.setHours(hours, minutes);
-    return formatTime(date, use24h);
-}
+const CACHE_SAVE_DEBOUNCE_MS = 2000;
 
 interface CacheEntry {
     data: WeatherData;
@@ -71,128 +28,124 @@ interface WeatherCacheStore {
     [key: string]: CacheEntry;
 }
 
-let memoryCache: WeatherCacheStore | null = null;
-let cacheLoadPromise: Promise<WeatherCacheStore> | null = null;
-let saveCacheTimeout: ReturnType<typeof setTimeout> | null = null;
-
-const CACHE_SAVE_DEBOUNCE_MS = 2000;
-
 /**
- * Persists the cache to storage with debouncing to prevent excessive writes.
- *
- * @param {WeatherCacheStore} cache - The cache object to save.
+ * Manages weather data caching with memory buffering and debounced storage persistence.
  */
-function saveCacheDebounced(cache: WeatherCacheStore) {
-    if (saveCacheTimeout) {
-        clearTimeout(saveCacheTimeout);
-    }
-    saveCacheTimeout = setTimeout(async () => {
-        saveCacheTimeout = null;
-        try {
-            await storage.set(CACHE_KEY, cache);
-        } catch (e) {
-            console.warn('Failed to save weather cache:', e);
-        }
-    }, CACHE_SAVE_DEBOUNCE_MS);
-}
+class WeatherCacheManager {
+    private memoryCache: WeatherCacheStore | null = null;
+    private cacheLoadPromise: Promise<WeatherCacheStore> | null = null;
+    private saveCacheTimeout: ReturnType<typeof setTimeout> | null = null;
 
-/**
- * Loads the weather cache from storage or memory.
- *
- * @returns {Promise<WeatherCacheStore>} A promise that resolves to the cache store.
- */
-async function getCache(): Promise<WeatherCacheStore> {
-    if (memoryCache) return memoryCache;
-    if (cacheLoadPromise) return cacheLoadPromise;
+    /**
+     * Loads the weather cache from storage or memory.
+     */
+    private async getCache(): Promise<WeatherCacheStore> {
+        if (this.memoryCache) return this.memoryCache;
+        if (this.cacheLoadPromise) return this.cacheLoadPromise;
 
-    cacheLoadPromise = (async () => {
-        try {
-            const c = await storage.get(CACHE_KEY);
-            memoryCache = c || {};
-        } catch (e) {
-            console.error('Failed to load weather cache:', e);
-            memoryCache = {};
-        }
-        return memoryCache!;
-    })();
-    return cacheLoadPromise;
-}
-
-/**
- * Generates a unique cache key for a weather request.
- *
- * @param {string} city - The name of the city.
- * @param {string} source - The weather data source.
- * @param {string} lang - The language code.
- * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
- * @returns {string} The generated cache key.
- */
-function getCacheKey(city: string, source: string, lang: string, coords?: { lat: number, lon: number }): string {
-    if (coords) {
-        return `${source}:${lang}:lat_${coords.lat.toFixed(2)}_lon_${coords.lon.toFixed(2)}`;
-    }
-    return `${source}:${lang}:${city.toLowerCase()}`;
-}
-
-/**
- * Helper to get cached weather data.
- */
-async function getWeatherCache(
-    city: string,
-    source: string,
-    lang: string,
-    coords: { lat: number, lon: number } | undefined,
-    ttl: number,
-    currentTimeFormat: '24h' | '12h'
-): Promise<WeatherData | null> {
-    try {
-        const cache = await getCache();
-        const key = getCacheKey(city, source, lang, coords);
-        const now = Date.now();
-
-        if (cache[key]) {
-            const entry = cache[key];
-            const isFormatMatch = entry.timeFormat === currentTimeFormat;
-
-            if (now - entry.timestamp < ttl && isFormatMatch) {
-                console.log(`[Cache Hit] Returning cached weather data for ${key}`);
-                return entry.data;
-            } else {
-                delete cache[key]; // Clean up expired
+        this.cacheLoadPromise = (async () => {
+            try {
+                const c = await storage.get(CACHE_KEY);
+                this.memoryCache = c || {};
+            } catch (e) {
+                console.error('Failed to load weather cache:', e);
+                this.memoryCache = {};
             }
-        }
-    } catch (e) {
-        console.warn('Cache check failed:', e);
+            return this.memoryCache!;
+        })();
+        return this.cacheLoadPromise;
     }
-    return null;
+
+    /**
+     * Persists the cache to storage with debouncing.
+     */
+    private saveCacheDebounced(cache: WeatherCacheStore) {
+        if (this.saveCacheTimeout) {
+            clearTimeout(this.saveCacheTimeout);
+        }
+        this.saveCacheTimeout = setTimeout(async () => {
+            this.saveCacheTimeout = null;
+            try {
+                await storage.set(CACHE_KEY, cache);
+            } catch (e) {
+                console.warn('Failed to save weather cache:', e);
+            }
+        }, CACHE_SAVE_DEBOUNCE_MS);
+    }
+
+    /**
+     * Generates a unique cache key for a weather request.
+     */
+    private getCacheKey(city: string, source: string, lang: string, coords?: { lat: number, lon: number }): string {
+        if (coords) {
+            return `${source}:${lang}:lat_${coords.lat.toFixed(2)}_lon_${coords.lon.toFixed(2)}`;
+        }
+        return `${source}:${lang}:${city.toLowerCase()}`;
+    }
+
+    /**
+     * Retrieves weather data from cache if valid.
+     */
+    public async getWeatherCache(
+        city: string,
+        source: string,
+        lang: string,
+        coords: { lat: number, lon: number } | undefined,
+        ttl: number,
+        currentTimeFormat: '24h' | '12h'
+    ): Promise<WeatherData | null> {
+        try {
+            const cache = await this.getCache();
+            const key = this.getCacheKey(city, source, lang, coords);
+            const now = Date.now();
+
+            if (cache[key]) {
+                const entry = cache[key];
+                const isFormatMatch = entry.timeFormat === currentTimeFormat;
+
+                if (now - entry.timestamp < ttl && isFormatMatch) {
+                    console.log(`[Cache Hit] Returning cached weather data for ${key}`);
+                    return entry.data;
+                } else {
+                    delete cache[key]; // Clean up expired
+                }
+            }
+        } catch (e) {
+            console.warn('Cache check failed:', e);
+        }
+        return null;
+    }
+
+    /**
+     * Sets weather data to cache.
+     */
+    public async setWeatherCache(
+        city: string,
+        source: string,
+        lang: string,
+        coords: { lat: number, lon: number } | undefined,
+        data: WeatherData,
+        currentTimeFormat: '24h' | '12h'
+    ): Promise<void> {
+        try {
+            const cache = await this.getCache();
+            const key = this.getCacheKey(city, source, lang, coords);
+            cache[key] = {
+                data: data,
+                timestamp: Date.now(),
+                lang,
+                source,
+                timeFormat: currentTimeFormat
+            };
+            this.saveCacheDebounced(cache);
+        } catch (e) {
+            console.warn('Failed to update cache:', e);
+        }
+    }
 }
 
-/**
- * Helper to set weather data to cache.
- */
-async function setWeatherCache(
-    city: string,
-    source: string,
-    lang: string,
-    coords: { lat: number, lon: number } | undefined,
-    data: WeatherData,
-    currentTimeFormat: '24h' | '12h'
-): Promise<void> {
-    try {
-        const cache = await getCache();
-        const key = getCacheKey(city, source, lang, coords);
-        cache[key] = {
-            data: data,
-            timestamp: Date.now(),
-            lang,
-            source,
-            timeFormat: currentTimeFormat
-        };
-        saveCacheDebounced(cache);
-    } catch (e) {
-        console.warn('Failed to update cache:', e);
-    }
-}
+// Singleton instance
+const weatherCacheManager = new WeatherCacheManager();
 
 /**
  * Constructs the API URLs for QWeather, respecting custom host configurations.
@@ -219,159 +172,7 @@ function getQWeatherUrls(customHost?: string): { base: string, geo: string } {
 }
 
 /**
- * Represents hourly weather forecast data.
- */
-export interface HourlyForecast {
-    time: string;
-    temperature: number;
-    condition: string;
-    icon: string;
-}
-
-/**
- * Represents daily weather forecast data.
- */
-export interface DailyForecast {
-    /** Date string in ISO or YYYY/MM/DD format. */
-    date: string;
-    tempMin: number;
-    tempMax: number;
-    condition: string;
-    icon: string;
-}
-
-/**
- * Represents air quality data.
- */
-export interface AirQuality {
-    /** AQI on a 1-5 scale (or similar index). */
-    aqi: number;
-    pm25: number;
-    pm10: number;
-    o3: number;
-    no2: number;
-}
-
-/**
- * Represents comprehensive weather data for a specific location.
- */
-export interface WeatherData {
-    city: string;
-    temperature: number;
-    condition: string;
-    humidity: number;
-    windSpeed: number;
-    feelsLike: number;
-    pressure: number;
-    visibility: number;
-    uvIndex: number;
-    sunrise?: string;
-    sunset?: string;
-    hourlyForecast: HourlyForecast[];
-    dailyForecast: DailyForecast[];
-    airQuality?: AirQuality;
-    source?: string;
-    sourceOverride?: string;
-    lat: number;
-    lon: number;
-}
-
-/**
- * Transforms OpenWeatherMap API response into WeatherData.
- */
-function transformOpenWeatherData(
-    data: any,
-    forecastData: any,
-    aqDataRaw: any,
-    use24h: boolean
-): WeatherData {
-    const hourlyForecast: HourlyForecast[] = [];
-    const dailyForecast: DailyForecast[] = [];
-
-    if (forecastData && forecastData.list) {
-        // Process hourly forecast (next 24 hours, 8 x 3-hour intervals).
-        const limit = 8;
-        for (let i = 0; i < Math.min(forecastData.list.length, limit); i++) {
-            const item = forecastData.list[i];
-            hourlyForecast.push({
-                time: formatTime(new Date(item.dt * 1000), use24h),
-                temperature: Math.round(item.main.temp),
-                condition: item.weather[0].description,
-                icon: item.weather[0].icon
-            });
-        }
-
-        // Process daily forecast (group by day).
-        const dailyMap = new Map<string, { temps: number[], condition: string, icon: string }>();
-
-        for (const item of forecastData.list) {
-            const dateStr = item.dt_txt.split(' ')[0]; // YYYY-MM-DD
-            const date = dateStr.replace(DATE_SEPARATOR_REGEX, '/');
-
-            if (!dailyMap.has(date)) {
-                dailyMap.set(date, {
-                    temps: [],
-                    condition: item.weather[0].description,
-                    icon: item.weather[0].icon
-                });
-            }
-            dailyMap.get(date)!.temps.push(item.main.temp);
-        }
-
-        dailyMap.forEach((value, key) => {
-            dailyForecast.push({
-                date: key,
-                tempMin: Math.round(Math.min(...value.temps)),
-                tempMax: Math.round(Math.max(...value.temps)),
-                condition: value.condition,
-                icon: value.icon
-            });
-        });
-    }
-
-    let airQuality: AirQuality | undefined;
-    if (aqDataRaw?.list?.length > 0) {
-        const aqData = aqDataRaw.list[0];
-        airQuality = {
-            aqi: aqData.main.aqi,
-            pm25: Math.round(aqData.components.pm2_5),
-            pm10: Math.round(aqData.components.pm10),
-            o3: Math.round(aqData.components.o3),
-            no2: Math.round(aqData.components.no2)
-        };
-    }
-
-    return {
-        city: data.name,
-        temperature: Math.round(data.main.temp),
-        condition: data.weather[0].description,
-        humidity: data.main.humidity,
-        windSpeed: data.wind.speed,
-        feelsLike: Math.round(data.main.feels_like),
-        pressure: data.main.pressure,
-        visibility: data.visibility / 1000,
-        uvIndex: 0,
-        sunrise: formatTime(new Date(data.sys.sunrise * 1000), use24h),
-        sunset: formatTime(new Date(data.sys.sunset * 1000), use24h),
-        hourlyForecast,
-        dailyForecast,
-        airQuality,
-        source: 'OpenWeatherMap',
-        lat: data.coord.lat,
-        lon: data.coord.lon
-    };
-}
-
-/**
  * Fetches weather data from OpenWeatherMap.
- *
- * @param {string} city - The city name.
- * @param {string} apiKey - The API key.
- * @param {'zh' | 'en'} [lang='zh'] - The language code.
- * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
- * @param {boolean} [use24h=true] - Whether to use 24-hour format.
- * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
- * @throws {Error} If the API request fails.
  */
 async function fetchOpenWeatherMap(
     city: string,
@@ -442,91 +243,7 @@ async function fetchOpenWeatherMap(
 }
 
 /**
- * Transforms WeatherAPI response into WeatherData.
- */
-function transformWeatherAPIData(
-    data: any,
-    historyDataRaw: any,
-    use24h: boolean
-): WeatherData {
-    const current = data.current;
-    const forecast = data.forecast.forecastday;
-
-    const hourlyForecast: HourlyForecast[] = [];
-    const sourceHours = forecast[0].hour;
-    const limit = 8;
-
-    for (let i = 0; i < sourceHours.length; i += 3) {
-        if (hourlyForecast.length >= limit) break;
-        const item = sourceHours[i];
-        hourlyForecast.push({
-            time: formatTime(new Date(item.time), use24h),
-            temperature: Math.round(item.temp_c),
-            condition: item.condition.text,
-            icon: item.condition.icon
-        });
-    }
-
-    const dailyForecast: DailyForecast[] = forecast.map((item: any) => ({
-        date: item.date, // YYYY-MM-DD
-        tempMin: Math.round(item.day.mintemp_c),
-        tempMax: Math.round(item.day.maxtemp_c),
-        condition: item.day.condition.text,
-        icon: item.day.condition.icon
-    }));
-
-    // Map US AQI to 1-5 scale roughly.
-    const usEpaIndex = current.air_quality ? current.air_quality['us-epa-index'] : 1;
-
-    // Process history data if available.
-    if (historyDataRaw?.forecast?.forecastday?.length > 0) {
-        const historyData = historyDataRaw.forecast.forecastday[0];
-        dailyForecast.unshift({
-            date: historyData.date, // YYYY-MM-DD
-            tempMin: Math.round(historyData.day.mintemp_c),
-            tempMax: Math.round(historyData.day.maxtemp_c),
-            condition: historyData.day.condition.text,
-            icon: historyData.day.condition.icon
-        });
-    }
-
-    return {
-        city: data.location.name,
-        temperature: Math.round(current.temp_c),
-        condition: current.condition.text,
-        humidity: current.humidity,
-        windSpeed: current.wind_kph / 3.6, // km/h to m/s
-        feelsLike: Math.round(current.feelslike_c),
-        pressure: current.pressure_mb,
-        visibility: current.vis_km,
-        uvIndex: current.uv,
-        sunrise: formatTimeString(forecast[0].astro.sunrise, use24h),
-        sunset: formatTimeString(forecast[0].astro.sunset, use24h),
-        hourlyForecast,
-        dailyForecast,
-        airQuality: {
-            aqi: usEpaIndex || 1,
-            pm25: Math.round(current.air_quality?.pm2_5 || 0),
-            pm10: Math.round(current.air_quality?.pm10 || 0),
-            o3: Math.round(current.air_quality?.o3 || 0),
-            no2: Math.round(current.air_quality?.no2 || 0)
-        },
-        source: 'WeatherAPI.com',
-        lat: data.location.lat,
-        lon: data.location.lon
-    };
-}
-
-/**
  * Fetches weather data from WeatherAPI.com.
- *
- * @param {string} city - The city name.
- * @param {string} apiKey - The API key.
- * @param {'zh' | 'en'} [lang='zh'] - The language code.
- * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
- * @param {boolean} [use24h=true] - Whether to use 24-hour format.
- * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
- * @throws {Error} If the API request fails.
  */
 async function fetchWeatherAPI(
     city: string,
@@ -571,87 +288,7 @@ async function fetchWeatherAPI(
 }
 
 /**
- * Transforms QWeather response into WeatherData.
- */
-function transformQWeatherData(
-    cityName: string,
-    locationLat: number,
-    locationLon: number,
-    now: any,
-    daily: any[],
-    hourly: any[],
-    air: any | null,
-    sun: any | null,
-    use24h: boolean
-): WeatherData {
-    const hourlyForecast: HourlyForecast[] = [];
-    const limit = 8;
-
-    for (let i = 0; i < hourly.length; i += 3) {
-        if (hourlyForecast.length >= limit) break;
-        const item = hourly[i];
-        hourlyForecast.push({
-            time: formatTime(new Date(item.fxTime), use24h),
-            temperature: parseInt(item.temp),
-            condition: item.text,
-            icon: item.icon
-        });
-    }
-
-    const dailyForecast: DailyForecast[] = daily.map((item: any) => ({
-        date: item.fxDate, // YYYY-MM-DD
-        tempMin: parseInt(item.tempMin),
-        tempMax: parseInt(item.tempMax),
-        condition: item.textDay,
-        icon: item.iconDay
-    }));
-
-    const weatherData: WeatherData = {
-        city: cityName,
-        temperature: parseInt(now.temp),
-        condition: now.text,
-        humidity: parseInt(now.humidity),
-        windSpeed: parseInt(now.windSpeed) / 3.6, // km/h to m/s
-        feelsLike: parseInt(now.feelsLike),
-        pressure: parseInt(now.pressure),
-        visibility: parseInt(now.vis),
-        uvIndex: 0,
-        hourlyForecast,
-        dailyForecast,
-        source: 'QWeather',
-        lat: locationLat,
-        lon: locationLon
-    };
-
-    if (sun) {
-        weatherData.sunrise = formatTime(new Date(sun.sunrise), use24h);
-        weatherData.sunset = formatTime(new Date(sun.sunset), use24h);
-    }
-
-    if (air) {
-        weatherData.airQuality = {
-            aqi: parseInt(air.aqi),
-            pm25: parseInt(air.pm2p5),
-            pm10: parseInt(air.pm10),
-            o3: parseInt(air.o3),
-            no2: parseInt(air.no2)
-        };
-    }
-
-    return weatherData;
-}
-
-/**
  * Fetches weather data from QWeather.
- *
- * @param {string} city - The city name.
- * @param {string} apiKey - The API key.
- * @param {'zh' | 'en'} [lang='zh'] - The language code.
- * @param {string} [host] - Optional custom host.
- * @param {{ lat: number, lon: number }} [coords] - Optional coordinates.
- * @param {boolean} [use24h=true] - Whether to use 24-hour format.
- * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
- * @throws {Error} If the API request fails.
  */
 async function fetchQWeather(
     city: string,
@@ -751,13 +388,6 @@ async function fetchQWeather(
 
 /**
  * Fetches weather data from a custom URL.
- *
- * @param {string} city - The city name.
- * @param {string} url - The custom API URL.
- * @param {string} [apiKey] - The optional API key.
- * @param {'zh' | 'en'} [lang='zh'] - The language code.
- * @returns {Promise<WeatherData>} A promise that resolves to the weather data.
- * @throws {Error} If the API request fails or response format is invalid.
  */
 async function fetchCustom(
     city: string,
@@ -815,7 +445,7 @@ export async function getWeather(
     const use24h = currentTimeFormat !== '12h';
 
     // Try to get from cache
-    const cachedData = await getWeatherCache(city, sourceToUse, lang, coords, ttl, currentTimeFormat);
+    const cachedData = await weatherCacheManager.getWeatherCache(city, sourceToUse, lang, coords, ttl, currentTimeFormat);
     if (cachedData) {
         return cachedData;
     }
@@ -846,21 +476,9 @@ export async function getWeather(
     }
 
     // Save to cache
-    await setWeatherCache(city, sourceToUse, lang, coords, weatherData, currentTimeFormat);
+    await weatherCacheManager.setWeatherCache(city, sourceToUse, lang, coords, weatherData, currentTimeFormat);
 
     return weatherData;
-}
-
-/**
- * Represents a result from a city search.
- */
-export interface CityResult {
-    name: string;
-    region?: string;
-    country?: string;
-    lat: number;
-    lon: number;
-    id?: string; // For QWeather
 }
 
 /**
