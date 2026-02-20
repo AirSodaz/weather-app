@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getSettings } from '../utils/config';
+import { getSettings, getSettingsSync, AppSettings } from '../utils/config';
 import { storage } from '../utils/storage';
 
 const OPENWEATHER_BASE_URL = 'https://api.openweathermap.org/data/2.5';
@@ -943,20 +943,21 @@ async function searchQWeather(
  */
 export async function searchCities(
     query: string,
-    lang: 'zh' | 'en' = 'zh'
+    lang: 'zh' | 'en' = 'zh',
+    settings?: AppSettings
 ): Promise<CityResult[]> {
-    const settings = await getSettings();
-    if (!settings.source || !settings.apiKeys[settings.source]) return [];
+    const actualSettings = settings || getSettingsSync() || await getSettings();
+    if (!actualSettings.source || !actualSettings.apiKeys[actualSettings.source]) return [];
 
-    const apiKey = settings.apiKeys[settings.source]!;
+    const apiKey = actualSettings.apiKeys[actualSettings.source]!;
 
-    switch (settings.source) {
+    switch (actualSettings.source) {
         case 'openweathermap':
             return searchOpenWeatherMap(query, apiKey, lang);
         case 'weatherapi':
             return searchWeatherAPI(query, apiKey);
         case 'qweather':
-            return searchQWeather(query, apiKey, lang, settings.qweatherHost);
+            return searchQWeather(query, apiKey, lang, actualSettings.qweatherHost);
         default:
             return [];
     }

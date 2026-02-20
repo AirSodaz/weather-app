@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaSearch, FaLocationArrow, FaSync, FaTimes } from 'react-icons/fa';
 import { AnimatePresence, motion, Variants } from 'framer-motion';
 import { searchCities, CityResult } from '../services/weatherApi';
+import { getSettings, AppSettings } from '../utils/config';
 import { useI18n } from '../contexts/I18nContext';
 
 const dropdownVariants: Variants = {
@@ -34,6 +35,7 @@ interface SearchBarProps {
 function SearchBar({ onSearch, onLocationRequest, isLoading = false }: SearchBarProps): JSX.Element {
     const { t, currentLanguage } = useI18n();
     const [searchCity, setSearchCity] = useState('');
+    const [settings, setSettings] = useState<AppSettings | null>(null);
     const [suggestions, setSuggestions] = useState<CityResult[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -44,6 +46,11 @@ function SearchBar({ onSearch, onLocationRequest, isLoading = false }: SearchBar
     useEffect(() => {
         setSelectedIndex(-1);
     }, [suggestions, searchCity]);
+
+    // Load settings on mount
+    useEffect(() => {
+        getSettings().then(setSettings);
+    }, []);
 
     // Close suggestions when clicking outside
     useEffect(() => {
@@ -72,7 +79,7 @@ function SearchBar({ onSearch, onLocationRequest, isLoading = false }: SearchBar
 
         searchTimeoutRef.current = setTimeout(async () => {
             try {
-                const results = await searchCities(searchCity, currentLanguage);
+                const results = await searchCities(searchCity, currentLanguage, settings || undefined);
                 setSuggestions(results);
                 setShowSuggestions(true);
             } catch (error) {

@@ -76,6 +76,16 @@ let settingsPromise: Promise<AppSettings> | null = null;
 let configVersion = 0;
 
 /**
+ * Synchronously retrieves the cached application settings.
+ * Returns null if the settings have not been loaded yet.
+ *
+ * @returns {AppSettings | null} The cached application settings or null.
+ */
+export function getSettingsSync(): AppSettings | null {
+    return cachedSettings;
+}
+
+/**
  * Retrieves the application settings from storage, merging with defaults.
  * Uses in-memory caching and promise deduplication to optimize performance.
  *
