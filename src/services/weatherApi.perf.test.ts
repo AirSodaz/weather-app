@@ -17,6 +17,12 @@ vi.mock('../utils/config', () => ({
         apiKeys: { openweathermap: 'test-key' },
         autoRefreshInterval: 15,
         timeFormat: '24h'
+    }),
+    getSettingsSync: vi.fn().mockReturnValue({
+        source: 'openweathermap',
+        apiKeys: { openweathermap: 'test-key' },
+        autoRefreshInterval: 15,
+        timeFormat: '24h'
     })
 }));
 
