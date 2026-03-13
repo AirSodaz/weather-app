@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { getWeather, WeatherData } from '../services/weatherApi';
 import { getSettings } from '../utils/config';
 import { storage } from '../utils/storage';
@@ -27,6 +27,22 @@ export function useWeatherList() {
     // Optimization: Use ref to hold weatherList to stabilize callbacks
     const weatherListRef = useRef(weatherList);
     const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const weatherMap = useMemo(() => {
+        const map = new Map<string, WeatherData>();
+        for (const w of weatherList) {
+            map.set(w.city, w);
+        }
+        return map;
+    }, [weatherList]);
+
+    const weatherCitiesSet = useMemo(() => {
+        const set = new Set<string>();
+        for (const w of weatherList) {
+            set.add(w.city.toLowerCase());
+        }
+        return set;
+    }, [weatherList]);
 
     useEffect(() => {
         weatherListRef.current = weatherList;
@@ -72,7 +88,10 @@ export function useWeatherList() {
             );
 
             setWeatherList(prev => {
-                const updateMap = new Map(results.map(u => [u.city, u]));
+                const updateMap = new Map<string, WeatherData>();
+                for (const u of results) {
+                    updateMap.set(u.city, u);
+                }
                 return prev.map(w => updateMap.get(w.city) || w);
             });
 
@@ -96,7 +115,10 @@ export function useWeatherList() {
                 return weather;
             }
         }, async (results) => {
-            const resultsMap = new Map(results.map(r => [r.city, r]));
+            const resultsMap = new Map<string, WeatherData>();
+            for (const r of results) {
+                resultsMap.set(r.city, r);
+            }
             const listToSave = weatherListRef.current.map(current =>
                 resultsMap.get(current.city) || current
             );
@@ -116,7 +138,10 @@ export function useWeatherList() {
                 return weather;
             }
         }, async (results) => {
-            const resultsMap = new Map(results.map(r => [r.city, r]));
+            const resultsMap = new Map<string, WeatherData>();
+            for (const r of results) {
+                resultsMap.set(r.city, r);
+            }
             const listToSave = weatherListRef.current.map(current =>
                 resultsMap.get(current.city) || current
             );
@@ -242,7 +267,7 @@ export function useWeatherList() {
         setError(null);
         setLoading(true);
 
-        if (weatherList.some(w => w.city.toLowerCase() === city.toLowerCase())) {
+        if (weatherCitiesSet.has(city.toLowerCase())) {
             setError(t.search.cityExists);
             setLoading(false);
             return false;
@@ -273,7 +298,7 @@ export function useWeatherList() {
                         const { latitude, longitude } = position.coords;
                         const data = await getWeather('', undefined, currentLanguage, { lat: latitude, lon: longitude });
 
-                        if (weatherList.some(w => w.city.toLowerCase() === data.city.toLowerCase())) {
+                        if (weatherCitiesSet.has(data.city.toLowerCase())) {
                             setError(t.search.cityExists);
                         } else {
                             const newList = [...weatherList, data];
@@ -310,7 +335,7 @@ export function useWeatherList() {
     const updateCitySource = useCallback(async (city: string, source: string | undefined) => {
         setLoading(true);
         try {
-            const currentCity = weatherList.find(w => w.city === city);
+            const currentCity = weatherMap.get(city);
             const coords = (currentCity?.lat && currentCity?.lon) ? { lat: currentCity.lat, lon: currentCity.lon } : undefined;
             const newData = await getWeather(city, source, currentLanguage, coords);
 
