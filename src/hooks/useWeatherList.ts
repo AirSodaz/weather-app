@@ -74,7 +74,7 @@ export function useWeatherList() {
     const refreshCitiesGeneric = useCallback(async (
         listToRefresh: WeatherData[],
         transform: (weather: WeatherData) => Promise<WeatherData>,
-        onComplete?: (results: WeatherData[]) => Promise<void>
+        onComplete?: (updatedList: WeatherData[]) => Promise<void>
     ) => {
         if (listToRefresh.length === 0 || refreshing) return;
 
@@ -87,16 +87,16 @@ export function useWeatherList() {
                 5
             );
 
-            setWeatherList(prev => {
-                const updateMap = new Map<string, WeatherData>();
-                for (const u of results) {
-                    updateMap.set(u.city, u);
-                }
-                return prev.map(w => updateMap.get(w.city) || w);
-            });
+            const updateMap = new Map<string, WeatherData>();
+            for (const u of results) {
+                updateMap.set(u.city, u);
+            }
+
+            const updatedList = weatherListRef.current.map(w => updateMap.get(w.city) || w);
+            setWeatherList(updatedList);
 
             setLastRefreshTime(new Date());
-            if (onComplete) await onComplete(results);
+            if (onComplete) await onComplete(updatedList);
 
         } finally {
             setRefreshing(false);
@@ -114,15 +114,8 @@ export function useWeatherList() {
                 console.error(`Failed to refresh weather for ${weather.city}`, e);
                 return weather;
             }
-        }, async (results) => {
-            const resultsMap = new Map<string, WeatherData>();
-            for (const r of results) {
-                resultsMap.set(r.city, r);
-            }
-            const listToSave = weatherListRef.current.map(current =>
-                resultsMap.get(current.city) || current
-            );
-            await updateSavedCities(listToSave);
+        }, async (updatedList) => {
+            await updateSavedCities(updatedList);
         });
     }, [refreshCitiesGeneric, currentLanguage]);
 
@@ -137,15 +130,8 @@ export function useWeatherList() {
                 console.error(`Failed to refresh weather for ${weather.city}`, e);
                 return weather;
             }
-        }, async (results) => {
-            const resultsMap = new Map<string, WeatherData>();
-            for (const r of results) {
-                resultsMap.set(r.city, r);
-            }
-            const listToSave = weatherListRef.current.map(current =>
-                resultsMap.get(current.city) || current
-            );
-            await updateSavedCities(listToSave);
+        }, async (updatedList) => {
+            await updateSavedCities(updatedList);
         });
     }, [refreshCitiesGeneric, currentLanguage]);
 
