@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { WeatherData } from '../services/weatherApi';
 import { getSettings, SectionConfig } from '../utils/config';
-import { FaCloud, FaTrash, FaInfoCircle, FaCheck } from 'react-icons/fa';
+import { FaCloud } from 'react-icons/fa';
 import WeatherDetail from './WeatherDetail';
 import SortableWeatherCard from './SortableWeatherCard';
 import SettingsModal from './SettingsModal';
@@ -10,9 +10,10 @@ import { storage } from '../utils/storage';
 import { useI18n } from '../contexts/I18nContext';
 import { getWeatherBackground } from '../utils/weatherUtils';
 import { isMobileDevice } from '../utils/env';
-import { AnimatePresence, motion, Variants } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { useWeatherList } from '../hooks/useWeatherList';
 import DashboardMenu from './DashboardMenu';
+import DashboardContextMenu from './DashboardContextMenu';
 import {
     DndContext,
     closestCenter,
@@ -29,13 +30,7 @@ import {
     rectSortingStrategy,
 } from '@dnd-kit/sortable';
 
-const contextMenuVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.9 },
-    visible: { opacity: 1, scale: 1, transition: { duration: 0.2 } },
-    exit: { opacity: 0, scale: 0.95, transition: { duration: 0.1 } }
-};
-
-interface ContextMenuState {
+export interface ContextMenuState {
     show: boolean;
     x: number;
     y: number;
@@ -362,50 +357,26 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
             {/* Context Menu */}
             <AnimatePresence>
                 {contextMenu.show && contextMenu.weather && (
-                    <motion.div
-                        ref={contextMenuRef}
+                    <DashboardContextMenu
                         key={`${contextMenu.x}-${contextMenu.y}-${contextMenu.weather.city}`}
-                        variants={contextMenuVariants}
-                        initial="hidden"
-                        animate="visible"
-                        exit="exit"
-                        className="fixed z-[100] glass-card rounded-3xl py-2 min-w-[200px] border border-white/20"
-                        style={contextMenu.menuStyle}
-                        onClick={(e) => e.stopPropagation()}
-                        onContextMenu={(e) => e.stopPropagation()}
-                    >
-                        <button
-                            onClick={() => {
-                                setSelectedCity(contextMenu.weather);
+                        contextMenu={contextMenu}
+                        contextMenuRef={contextMenuRef}
+                        confirmDelete={confirmDelete}
+                        onViewDetails={() => {
+                            setSelectedCity(contextMenu.weather);
+                            setContextMenu(prev => ({ ...prev, show: false }));
+                        }}
+                        onDeleteClick={(e) => {
+                            e.stopPropagation();
+                            if (confirmDelete === contextMenu.weather?.city) {
+                                if (contextMenu.weather) handleRemoveCityWrapper(contextMenu.weather.city);
                                 setContextMenu(prev => ({ ...prev, show: false }));
-                            }}
-                            className="menu-item"
-                        >
-                            <span className="menu-item-icon"><FaInfoCircle className="text-blue-400" /></span>
-                            {t.contextMenu?.viewDetails || 'View Details'}
-                        </button>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirmDelete === contextMenu.weather?.city) {
-                                    if (contextMenu.weather) handleRemoveCityWrapper(contextMenu.weather.city);
-                                    setContextMenu(prev => ({ ...prev, show: false }));
-                                    setConfirmDelete(null);
-                                } else {
-                                    setConfirmDelete(contextMenu.weather?.city || null);
-                                }
-                            }}
-                            className={`menu-item ${confirmDelete === contextMenu.weather?.city ? 'bg-red-500/20 text-red-200' : 'menu-item-danger'}`}
-                        >
-                            <span className="menu-item-icon">
-                                {confirmDelete === contextMenu.weather?.city
-                                    ? <FaCheck className="text-red-400" />
-                                    : <FaTrash className="text-red-400" />
-                                }
-                            </span>
-                            {confirmDelete === contextMenu.weather?.city ? `${t.remove}?` : t.remove}
-                        </button>
-                    </motion.div>
+                                setConfirmDelete(null);
+                            } else {
+                                setConfirmDelete(contextMenu.weather?.city || null);
+                            }
+                        }}
+                    />
                 )}
             </AnimatePresence>
         </div>
