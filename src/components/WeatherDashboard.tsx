@@ -45,6 +45,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
         weatherList,
         loading,
         refreshing,
+        isAutoLocating,
         error,
         lastRefreshTime,
         addCity,
@@ -296,10 +297,17 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
             </div>
 
             {error && <div className="mb-4 text-red-200 bg-red-500/20 glass px-4 py-2 rounded-lg text-sm">{error}</div>}
-            {loading && weatherList.length === 0 && (
+
+            {isAutoLocating && (
+                <div className="text-center py-4 animate-pulse text-sm text-blue-200 glass mx-4 mb-4 rounded-lg">
+                    {t.search.locating || 'Finding your location...'}
+                </div>
+            )}
+
+            {loading && !isAutoLocating && weatherList.length === 0 && (
                 <div className="text-center py-10 animate-pulse text-sm">{t.search.loading}</div>
             )}
-            {refreshing && (
+            {refreshing && !isAutoLocating && (
                 <div className="text-center py-2 text-sm text-white/70">{t.refresh.refreshing}</div>
             )}
 

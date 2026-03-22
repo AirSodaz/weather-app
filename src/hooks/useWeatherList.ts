@@ -21,6 +21,7 @@ export function useWeatherList() {
     const [weatherList, setWeatherList] = useState<WeatherData[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [isAutoLocating, setIsAutoLocating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
 
@@ -187,6 +188,15 @@ export function useWeatherList() {
                 setWeatherList([]);
                 setLoading(false);
                 setRefreshing(false);
+
+                // Trigger auto-location if we have no saved cities and haven't tried before
+                const hasAutoLocated = await storage.get('hasAutoLocated');
+                if (!hasAutoLocated) {
+                    await storage.setAsync('hasAutoLocated', true);
+                    // We don't await this so it runs in background and updates state when done
+                    addCityByLocation().catch(e => console.warn('Auto-location on startup failed:', e));
+                }
+
                 return;
             }
 
@@ -277,6 +287,7 @@ export function useWeatherList() {
 
     const addCityByLocation = async () => {
         setLoading(true);
+        setIsAutoLocating(true);
         return new Promise<void>((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
@@ -295,16 +306,18 @@ export function useWeatherList() {
                         resolve();
                     } catch (err) {
                         console.error("Geolocation weather fetch failed", err);
-                        setError(t.errors?.loadFailed || "Failed to load location");
+                        setError(t.errors?.locationError || "Failed to determine location");
                         reject(err);
                     } finally {
                         setLoading(false);
+                        setIsAutoLocating(false);
                     }
                 },
                 (err) => {
                     console.error("Geolocation error", err);
-                    setError("Location access denied or unavailable");
+                    setError(t.errors?.locationDenied || "Location access denied or unavailable");
                     setLoading(false);
+                    setIsAutoLocating(false);
                     reject(err);
                 },
                 { timeout: 10000 }
@@ -378,6 +391,7 @@ export function useWeatherList() {
         weatherList,
         loading,
         refreshing,
+        isAutoLocating,
         error,
         lastRefreshTime,
         addCity,
