@@ -12,6 +12,7 @@ import { getWeatherBackground } from '../utils/weatherUtils';
 import { AnimatePresence } from 'framer-motion';
 import { useWeatherList } from '../hooks/useWeatherList';
 import { useDashboardContextMenu } from '../hooks/useDashboardContextMenu';
+import { useWeatherAlerts } from '../hooks/useWeatherAlerts';
 import DashboardMenu from './DashboardMenu';
 import DashboardContextMenu from './DashboardContextMenu';
 import {
@@ -51,6 +52,8 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
         refreshDefaultSourceCities,
         reorderCities
     } = useWeatherList();
+
+    const { activeAlerts, dismissAlert } = useWeatherAlerts(weatherList);
 
     const [selectedCity, setSelectedCity] = useState<WeatherData | null>(null);
     const [showSettings, setShowSettings] = useState(false);
@@ -249,6 +252,22 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
             {hasOfflineData && (
                 <div className="w-full bg-yellow-500/80 text-white text-center py-1 text-sm font-medium sticky top-0 z-[60]">
                     No network connection. Showing last cached data.
+                </div>
+            )}
+
+            {activeAlerts.length > 0 && (
+                <div className="w-full bg-red-500/90 text-white text-center py-2 text-sm font-medium sticky top-0 z-[60] flex flex-col items-center gap-1 shadow-md">
+                    {activeAlerts.map(alert => (
+                        <div key={`${alert.city}-${alert.condition}`} className="flex items-center gap-2 justify-center w-full px-4">
+                            <span>⚠️ {alert.city}: {alert.message}</span>
+                            <button
+                                onClick={() => dismissAlert(alert.city)}
+                                className="ml-auto bg-black/20 hover:bg-black/30 text-white px-2 py-0.5 rounded text-xs transition-colors"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    ))}
                 </div>
             )}
             {/* Header / Search Section */}
