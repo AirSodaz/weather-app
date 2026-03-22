@@ -19,6 +19,7 @@ interface SavedCity {
 export function useWeatherList() {
     const { t, currentLanguage } = useI18n();
     const [weatherList, setWeatherList] = useState<WeatherData[]>([]);
+    const [autoLocationWeather, setAutoLocationWeather] = useState<WeatherData | null>(null);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -275,6 +276,80 @@ export function useWeatherList() {
         }
     };
 
+    const refreshAutoLocation = useCallback(async () => {
+        try {
+            const savedLastLocation = await storage.get('lastAutoLocation');
+
+            if (savedLastLocation) {
+                setAutoLocationWeather({
+                    ...savedLastLocation,
+                    isAutoLocation: true,
+                    autoLocationStatus: 'locating'
+                });
+            } else {
+                setAutoLocationWeather({
+                    city: "",
+                    temperature: 0, condition: '', humidity: 0, windSpeed: 0, feelsLike: 0, pressure: 0, visibility: 0, uvIndex: 0, hourlyForecast: [], dailyForecast: [], lat: 0, lon: 0,
+                    isAutoLocation: true,
+                    autoLocationStatus: 'locating'
+                });
+            }
+
+            // We handle the promise internally so it doesn't cause unhandled rejections for the caller
+            await new Promise<void>((resolve) => {
+                if (!navigator || !navigator.geolocation) {
+                    throw new Error("Geolocation not supported");
+                }
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        try {
+                            const { latitude, longitude } = position.coords;
+                            const data = await getWeather('', undefined, currentLanguage, { lat: latitude, lon: longitude });
+                            const newLocationData = {
+                                ...data,
+                                isAutoLocation: true,
+                                autoLocationStatus: 'success' as const
+                            };
+                            setAutoLocationWeather(newLocationData);
+                            await storage.setAsync('lastAutoLocation', newLocationData);
+                            resolve();
+                        } catch (err) {
+                            console.error("Geolocation weather fetch failed", err);
+                            if (savedLastLocation) {
+                                setAutoLocationWeather({ ...savedLastLocation, isAutoLocation: true, autoLocationStatus: 'fallback' });
+                            } else {
+                                setAutoLocationWeather({
+                                    city: "",
+                                    temperature: 0, condition: '', humidity: 0, windSpeed: 0, feelsLike: 0, pressure: 0, visibility: 0, uvIndex: 0, hourlyForecast: [], dailyForecast: [], lat: 0, lon: 0,
+                                    isAutoLocation: true,
+                                    autoLocationStatus: 'error'
+                                });
+                            }
+                            resolve();
+                        }
+                    },
+                    (err) => {
+                        console.error("Geolocation error", err);
+                        if (savedLastLocation) {
+                            setAutoLocationWeather({ ...savedLastLocation, isAutoLocation: true, autoLocationStatus: 'denied' });
+                        } else {
+                            setAutoLocationWeather({
+                                city: "",
+                                temperature: 0, condition: '', humidity: 0, windSpeed: 0, feelsLike: 0, pressure: 0, visibility: 0, uvIndex: 0, hourlyForecast: [], dailyForecast: [], lat: 0, lon: 0,
+                                isAutoLocation: true,
+                                autoLocationStatus: 'denied'
+                            });
+                        }
+                        resolve();
+                    },
+                    { timeout: 10000, maximumAge: 60000 }
+                );
+            });
+        } catch (e) {
+             console.error("refreshAutoLocation failed", e);
+        }
+    }, [currentLanguage]);
+
     const addCityByLocation = async () => {
         setLoading(true);
         return new Promise<void>((resolve, reject) => {
@@ -354,6 +429,11 @@ export function useWeatherList() {
         };
     }, [setupAutoRefresh, loadSavedCities]);
 
+    // Initial auto location load
+    useEffect(() => {
+        refreshAutoLocation();
+    }, [refreshAutoLocation]);
+
     // Save cache when list changes
     useEffect(() => {
         if (weatherList.length > 0) {
@@ -376,12 +456,14 @@ export function useWeatherList() {
 
     return {
         weatherList,
+        autoLocationWeather,
         loading,
         refreshing,
         error,
         lastRefreshTime,
         addCity,
         addCityByLocation,
+        refreshAutoLocation,
         removeCity,
         updateCitySource,
         refreshAllCities,

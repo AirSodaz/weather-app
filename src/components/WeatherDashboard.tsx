@@ -4,6 +4,7 @@ import { getSettings, SectionConfig } from '../utils/config';
 import { FaCloud } from 'react-icons/fa';
 import WeatherDetail from './WeatherDetail';
 import SortableWeatherCard from './SortableWeatherCard';
+import AutoLocationCard from './AutoLocationCard';
 import SettingsModal from './SettingsModal';
 import SearchBar from './SearchBar';
 import { storage } from '../utils/storage';
@@ -40,6 +41,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
     const { t } = useI18n();
     const {
         weatherList,
+        autoLocationWeather,
         loading,
         refreshing,
         error,
@@ -300,6 +302,18 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={weatherIds} strategy={rectSortingStrategy}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4 pb-4">
+                        {autoLocationWeather && (
+                            <AutoLocationCard
+                                weather={autoLocationWeather}
+                                onClick={handleCardClick}
+                                onManualSearch={() => {
+                                    const searchInput = document.querySelector('form[role="search"] input') as HTMLInputElement;
+                                    if (searchInput) {
+                                        searchInput.focus();
+                                    }
+                                }}
+                            />
+                        )}
                         <AnimatePresence mode='popLayout'>
                             {weatherList.map((weather, index) => (
                                 <SortableWeatherCard

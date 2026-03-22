@@ -331,6 +331,8 @@ export interface WeatherData {
     lat: number;
     lon: number;
     isOffline?: boolean;
+    isAutoLocation?: boolean;
+    autoLocationStatus?: 'locating' | 'success' | 'denied' | 'error' | 'fallback';
 }
 
 /**
