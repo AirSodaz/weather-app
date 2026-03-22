@@ -9,9 +9,9 @@ import SearchBar from './SearchBar';
 import { storage } from '../utils/storage';
 import { useI18n } from '../contexts/I18nContext';
 import { getWeatherBackground } from '../utils/weatherUtils';
-import { isMobileDevice } from '../utils/env';
 import { AnimatePresence } from 'framer-motion';
 import { useWeatherList } from '../hooks/useWeatherList';
+import { useDashboardContextMenu } from '../hooks/useDashboardContextMenu';
 import DashboardMenu from './DashboardMenu';
 import DashboardContextMenu from './DashboardContextMenu';
 import {
@@ -29,14 +29,6 @@ import {
     sortableKeyboardCoordinates,
     rectSortingStrategy,
 } from '@dnd-kit/sortable';
-
-export interface ContextMenuState {
-    show: boolean;
-    x: number;
-    y: number;
-    weather: WeatherData | null;
-    menuStyle?: React.CSSProperties;
-}
 
 interface WeatherDashboardProps {
     onBgChange?: (bgClass: string) => void;
@@ -62,10 +54,16 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
 
     const [selectedCity, setSelectedCity] = useState<WeatherData | null>(null);
     const [showSettings, setShowSettings] = useState(false);
-    const [contextMenu, setContextMenu] = useState<ContextMenuState>({
-        show: false, x: 0, y: 0, weather: null
-    });
-    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+    const {
+        contextMenu,
+        confirmDelete,
+        setConfirmDelete,
+        contextMenuRef,
+        handleCardContextMenu,
+        closeContextMenu
+    } = useDashboardContextMenu();
+
     const [showMenu, setShowMenu] = useState(false);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const ticking = useRef(false);
@@ -87,7 +85,6 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
         }
     }, [weatherList, reorderCities]);
 
-    const contextMenuRef = useRef<HTMLDivElement>(null);
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
     const [enableHardwareAcceleration, setEnableHardwareAcceleration] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
@@ -137,12 +134,10 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
 
     // Close menus when clicking outside
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (contextMenu.show && contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
-                setContextMenu(prev => ({ ...prev, show: false }));
-            }
+        const handleClickOutside = () => {
+            // Note: Context menu closing is handled internally by useDashboardContextMenu
         };
-        if (contextMenu.show || showMenu) {
+        if (showMenu) {
             document.addEventListener('mousedown', handleClickOutside, true);
             document.addEventListener('contextmenu', handleClickOutside, true);
         }
@@ -150,7 +145,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
             document.removeEventListener('mousedown', handleClickOutside, true);
             document.removeEventListener('contextmenu', handleClickOutside, true);
         };
-    }, [contextMenu.show, showMenu]);
+    }, [showMenu]);
 
     const dominantCondition = weatherList.length > 0 ? weatherList[0].condition : 'default';
 
@@ -233,29 +228,6 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
     const handleCardClick = useCallback((weather: WeatherData) => {
         setSelectedCity(weather);
         window.history.pushState({ city: weather.city }, '', '');
-    }, []);
-
-    const handleCardContextMenu = useCallback((e: React.MouseEvent, weather: WeatherData) => {
-        e.preventDefault();
-        if (isMobileDevice() && e.type === 'contextmenu') return;
-
-        const { clientX, clientY } = e;
-        const { innerWidth, innerHeight } = window;
-        const menuWidth = 200;
-        const menuHeight = 150;
-        const padding = 3;
-
-        const isRight = clientX + menuWidth + padding > innerWidth;
-        const isBottom = clientY + menuHeight + padding > innerHeight;
-
-        const menuStyle: React.CSSProperties = {
-            transformOrigin: `${isBottom ? 'bottom' : 'top'} ${isRight ? 'right' : 'left'}`,
-            [isBottom ? 'bottom' : 'top']: isBottom ? innerHeight - clientY : clientY,
-            [isRight ? 'right' : 'left']: isRight ? innerWidth - clientX : clientX
-        };
-
-        setContextMenu({ show: true, x: clientX, y: clientY, weather, menuStyle });
-        setConfirmDelete(null);
     }, []);
 
     const handleDetailBack = useCallback(() => window.history.back(), []);
@@ -364,14 +336,13 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
                         confirmDelete={confirmDelete}
                         onViewDetails={() => {
                             setSelectedCity(contextMenu.weather);
-                            setContextMenu(prev => ({ ...prev, show: false }));
+                            closeContextMenu();
                         }}
                         onDeleteClick={(e) => {
                             e.stopPropagation();
                             if (confirmDelete === contextMenu.weather?.city) {
                                 if (contextMenu.weather) handleRemoveCityWrapper(contextMenu.weather.city);
-                                setContextMenu(prev => ({ ...prev, show: false }));
-                                setConfirmDelete(null);
+                                closeContextMenu();
                             } else {
                                 setConfirmDelete(contextMenu.weather?.city || null);
                             }
