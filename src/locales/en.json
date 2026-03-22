@@ -117,5 +117,19 @@
     "contextMenu": {
         "viewDetails": "View Details",
         "delete": "Delete"
+    },
+    "autoLocation": {
+        "locating": "Locating...",
+        "finding": "Finding your location...",
+        "currentLocation": "Current Location",
+        "lastKnownLocation": "Last Known Location",
+        "locationUnavailable": "Location Unavailable",
+        "locationDenied": "Location Denied",
+        "enableServices": "Please enable location services or search for a city.",
+        "searchCity": "Search City",
+        "geoNotSupported": "Geolocation not supported",
+        "deniedUsingLast": "Location denied, using last known",
+        "accessDenied": "Location access denied",
+        "unavailableUsingLast": "Location unavailable, using last known"
     }
 }

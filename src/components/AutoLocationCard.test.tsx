@@ -2,6 +2,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import AutoLocationCard from './AutoLocationCard';
 import { WeatherData } from '../services/weatherApi';
+import { I18nProvider } from '../contexts/I18nContext';
 
 /** @vitest-environment jsdom */
 
@@ -30,12 +31,14 @@ describe('AutoLocationCard', () => {
 
     it('renders "Locating..." state', () => {
         render(
-            <AutoLocationCard
-                weatherData={null}
-                status="locating"
-                errorMsg={null}
-                onClick={() => {}}
-            />
+            <I18nProvider>
+                <AutoLocationCard
+                    weatherData={null}
+                    status="locating"
+                    errorMsg={null}
+                    onClick={() => {}}
+                />
+            </I18nProvider>
         );
         expect(screen.getByText('Locating...')).toBeDefined();
         expect(screen.getByText('Finding your location...')).toBeDefined();
@@ -44,13 +47,15 @@ describe('AutoLocationCard', () => {
     it('renders error state and search button when location denied and no cache', () => {
         const onFocusSearch = vi.fn();
         render(
-            <AutoLocationCard
-                weatherData={null}
-                status="denied"
-                errorMsg="Location access denied"
-                onClick={() => {}}
-                onFocusSearch={onFocusSearch}
-            />
+            <I18nProvider>
+                <AutoLocationCard
+                    weatherData={null}
+                    status="denied"
+                    errorMsg="Location access denied"
+                    onClick={() => {}}
+                    onFocusSearch={onFocusSearch}
+                />
+            </I18nProvider>
         );
         expect(screen.getByText('Location access denied')).toBeDefined();
         const searchBtn = screen.getByText('Search City');
@@ -63,12 +68,14 @@ describe('AutoLocationCard', () => {
     it('renders weather data successfully', () => {
         const onClick = vi.fn();
         render(
-            <AutoLocationCard
-                weatherData={mockWeatherData}
-                status="success"
-                errorMsg={null}
-                onClick={onClick}
-            />
+            <I18nProvider>
+                <AutoLocationCard
+                    weatherData={mockWeatherData}
+                    status="success"
+                    errorMsg={null}
+                    onClick={onClick}
+                />
+            </I18nProvider>
         );
         expect(screen.getByText('Current Location')).toBeDefined();
         // The WeatherCard should render the city name with zero-width spaces
@@ -84,12 +91,14 @@ describe('AutoLocationCard', () => {
 
     it('renders cached location with warning', () => {
         render(
-            <AutoLocationCard
-                weatherData={mockWeatherData}
-                status="cached"
-                errorMsg="Location denied, using last known"
-                onClick={() => {}}
-            />
+            <I18nProvider>
+                <AutoLocationCard
+                    weatherData={mockWeatherData}
+                    status="cached"
+                    errorMsg="Location denied, using last known"
+                    onClick={() => {}}
+                />
+            </I18nProvider>
         );
         expect(screen.getByText('Last Known Location')).toBeDefined();
         expect(screen.getByText('Location denied, using last known')).toBeDefined();

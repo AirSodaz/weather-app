@@ -117,5 +117,19 @@
     "contextMenu": {
         "viewDetails": "查看详情",
         "delete": "删除"
+    },
+    "autoLocation": {
+        "locating": "正在定位...",
+        "finding": "正在查找您的位置...",
+        "currentLocation": "当前位置",
+        "lastKnownLocation": "上次已知位置",
+        "locationUnavailable": "定位不可用",
+        "locationDenied": "定位被拒绝",
+        "enableServices": "请开启定位服务或搜索城市。",
+        "searchCity": "搜索城市",
+        "geoNotSupported": "不支持地理定位",
+        "deniedUsingLast": "定位被拒绝，使用上次已知位置",
+        "accessDenied": "定位访问被拒绝",
+        "unavailableUsingLast": "定位不可用，使用上次已知位置"
     }
 }

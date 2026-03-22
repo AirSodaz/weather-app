@@ -4,6 +4,7 @@ import { FaLocationArrow, FaExclamationTriangle, FaSearch } from 'react-icons/fa
 import { WeatherData } from '../services/weatherApi';
 import WeatherCard from './WeatherCard';
 import { AutoLocationStatus } from '../hooks/useAutoLocation';
+import { useI18n } from '../contexts/I18nContext';
 
 interface AutoLocationCardProps {
     weatherData: WeatherData | null;
@@ -14,7 +15,7 @@ interface AutoLocationCardProps {
 }
 
 function AutoLocationCard({ weatherData, status, errorMsg, onClick, onFocusSearch }: AutoLocationCardProps): JSX.Element {
-
+    const { t } = useI18n();
     const isLocating = status === 'locating';
 
     // If no data and not locating, show an empty state or error state
@@ -27,8 +28,8 @@ function AutoLocationCard({ weatherData, status, errorMsg, onClick, onFocusSearc
             >
                 <div className="text-white/60 mb-4 text-center">
                     <FaLocationArrow className="text-4xl mx-auto mb-2 opacity-50" />
-                    <p className="font-medium text-lg">{errorMsg || "Location unavailable"}</p>
-                    <p className="text-sm mt-1">Please enable location services or search for a city.</p>
+                    <p className="font-medium text-lg">{errorMsg || t.autoLocation?.locationUnavailable || "Location unavailable"}</p>
+                    <p className="text-sm mt-1">{t.autoLocation?.enableServices || "Please enable location services or search for a city."}</p>
                 </div>
                 {onFocusSearch && (
                     <button
@@ -36,7 +37,7 @@ function AutoLocationCard({ weatherData, status, errorMsg, onClick, onFocusSearc
                         className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full transition-colors"
                     >
                         <FaSearch className="text-sm" />
-                        <span>Search City</span>
+                        <span>{t.autoLocation?.searchCity || "Search City"}</span>
                     </button>
                 )}
             </motion.div>
@@ -68,11 +69,11 @@ function AutoLocationCard({ weatherData, status, errorMsg, onClick, onFocusSearc
                 {!isLocating && status === 'cached' && <FaLocationArrow className="text-white/60 text-[10px]" />}
 
                 <span>
-                    {isLocating && 'Locating...'}
-                    {!isLocating && status === 'success' && 'Current Location'}
-                    {!isLocating && status === 'cached' && 'Last Known Location'}
-                    {!isLocating && status === 'error' && 'Location Unavailable'}
-                    {!isLocating && status === 'denied' && 'Location Denied'}
+                    {isLocating && (t.autoLocation?.locating || 'Locating...')}
+                    {!isLocating && status === 'success' && (t.autoLocation?.currentLocation || 'Current Location')}
+                    {!isLocating && status === 'cached' && (t.autoLocation?.lastKnownLocation || 'Last Known Location')}
+                    {!isLocating && status === 'error' && (t.autoLocation?.locationUnavailable || 'Location Unavailable')}
+                    {!isLocating && status === 'denied' && (t.autoLocation?.locationDenied || 'Location Denied')}
                 </span>
             </div>
 
@@ -85,7 +86,7 @@ function AutoLocationCard({ weatherData, status, errorMsg, onClick, onFocusSearc
 
             {isLocating && !weatherData ? (
                 <div className="text-white/60 flex flex-col items-center">
-                    <p className="animate-pulse">Finding your location...</p>
+                    <p className="animate-pulse">{t.autoLocation?.finding || 'Finding your location...'}</p>
                 </div>
             ) : weatherData ? (
                 <div className="mt-8 relative z-0">

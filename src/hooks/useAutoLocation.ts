@@ -54,7 +54,7 @@ export function useAutoLocation(): UseAutoLocationResult {
         return new Promise<void>((resolve) => {
             if (!navigator.geolocation) {
                 setStatus('error');
-                setErrorMsg('Geolocation not supported');
+                setErrorMsg(t.autoLocation?.geoNotSupported || 'Geolocation not supported');
                 resolve();
                 return;
             }
@@ -66,10 +66,10 @@ export function useAutoLocation(): UseAutoLocationResult {
 
                 if (err && err.code === err.PERMISSION_DENIED) {
                     setStatus(cached ? 'cached' : 'denied');
-                    setErrorMsg(cached ? 'Location denied, using last known' : 'Location access denied');
+                    setErrorMsg(cached ? (t.autoLocation?.deniedUsingLast || 'Location denied, using last known') : (t.autoLocation?.accessDenied || 'Location access denied'));
                 } else {
                     setStatus(cached ? 'cached' : 'error');
-                    setErrorMsg(cached ? 'Location unavailable, using last known' : 'Location unavailable');
+                    setErrorMsg(cached ? (t.autoLocation?.unavailableUsingLast || 'Location unavailable, using last known') : (t.autoLocation?.locationUnavailable || 'Location unavailable'));
                 }
 
                 if (cached) {
