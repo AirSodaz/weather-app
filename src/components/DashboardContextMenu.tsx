@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, Variants } from 'framer-motion';
 import { FaInfoCircle, FaCheck, FaTrash } from 'react-icons/fa';
 import { useI18n } from '../contexts/I18nContext';
-import { ContextMenuState } from './WeatherDashboard';
+import { ContextMenuState } from '../hooks/useDashboardContextMenu';
 
 const contextMenuVariants: Variants = {
     hidden: { opacity: 0, scale: 0.9 },
