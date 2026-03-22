@@ -148,6 +148,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
     }, [showMenu]);
 
     const dominantCondition = weatherList.length > 0 ? weatherList[0].condition : 'default';
+    const hasOfflineData = weatherList.some(w => w.isOffline) || (selectedCity?.isOffline ?? false);
 
     useEffect(() => {
         if (onBgChange) onBgChange(getWeatherBackground(dominantCondition));
@@ -245,8 +246,13 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
 
     return (
         <div ref={scrollContainerRef} className="flex-1 flex flex-col items-center overflow-y-auto text-white">
+            {hasOfflineData && (
+                <div className="w-full bg-yellow-500/80 text-white text-center py-1 text-sm font-medium sticky top-0 z-[60]">
+                    No network connection. Showing last cached data.
+                </div>
+            )}
             {/* Header / Search Section */}
-            <div className={`sticky top-0 z-50 w-full max-w-2xl flex items-center gap-3 transition-all duration-500 ease-in-out px-4 sm:px-0 ${isScrolled ? 'py-3' : 'py-6'}`}>
+            <div className={`sticky ${hasOfflineData ? 'top-7' : 'top-0'} z-50 w-full max-w-2xl flex items-center gap-3 transition-all duration-500 ease-in-out px-4 sm:px-0 ${isScrolled ? 'py-3' : 'py-6'}`}>
                 <SearchBar onSearch={handleSearch} onLocationRequest={handleLocationRequest} isLoading={loading} />
 
                 {/* Top Right Menu Button */}
