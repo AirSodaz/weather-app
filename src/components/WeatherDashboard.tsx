@@ -15,6 +15,9 @@ import { useDashboardContextMenu } from '../hooks/useDashboardContextMenu';
 import { useWeatherAlerts } from '../hooks/useWeatherAlerts';
 import DashboardMenu from './DashboardMenu';
 import DashboardContextMenu from './DashboardContextMenu';
+import { useAutoLocation } from '../hooks/useAutoLocation';
+import AutoLocationCard from './AutoLocationCard';
+
 import {
     DndContext,
     closestCenter,
@@ -54,6 +57,8 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
     } = useWeatherList();
 
     const { activeAlerts, dismissAlert } = useWeatherAlerts(weatherList);
+    const { weatherData: autoLocationWeather, status: autoLocationStatus, errorMsg: autoLocationError } = useAutoLocation();
+
 
     const [selectedCity, setSelectedCity] = useState<WeatherData | null>(null);
     const [showSettings, setShowSettings] = useState(false);
@@ -150,7 +155,9 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
         };
     }, [showMenu]);
 
-    const dominantCondition = weatherList.length > 0 ? weatherList[0].condition : 'default';
+    const dominantCondition = weatherList.length > 0
+        ? weatherList[0].condition
+        : (autoLocationWeather ? autoLocationWeather.condition : 'default');
     const hasOfflineData = weatherList.some(w => w.isOffline) || (selectedCity?.isOffline ?? false);
 
     useEffect(() => {
@@ -295,6 +302,20 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
             {refreshing && (
                 <div className="text-center py-2 text-sm text-white/70">{t.refresh.refreshing}</div>
             )}
+
+            {/* Auto Location Card */}
+            <div className="w-full max-w-2xl px-4 pb-4">
+                <AutoLocationCard
+                    weatherData={autoLocationWeather}
+                    status={autoLocationStatus}
+                    errorMsg={autoLocationError}
+                    onClick={handleCardClick}
+                    onFocusSearch={() => {
+                        const input = document.querySelector('input[type="text"]');
+                        if (input) (input as HTMLInputElement).focus();
+                    }}
+                />
+            </div>
 
             {/* Weather Cards */}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
