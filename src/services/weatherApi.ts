@@ -304,6 +304,12 @@ export interface AirQuality {
 /**
  * Represents comprehensive weather data for a specific location.
  */
+export interface WeatherAlert {
+    event: string;
+    description: string;
+    severity?: string;
+}
+
 export interface WeatherData {
     city: string;
     temperature: number;
@@ -319,6 +325,7 @@ export interface WeatherData {
     hourlyForecast: HourlyForecast[];
     dailyForecast: DailyForecast[];
     airQuality?: AirQuality;
+    alerts?: WeatherAlert[];
     source?: string;
     sourceOverride?: string;
     lat: number;
@@ -391,6 +398,17 @@ function transformOpenWeatherData(
         };
     }
 
+    const alerts: WeatherAlert[] = [];
+    if (data.alerts && Array.isArray(data.alerts)) {
+        for (const a of data.alerts) {
+            alerts.push({
+                event: a.event,
+                description: a.description,
+                severity: a.severity || 'warning'
+            });
+        }
+    }
+
     return {
         city: data.name,
         temperature: Math.round(data.main.temp),
@@ -406,6 +424,7 @@ function transformOpenWeatherData(
         hourlyForecast,
         dailyForecast,
         airQuality,
+        alerts,
         source: 'OpenWeatherMap',
         lat: data.coord.lat,
         lon: data.coord.lon
@@ -540,6 +559,17 @@ function transformWeatherAPIData(
         });
     }
 
+    const alerts: WeatherAlert[] = [];
+    if (data.alerts && data.alerts.alert && Array.isArray(data.alerts.alert)) {
+        for (const a of data.alerts.alert) {
+            alerts.push({
+                event: a.event,
+                description: a.desc || a.headline,
+                severity: a.severity || a.certainty || 'warning'
+            });
+        }
+    }
+
     return {
         city: data.location.name,
         temperature: Math.round(current.temp_c),
@@ -561,6 +591,7 @@ function transformWeatherAPIData(
             o3: Math.round(current.air_quality?.o3 || 0),
             no2: Math.round(current.air_quality?.no2 || 0)
         },
+        alerts,
         source: 'WeatherAPI.com',
         lat: data.location.lat,
         lon: data.location.lon
@@ -596,7 +627,7 @@ async function fetchWeatherAPI(
                 q: query,
                 days: 7,
                 aqi: 'yes',
-                alerts: 'no',
+                alerts: 'yes',
                 lang: lang
             }
         });
@@ -780,6 +811,10 @@ async function fetchQWeather(
         if (sunRes.status === 'fulfilled' && sunRes.value.data.code === '200') {
             sun = sunRes.value.data;
         }
+
+        // We can fetch alerts optionally for QWeather, but let's stick to the base data which might have 'warning' if they included it,
+        // otherwise it will just be undefined. To keep things safe and simple, we'll try to fetch warning if QWeather supports it in standard endpoints,
+        // but it requires a separate call usually (/warning/now). We won't add a new call here to keep scope tight.
 
         return transformQWeatherData(
             cityName,
