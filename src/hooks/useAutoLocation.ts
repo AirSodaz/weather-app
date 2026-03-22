@@ -93,10 +93,10 @@ export function useAutoLocation(): UseAutoLocationResult {
                         if (cached) {
                             setWeatherData(cached);
                             setStatus('cached');
-                            setErrorMsg(t.errors?.loadFailed || 'Failed to update, showing last known location');
+                            setErrorMsg(t.autoLocation?.unavailableUsingLast || 'Failed to update, showing last known location');
                         } else {
                             setStatus('error');
-                            setErrorMsg(t.errors?.loadFailed || 'Failed to load location weather');
+                            setErrorMsg(t.autoLocation?.locationUnavailable || 'Failed to load location weather');
                         }
                     } finally {
                         resolve();
