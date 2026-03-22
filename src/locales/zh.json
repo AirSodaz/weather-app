@@ -48,10 +48,13 @@
         "error": "获取天气失败，请重试。",
         "cityExists": "该城市已添加！",
         "loading": "加载已保存的城市...",
-        "currentLocation": "使用当前位置"
+        "currentLocation": "使用当前位置",
+        "locating": "正在获取您的位置..."
     },
     "errors": {
-        "loadFailed": "切换源失败"
+        "loadFailed": "切换源失败",
+        "locationError": "无法确定位置。",
+        "locationDenied": "位置访问被拒绝或不可用。"
     },
     "switchSource": "切换数据源",
     "useGlobalDefault": "使用全局默认源",
