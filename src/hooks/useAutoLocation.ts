@@ -12,9 +12,6 @@ export interface UseAutoLocationResult {
     refreshLocation: () => Promise<void>;
 }
 
-// Global flag to track if we've already attempted auto-location in this session
-let hasAttemptedLocationThisSession = false;
-
 /**
  * Hook to manage auto-locating the user and fetching weather for their current coordinates.
  */
@@ -30,20 +27,19 @@ export function useAutoLocation(): UseAutoLocationResult {
     const loadCachedLocation = useCallback(async (): Promise<WeatherData | null> => {
         try {
             const cached: any = await storage.get('lastKnownAutoLocation');
-            if (cached && cached.data && cached.lang === currentLanguage) {
+            if (cached && cached.data) {
                 return cached.data as WeatherData;
             }
         } catch (err) {
             console.error('Failed to load cached auto location', err);
         }
         return null;
-    }, [currentLanguage]);
+    }, []);
 
     const saveCachedLocation = async (data: WeatherData) => {
         try {
             await storage.setAsync('lastKnownAutoLocation', {
                 data,
-                lang: currentLanguage,
                 timestamp: Date.now()
             });
         } catch (err) {
@@ -51,7 +47,7 @@ export function useAutoLocation(): UseAutoLocationResult {
         }
     };
 
-    const fetchLocationWeather = useCallback(async (_isManualRefresh = false) => {
+    const fetchLocationWeather = useCallback(async () => {
         setStatus('locating');
         setErrorMsg(null);
 
@@ -117,8 +113,10 @@ export function useAutoLocation(): UseAutoLocationResult {
             if (initialized.current) return;
             initialized.current = true;
 
-            if (!hasAttemptedLocationThisSession) {
-                hasAttemptedLocationThisSession = true;
+            const hasAttempted = sessionStorage.getItem('hasAttemptedLocationThisSession');
+
+            if (!hasAttempted) {
+                sessionStorage.setItem('hasAttemptedLocationThisSession', 'true');
 
                 const cached = await loadCachedLocation();
                 if (cached) {
@@ -126,7 +124,7 @@ export function useAutoLocation(): UseAutoLocationResult {
                     setStatus('cached');
                 }
 
-                await fetchLocationWeather(false);
+                await fetchLocationWeather();
             } else {
                 // If we navigate away and back, just load from state/cache
                 const cached = await loadCachedLocation();
@@ -146,6 +144,6 @@ export function useAutoLocation(): UseAutoLocationResult {
         weatherData,
         status,
         errorMsg,
-        refreshLocation: () => fetchLocationWeather(true)
+        refreshLocation: fetchLocationWeather
     };
 }
