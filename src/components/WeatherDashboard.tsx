@@ -42,6 +42,9 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
         weatherList,
         loading,
         refreshing,
+        autoLocationStatus,
+        autoLocationWeather,
+        triggerAutoLocation,
         error,
         lastRefreshTime,
         addCity,
@@ -289,6 +292,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
             </div>
 
             {error && <div className="mb-4 text-red-200 bg-red-500/20 glass px-4 py-2 rounded-lg text-sm">{error}</div>}
+
             {loading && weatherList.length === 0 && (
                 <div className="text-center py-10 animate-pulse text-sm">{t.search.loading}</div>
             )}
@@ -296,10 +300,61 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
                 <div className="text-center py-2 text-sm text-white/70">{t.refresh.refreshing}</div>
             )}
 
-            {/* Weather Cards */}
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={weatherIds} strategy={rectSortingStrategy}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4 pb-4">
+            {/* Weather Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl px-4 pb-4">
+
+                {/* Auto Location Card */}
+                {autoLocationStatus !== 'idle' && (
+                    <div onClick={() => autoLocationWeather && handleCardClick(autoLocationWeather)} className="cursor-pointer">
+                        {autoLocationStatus === 'locating' && (
+                            <div className="relative glass-card rounded-3xl p-6 flex flex-col h-full animate-pulse border border-white/20">
+                                <h2 className="text-xl font-bold text-white mb-2">{t.search.locating || 'Finding location...'}</h2>
+                                <div className="w-1/2 h-4 bg-white/20 rounded mb-6"></div>
+                                <div className="mt-auto pt-4 border-t border-white/10">
+                                    <div className="w-3/4 h-3 bg-white/20 rounded"></div>
+                                </div>
+                            </div>
+                        )}
+                        {(autoLocationStatus === 'success' || autoLocationWeather) && autoLocationWeather && (
+                            <div className="relative h-full">
+                                <SortableWeatherCard
+                                    weather={{...autoLocationWeather, city: `📍 ${autoLocationWeather.city}`}}
+                                    index={-1} // Not sortable
+                                    onClick={() => handleCardClick(autoLocationWeather)}
+                                    onContextMenu={() => {}}
+                                    enableHardwareAcceleration={enableHardwareAcceleration}
+                                />
+                                {autoLocationStatus === 'error' && (
+                                   <div className="absolute top-2 left-2 right-2 text-center text-xs bg-red-500/80 text-white rounded px-2 py-1">
+                                       {t.errors?.locationError || 'Location update failed. Showing last known.'}
+                                   </div>
+                                )}
+                            </div>
+                        )}
+                        {autoLocationStatus === 'denied' && !autoLocationWeather && (
+                             <div className="relative glass-card rounded-3xl p-6 flex flex-col h-full justify-center items-center text-center border border-white/10 opacity-70 hover:opacity-100 transition-opacity">
+                                <h2 className="text-lg font-bold text-white mb-2">{t.errors?.locationDeniedTitle || 'Location Denied'}</h2>
+                                <p className="text-xs text-white/60 mb-4">{t.errors?.locationDenied || 'Enable location access to see your local weather here.'}</p>
+                                <button onClick={(e) => { e.stopPropagation(); triggerAutoLocation(); }} className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-sm text-white transition-colors">
+                                    {t.refresh?.button || 'Retry'}
+                                </button>
+                            </div>
+                        )}
+                        {autoLocationStatus === 'error' && !autoLocationWeather && (
+                             <div className="relative glass-card rounded-3xl p-6 flex flex-col h-full justify-center items-center text-center border border-white/10 opacity-70 hover:opacity-100 transition-opacity">
+                                <h2 className="text-lg font-bold text-white mb-2">{t.errors?.locationErrorTitle || 'Location Error'}</h2>
+                                <p className="text-xs text-white/60 mb-4">{t.errors?.locationError || 'Could not determine location.'}</p>
+                                <button onClick={(e) => { e.stopPropagation(); triggerAutoLocation(); }} className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-sm text-white transition-colors">
+                                    {t.refresh?.button || 'Retry'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Manually Saved Weather Cards */}
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={weatherIds} strategy={rectSortingStrategy}>
                         <AnimatePresence mode='popLayout'>
                             {weatherList.map((weather, index) => (
                                 <SortableWeatherCard
@@ -312,9 +367,9 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
                                 />
                             ))}
                         </AnimatePresence>
-                    </div>
-                </SortableContext>
-            </DndContext>
+                    </SortableContext>
+                </DndContext>
+            </div>
 
             {!loading && weatherList.length === 0 && (
                 <div className="text-white/60 mt-16 text-center font-light animate-fade-in">

@@ -16,11 +16,19 @@ interface SavedCity {
 /**
  * Hook to manage the list of weather cities, including fetching, caching, and persistence.
  */
+export type AutoLocationStatus = 'idle' | 'locating' | 'success' | 'denied' | 'error';
+
 export function useWeatherList() {
     const { t, currentLanguage } = useI18n();
     const [weatherList, setWeatherList] = useState<WeatherData[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+
+    // Auto-location state
+    const [autoLocationStatus, setAutoLocationStatus] = useState<AutoLocationStatus>('idle');
+    const [autoLocationWeather, setAutoLocationWeather] = useState<WeatherData | null>(null);
+    const autoLocationInitiated = useRef(false);
+
     const [error, setError] = useState<string | null>(null);
     const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
 
@@ -104,6 +112,10 @@ export function useWeatherList() {
     }, [refreshing]);
 
     const refreshAllCities = useCallback(async () => {
+        if (autoLocationStatus === 'success') {
+            triggerAutoLocation();
+        }
+
         await refreshCitiesGeneric(weatherListRef.current, async (weather) => {
             try {
                 const source = weather.sourceOverride;
@@ -117,7 +129,7 @@ export function useWeatherList() {
         }, async (updatedList) => {
             await updateSavedCities(updatedList);
         });
-    }, [refreshCitiesGeneric, currentLanguage]);
+    }, [refreshCitiesGeneric, currentLanguage, autoLocationStatus]);
 
     const refreshDefaultSourceCities = useCallback(async () => {
         await refreshCitiesGeneric(weatherListRef.current, async (weather) => {
@@ -148,8 +160,78 @@ export function useWeatherList() {
         }
     }, [refreshAllCities]);
 
+    const triggerAutoLocation = useCallback(async () => {
+        setAutoLocationStatus('locating');
+
+        // Attempt to fetch fresh data via geolocation
+        if (!navigator.geolocation) {
+            setAutoLocationStatus('error');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const { latitude, longitude } = position.coords;
+                    const data = await getWeather('', undefined, currentLanguage, { lat: latitude, lon: longitude });
+
+                    setAutoLocationWeather(data);
+                    setAutoLocationStatus('success');
+
+                    // Cache the successful location globally to persist fallback
+                    await storage.setAsync('autoLocationFallback', data);
+                    await storage.setAsync('autoLocationPermissionDenied', false);
+                } catch (err) {
+                    console.error("Auto-location fetch failed:", err);
+
+                    // Try to load fallback
+                    const fallback = await storage.get('autoLocationFallback');
+                    if (fallback) {
+                        setAutoLocationWeather({ ...fallback, isOffline: true });
+                        setAutoLocationStatus('error'); // Show error but with cached data
+                    } else {
+                        setAutoLocationStatus('error');
+                    }
+                }
+            },
+            async (err) => {
+                console.warn("Auto-location permission denied or failed:", err);
+                // Try to load fallback if we had it before they denied it later
+                const fallback = await storage.get('autoLocationFallback');
+                if (fallback) {
+                    setAutoLocationWeather({ ...fallback, isOffline: true });
+                }
+
+                if (err.code === err.PERMISSION_DENIED) {
+                    setAutoLocationStatus('denied');
+                    await storage.setAsync('autoLocationPermissionDenied', true);
+                } else {
+                    setAutoLocationStatus('error');
+                }
+            },
+            { timeout: 10000, maximumAge: 60000 } // Allow slightly older cached location to speed it up
+        );
+    }, [currentLanguage]);
+
     const loadSavedCities = useCallback(async () => {
         try {
+            // Trigger auto-location on load, but respect the permission loop
+            if (!autoLocationInitiated.current) {
+                autoLocationInitiated.current = true;
+
+                const permissionDenied = await storage.get('autoLocationPermissionDenied');
+                if (permissionDenied) {
+                    setAutoLocationStatus('denied');
+                    // Still try to load the fallback
+                    const fallback = await storage.get('autoLocationFallback');
+                    if (fallback) {
+                        setAutoLocationWeather({ ...fallback, isOffline: true });
+                    }
+                } else {
+                    triggerAutoLocation();
+                }
+            }
+
             // 1. Load Last Refresh Time
             const timeStr = await storage.get('lastRefreshTime');
             const savedLastRefreshTime = timeStr ? new Date(timeStr) : null;
@@ -295,7 +377,7 @@ export function useWeatherList() {
                         resolve();
                     } catch (err) {
                         console.error("Geolocation weather fetch failed", err);
-                        setError(t.errors?.loadFailed || "Failed to load location");
+                        setError(t.errors?.locationError || "Failed to determine location");
                         reject(err);
                     } finally {
                         setLoading(false);
@@ -303,7 +385,7 @@ export function useWeatherList() {
                 },
                 (err) => {
                     console.error("Geolocation error", err);
-                    setError("Location access denied or unavailable");
+                    setError(t.errors?.locationDenied || "Location access denied or unavailable");
                     setLoading(false);
                     reject(err);
                 },
@@ -378,6 +460,9 @@ export function useWeatherList() {
         weatherList,
         loading,
         refreshing,
+        autoLocationStatus,
+        autoLocationWeather,
+        triggerAutoLocation,
         error,
         lastRefreshTime,
         addCity,

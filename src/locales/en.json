@@ -48,10 +48,15 @@
         "error": "Failed to fetch weather. Please try again.",
         "cityExists": "City already added!",
         "loading": "Loading saved locations...",
-        "currentLocation": "Use Current Location"
+        "currentLocation": "Use Current Location",
+        "locating": "Finding your location..."
     },
     "errors": {
-        "loadFailed": "Failed to switch source"
+        "loadFailed": "Failed to switch source",
+        "locationErrorTitle": "Location Error",
+        "locationError": "Failed to determine location.",
+        "locationDeniedTitle": "Location Denied",
+        "locationDenied": "Location access denied or unavailable."
     },
     "switchSource": "Switch Source",
     "useGlobalDefault": "Use Global Default",
