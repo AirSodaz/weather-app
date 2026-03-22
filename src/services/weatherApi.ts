@@ -28,6 +28,55 @@ function formatTime(date: Date, use24h: boolean = true): string {
 }
 
 /**
+ * Helper to get cached weather data ignoring TTL (used for offline fallback).
+ */
+async function getWeatherCacheIgnoreTTL(
+    city: string,
+    source: string,
+    lang: string,
+    coords: { lat: number, lon: number } | undefined
+): Promise<WeatherData | null> {
+    try {
+        const cache = await getCache();
+
+        // Log keys to debug cache mismatch issues
+        const generatedKey = getCacheKey(city, source, lang, coords);
+        let matchKey = generatedKey;
+
+        console.log(`[Offline Fallback] Generated key: ${generatedKey}, cache has keys:`, Object.keys(cache));
+
+        // If exact key doesn't exist, try to find a matching one by checking values
+        // This helps if coordinates differ slightly due to float precision between save and load
+        if (!cache[matchKey]) {
+            const prefix = `${source}:${lang}:`;
+
+            // Find an entry with the matching prefix and city name
+            for (const key of Object.keys(cache)) {
+                if (key.startsWith(prefix)) {
+                    const entry = cache[key];
+                    if (entry.data.city.toLowerCase() === city.toLowerCase()) {
+                        matchKey = key;
+                        console.log(`[Offline Fallback] Exact key ${generatedKey} not found, found fallback key ${matchKey}`);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (cache[matchKey]) {
+            const entry = cache[matchKey];
+
+            // Note: intentionally ignoring timeFormat strict match for offline fallback to ensure we return *something*
+            console.log(`[Offline Fallback] Returning cached weather data for ${matchKey}`);
+            return { ...entry.data, isOffline: true };
+        }
+    } catch (e) {
+        console.warn('Offline cache fallback check failed:', e);
+    }
+    return null;
+}
+
+/**
  * Formats a time string (e.g., "05:00 AM" or "13:00") to the desired format.
  * Assuming input is either 12h with AM/PM or 24h.
  *
@@ -274,6 +323,7 @@ export interface WeatherData {
     sourceOverride?: string;
     lat: number;
     lon: number;
+    isOffline?: boolean;
 }
 
 /**
@@ -822,33 +872,47 @@ export async function getWeather(
 
     let weatherData: WeatherData;
 
-    if (sourceToUse === 'custom' && settings.customUrl) {
-        weatherData = await fetchCustom(city, settings.customUrl, settings.apiKeys.custom, lang);
-    } else if (sourceToUse && (sourceToUse in settings.apiKeys)) {
-        const apiKey = settings.apiKeys[sourceToUse as keyof typeof settings.apiKeys];
-        if (!apiKey) throw new Error(`API key for ${sourceToUse} is invalid or missing.`);
+    try {
+        if (sourceToUse === 'custom' && settings.customUrl) {
+            weatherData = await fetchCustom(city, settings.customUrl, settings.apiKeys.custom, lang);
+        } else if (sourceToUse && (sourceToUse in settings.apiKeys)) {
+            const apiKey = settings.apiKeys[sourceToUse as keyof typeof settings.apiKeys];
+            if (!apiKey) throw new Error(`API key for ${sourceToUse} is invalid or missing.`);
 
-        switch (sourceToUse) {
-            case 'openweathermap':
-                weatherData = await fetchOpenWeatherMap(city, apiKey, lang, coords, use24h);
-                break;
-            case 'weatherapi':
-                weatherData = await fetchWeatherAPI(city, apiKey, lang, coords, use24h);
-                break;
-            case 'qweather':
-                weatherData = await fetchQWeather(city, apiKey, lang, settings.qweatherHost, coords, use24h);
-                break;
-            default:
-                throw new Error('Unknown weather source');
+            switch (sourceToUse) {
+                case 'openweathermap':
+                    weatherData = await fetchOpenWeatherMap(city, apiKey, lang, coords, use24h);
+                    break;
+                case 'weatherapi':
+                    weatherData = await fetchWeatherAPI(city, apiKey, lang, coords, use24h);
+                    break;
+                case 'qweather':
+                    weatherData = await fetchQWeather(city, apiKey, lang, settings.qweatherHost, coords, use24h);
+                    break;
+                default:
+                    throw new Error('Unknown weather source');
+            }
+        } else {
+            throw new Error('Please configure a weather source and API key in settings.');
         }
-    } else {
-        throw new Error('Please configure a weather source and API key in settings.');
+
+        // Save to cache
+        await setWeatherCache(city, sourceToUse, lang, coords, weatherData, currentTimeFormat);
+        return weatherData;
+    } catch (e: any) {
+        // Only trigger offline fallback if it's a network error or offline condition
+        const isNetworkError = !navigator.onLine || (e && e.message && e.message.includes('Network Error'));
+
+        if (isNetworkError) {
+            console.warn(`Fetching fresh weather data failed (Network Error), attempting offline fallback...`, e);
+            const offlineData = await getWeatherCacheIgnoreTTL(city, sourceToUse, lang, coords);
+            if (offlineData) {
+                return offlineData;
+            }
+        }
+
+        throw e;
     }
-
-    // Save to cache
-    await setWeatherCache(city, sourceToUse, lang, coords, weatherData, currentTimeFormat);
-
-    return weatherData;
 }
 
 /**
