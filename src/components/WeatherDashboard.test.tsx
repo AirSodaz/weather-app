@@ -25,6 +25,11 @@ vi.mock('../services/weatherApi', () => ({
 
 vi.mock('../utils/config', () => ({
     getSettings: vi.fn(),
+    getSettingsSync: vi.fn(() => ({
+        source: 'openweathermap',
+        autoRefreshInterval: 0,
+        enableAutoLocation: true,
+    })),
 }));
 
 vi.mock('../contexts/I18nContext', () => ({
