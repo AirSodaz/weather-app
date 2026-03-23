@@ -34,7 +34,9 @@
         "timeFormat24": "24 小时制 (13:00)",
         "timeFormat12": "12 小时制 (1:00 PM)",
         "hardwareAcceleration": "硬件加速",
-        "hardwareAccelerationHelp": "启用 GPU 加速以获得更流畅的动画效果"
+        "hardwareAccelerationHelp": "启用 GPU 加速以获得更流畅的动画效果",
+        "autoLocation": "自动定位",
+        "autoLocationHelp": "自动检测并显示您当前位置的天气"
     },
     "detailSections": {
         "hourly": "逐时预报",

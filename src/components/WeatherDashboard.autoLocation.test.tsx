@@ -25,6 +25,11 @@ vi.mock('../services/weatherApi', () => ({
 
 vi.mock('../utils/config', () => ({
     getSettings: vi.fn(),
+    getSettingsSync: vi.fn(() => ({
+        source: 'openweathermap',
+        autoRefreshInterval: 0,
+        enableAutoLocation: true,
+    })),
 }));
 
 vi.mock('../contexts/I18nContext', () => ({
@@ -99,6 +104,7 @@ describe('WeatherDashboard Auto Location', () => {
             detailViewSections: [],
             timeFormat: '24h',
             enableHardwareAcceleration: false,
+            enableAutoLocation: true,
         });
 
         Object.defineProperty(global.navigator, 'geolocation', {
@@ -145,7 +151,9 @@ describe('WeatherDashboard Auto Location', () => {
 
         // We don't need to await the locator text specifically, sometimes it renders instantly and completes before the await triggers
         // Wait for weather card to appear instead
-        await screen.findByText('New York');
+        await waitFor(() => {
+            expect(screen.getAllByText('New York').length).toBeGreaterThan(0);
+        });
 
         // Verify storage set for hasAutoLocated
         expect(storage.setAsync).toHaveBeenCalledWith('hasAutoLocated', true);

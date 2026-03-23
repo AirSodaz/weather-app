@@ -34,7 +34,9 @@
         "timeFormat24": "24 Hour (13:00)",
         "timeFormat12": "12 Hour (1:00 PM)",
         "hardwareAcceleration": "Hardware Acceleration",
-        "hardwareAccelerationHelp": "Enable GPU acceleration for smoother animations"
+        "hardwareAccelerationHelp": "Enable GPU acceleration for smoother animations",
+        "autoLocation": "Auto Location",
+        "autoLocationHelp": "Automatically detect and display weather for your current location"
     },
     "detailSections": {
         "hourly": "Hourly Forecast",

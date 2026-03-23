@@ -191,9 +191,11 @@ export function useWeatherList() {
 
                 // Trigger auto-location if we have no saved cities and haven't tried before
                 const hasAutoLocated = await storage.get('hasAutoLocated');
-                if (!hasAutoLocated) {
+                if (!hasAutoLocated && settings.enableAutoLocation !== false) {
                     await storage.setAsync('hasAutoLocated', true);
                     // We don't await this so it runs in background and updates state when done
+                    // Do not reject the promise completely so we don't cause an unhandled rejection,
+                    // just catch and warn.
                     addCityByLocation().catch(e => console.warn('Auto-location on startup failed:', e));
                 }
 
@@ -288,7 +290,7 @@ export function useWeatherList() {
     const addCityByLocation = async () => {
         setLoading(true);
         setIsAutoLocating(true);
-        return new Promise<void>((resolve, reject) => {
+        return new Promise<void>((resolve) => {
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
                     try {
@@ -307,7 +309,7 @@ export function useWeatherList() {
                     } catch (err) {
                         console.error("Geolocation weather fetch failed", err);
                         setError(t.errors?.locationError || "Failed to determine location");
-                        reject(err);
+                        resolve(); // Resolve anyway to avoid unhandled rejection
                     } finally {
                         setLoading(false);
                         setIsAutoLocating(false);
@@ -318,7 +320,7 @@ export function useWeatherList() {
                     setError(t.errors?.locationDenied || "Location access denied or unavailable");
                     setLoading(false);
                     setIsAutoLocating(false);
-                    reject(err);
+                    resolve(); // Resolve anyway to avoid unhandled rejection
                 },
                 { timeout: 10000 }
             );
