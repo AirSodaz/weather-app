@@ -6,7 +6,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap';
 import {
     FaTimes, FaSave, FaCog, FaGlobe, FaClock, FaDesktop,
     FaSync, FaCloud, FaGripLines, FaCheckSquare, FaSquare, FaList, FaGithub, FaBolt,
-    FaChevronUp, FaChevronDown
+    FaChevronUp, FaChevronDown, FaLocationArrow
 } from 'react-icons/fa';
 import packageJson from '../../package.json';
 import { motion, Variants } from 'framer-motion';
@@ -71,6 +71,7 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
     const [timeFormat, setTimeFormat] = useState<'24h' | '12h'>('24h');
     const [enableHardwareAcceleration, setEnableHardwareAcceleration] = useState(true);
+    const [showAutoLocation, setShowAutoLocation] = useState(true);
     const [loading, setLoading] = useState(false);
 
     // Drag and drop state.
@@ -102,6 +103,7 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
         setDetailViewSections(settings.detailViewSections || []);
         setTimeFormat(settings.timeFormat || '24h');
         setEnableHardwareAcceleration(settings.enableHardwareAcceleration ?? true);
+        setShowAutoLocation(settings.showAutoLocation ?? true);
         setLoading(false);
     };
 
@@ -119,7 +121,8 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
             startupView,
             detailViewSections,
             timeFormat,
-            enableHardwareAcceleration
+            enableHardwareAcceleration,
+            showAutoLocation
         };
         await saveSettings(newSettings);
         setLanguage(localLanguage);
@@ -433,6 +436,21 @@ function SettingsModal({ isOpen, onClose, onSettingsChange }: SettingsModalProps
                         value={enableHardwareAcceleration}
                         onChange={setEnableHardwareAcceleration}
                         helpText={t.settings.hardwareAccelerationHelp}
+                        options={[
+                            { value: true, label: 'ON' },
+                            { value: false, label: 'OFF' }
+                        ]}
+                    />
+
+                    <div className="w-full h-px bg-white/5" />
+
+                    {/* Auto Location Toggle */}
+                    <RadioGroup
+                        label={t.settings.autoLocationToggle || 'Auto Location'}
+                        icon={<FaLocationArrow />}
+                        value={showAutoLocation}
+                        onChange={setShowAutoLocation}
+                        helpText={t.settings.autoLocationToggleHelp || 'Show current location weather card'}
                         options={[
                             { value: true, label: 'ON' },
                             { value: false, label: 'OFF' }

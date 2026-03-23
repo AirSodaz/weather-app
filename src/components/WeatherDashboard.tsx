@@ -17,6 +17,7 @@ import DashboardMenu from './DashboardMenu';
 import DashboardContextMenu from './DashboardContextMenu';
 import { useAutoLocation } from '../hooks/useAutoLocation';
 import AutoLocationCard from './AutoLocationCard';
+import { saveSettings } from '../utils/config';
 
 import {
     DndContext,
@@ -96,6 +97,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
 
     const [detailViewSections, setDetailViewSections] = useState<SectionConfig[]>([]);
     const [enableHardwareAcceleration, setEnableHardwareAcceleration] = useState(true);
+    const [showAutoLocation, setShowAutoLocation] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
     const lastSourceRef = useRef<string | null>(null);
 
@@ -103,6 +105,7 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
         const settings = await getSettings();
         setDetailViewSections(settings.detailViewSections || []);
         setEnableHardwareAcceleration(settings.enableHardwareAcceleration ?? true);
+        setShowAutoLocation(settings.showAutoLocation ?? true);
         if (lastSourceRef.current === null) {
             lastSourceRef.current = settings.source;
         }
@@ -237,6 +240,12 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
         lastSourceRef.current = settings.source;
     };
 
+    const handleDismissAutoLocation = async () => {
+        setShowAutoLocation(false);
+        const settings = await getSettings();
+        await saveSettings({ ...settings, showAutoLocation: false });
+    };
+
     const handleCardClick = useCallback((weather: WeatherData) => {
         setSelectedCity(weather);
         window.history.pushState({ city: weather.city }, '', '');
@@ -312,18 +321,21 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
             )}
 
             {/* Auto Location Card */}
-            <div className="w-full max-w-2xl px-4 pb-4">
-                <AutoLocationCard
-                    weatherData={autoLocationWeather}
-                    status={autoLocationStatus}
-                    errorMsg={autoLocationError}
-                    onClick={handleCardClick}
-                    onFocusSearch={() => {
-                        const input = document.querySelector('input[type="text"]');
-                        if (input) (input as HTMLInputElement).focus();
-                    }}
-                />
-            </div>
+            {showAutoLocation && (
+                <div className="w-full max-w-2xl px-4 pb-4">
+                    <AutoLocationCard
+                        weatherData={autoLocationWeather}
+                        status={autoLocationStatus}
+                        errorMsg={autoLocationError}
+                        onClick={handleCardClick}
+                        onDismiss={handleDismissAutoLocation}
+                        onFocusSearch={() => {
+                            const input = document.querySelector('input[type="text"]');
+                            if (input) (input as HTMLInputElement).focus();
+                        }}
+                    />
+                </div>
+            )}
 
             {/* Weather Cards */}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

@@ -47,6 +47,8 @@ export interface AppSettings {
     timeFormat: '24h' | '12h';
     /** Whether to enable hardware acceleration for animations. */
     enableHardwareAcceleration: boolean;
+    /** Whether to show the auto location card. */
+    showAutoLocation: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -67,7 +69,8 @@ const DEFAULT_SETTINGS: AppSettings = {
         { id: 'sunrise', visible: true }
     ],
     timeFormat: '24h',
-    enableHardwareAcceleration: true
+    enableHardwareAcceleration: true,
+    showAutoLocation: true
 };
 
 // Caching mechanism to avoid frequent storage reads (which involve worker messaging)

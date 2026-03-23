@@ -34,7 +34,9 @@
         "timeFormat24": "24 小时制 (13:00)",
         "timeFormat12": "12 小时制 (1:00 PM)",
         "hardwareAcceleration": "硬件加速",
-        "hardwareAccelerationHelp": "启用 GPU 加速以获得更流畅的动画效果"
+        "hardwareAccelerationHelp": "启用 GPU 加速以获得更流畅的动画效果",
+        "autoLocationToggle": "自动定位",
+        "autoLocationToggleHelp": "显示当前位置的天气"
     },
     "detailSections": {
         "hourly": "逐时预报",
@@ -133,6 +135,7 @@
         "geoNotSupported": "不支持地理定位",
         "deniedUsingLast": "定位被拒绝，使用上次已知位置",
         "accessDenied": "定位访问被拒绝",
-        "unavailableUsingLast": "定位不可用，使用上次已知位置"
+        "unavailableUsingLast": "定位不可用，使用上次已知位置",
+        "dismiss": "关闭"
     }
 }
