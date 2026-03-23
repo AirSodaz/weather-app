@@ -34,7 +34,9 @@
         "timeFormat24": "24 Hour (13:00)",
         "timeFormat12": "12 Hour (1:00 PM)",
         "hardwareAcceleration": "Hardware Acceleration",
-        "hardwareAccelerationHelp": "Enable GPU acceleration for smoother animations"
+        "hardwareAccelerationHelp": "Enable GPU acceleration for smoother animations",
+        "autoLocationToggle": "Auto Location",
+        "autoLocationToggleHelp": "Show your current location weather"
     },
     "detailSections": {
         "hourly": "Hourly Forecast",
@@ -133,6 +135,7 @@
         "geoNotSupported": "Geolocation not supported",
         "deniedUsingLast": "Location denied, using last known",
         "accessDenied": "Location access denied",
-        "unavailableUsingLast": "Location unavailable, using last known"
+        "unavailableUsingLast": "Location unavailable, using last known",
+        "dismiss": "Dismiss"
     }
 }

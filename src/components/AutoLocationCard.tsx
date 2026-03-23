@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { motion } from 'framer-motion';
-import { FaLocationArrow, FaExclamationTriangle, FaSearch } from 'react-icons/fa';
+import { FaLocationArrow, FaExclamationTriangle, FaSearch, FaTimes } from 'react-icons/fa';
 import { WeatherData } from '../services/weatherApi';
 import WeatherCard from './WeatherCard';
 import { AutoLocationStatus } from '../hooks/useAutoLocation';
@@ -12,9 +12,10 @@ interface AutoLocationCardProps {
     errorMsg: string | null;
     onClick: (weather: WeatherData) => void;
     onFocusSearch?: () => void;
+    onDismiss?: () => void;
 }
 
-function AutoLocationCard({ weatherData, status, errorMsg, onClick, onFocusSearch }: AutoLocationCardProps): JSX.Element {
+function AutoLocationCard({ weatherData, status, errorMsg, onClick, onFocusSearch, onDismiss }: AutoLocationCardProps): JSX.Element {
     const { t } = useI18n();
     const isLocating = status === 'locating';
 
@@ -59,6 +60,21 @@ function AutoLocationCard({ weatherData, status, errorMsg, onClick, onFocusSearc
                 ${isLocating && !weatherData ? 'min-h-[200px] flex items-center justify-center' : ''}
             `}
         >
+            {/* Close Button */}
+            {onDismiss && !isLocating && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onDismiss();
+                    }}
+                    className="absolute top-4 right-6 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-black/20 text-white/70 hover:text-white hover:bg-black/40 transition-colors backdrop-blur-sm focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+                    aria-label={t.autoLocation?.dismiss || 'Dismiss'}
+                    title={t.autoLocation?.dismiss || 'Dismiss'}
+                >
+                    <FaTimes className="text-sm" />
+                </button>
+            )}
+
             {/* Status Header */}
             <div className="absolute top-4 left-6 flex items-center gap-2 z-10 bg-black/20 px-3 py-1 rounded-full text-xs font-medium text-white/90 backdrop-blur-sm">
                 {isLocating && (

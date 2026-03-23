@@ -105,4 +105,25 @@ describe('AutoLocationCard', () => {
         const cityElements = screen.getAllByText(/New York/);
         expect(cityElements.length).toBeGreaterThan(0);
     });
+
+    it('renders dismiss button when onDismiss prop is provided', () => {
+        const onDismiss = vi.fn();
+        render(
+            <I18nProvider>
+                <AutoLocationCard
+                    weatherData={mockWeatherData}
+                    status="success"
+                    errorMsg={null}
+                    onClick={() => {}}
+                    onDismiss={onDismiss}
+                />
+            </I18nProvider>
+        );
+
+        const dismissBtn = screen.getByRole('button', { name: /Dismiss/i });
+        expect(dismissBtn).toBeDefined();
+
+        fireEvent.click(dismissBtn);
+        expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
 });

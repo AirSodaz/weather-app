@@ -99,6 +99,7 @@ describe('WeatherDashboard Auto Location', () => {
             detailViewSections: [],
             timeFormat: '24h',
             enableHardwareAcceleration: false,
+            showAutoLocation: true,
         });
 
         Object.defineProperty(global.navigator, 'geolocation', {
