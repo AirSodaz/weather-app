@@ -312,18 +312,20 @@ function WeatherDashboard({ onBgChange, bgContainerRef }: WeatherDashboardProps)
             )}
 
             {/* Auto Location Card */}
-            <div className="w-full max-w-2xl px-4 pb-4">
-                <AutoLocationCard
-                    weatherData={autoLocationWeather}
-                    status={autoLocationStatus}
-                    errorMsg={autoLocationError}
-                    onClick={handleCardClick}
-                    onFocusSearch={() => {
-                        const input = document.querySelector('input[type="text"]');
-                        if (input) (input as HTMLInputElement).focus();
-                    }}
-                />
-            </div>
+            {autoLocationStatus !== 'disabled' && (
+                <div className="w-full max-w-2xl px-4 pb-4">
+                    <AutoLocationCard
+                        weatherData={autoLocationWeather}
+                        status={autoLocationStatus}
+                        errorMsg={autoLocationError}
+                        onClick={handleCardClick}
+                        onFocusSearch={() => {
+                            const input = document.querySelector('input[type="text"]');
+                            if (input) (input as HTMLInputElement).focus();
+                        }}
+                    />
+                </div>
+            )}
 
             {/* Weather Cards */}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

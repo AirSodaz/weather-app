@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { getWeather, WeatherData } from '../services/weatherApi';
 import { storage } from '../utils/storage';
 import { useI18n } from '../contexts/I18nContext';
+import { getSettings, getSettingsSync } from '../utils/config';
 
-export type AutoLocationStatus = 'locating' | 'success' | 'error' | 'cached' | 'denied' | 'idle';
+export type AutoLocationStatus = 'locating' | 'success' | 'error' | 'cached' | 'denied' | 'idle' | 'disabled';
 
 export interface UseAutoLocationResult {
     weatherData: WeatherData | null;
@@ -17,9 +18,15 @@ export interface UseAutoLocationResult {
  */
 export function useAutoLocation(): UseAutoLocationResult {
     const { t, currentLanguage } = useI18n();
+
+    // Check synchronous settings first if available to prevent flash
+    const syncSettings = getSettingsSync();
+    const initialStatus: AutoLocationStatus = syncSettings && !syncSettings.enableAutoLocation ? 'disabled' : 'idle';
+
     const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
-    const [status, setStatus] = useState<AutoLocationStatus>('idle');
+    const [status, setStatus] = useState<AutoLocationStatus>(initialStatus);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [isEnabled, setIsEnabled] = useState(syncSettings ? syncSettings.enableAutoLocation : true);
 
     // Prevent strict mode double-firing from triggering multiple geolocations
     const initialized = useRef(false);
@@ -48,6 +55,13 @@ export function useAutoLocation(): UseAutoLocationResult {
     };
 
     const fetchLocationWeather = useCallback(async () => {
+        const settings = await getSettings();
+        if (!settings.enableAutoLocation) {
+            setStatus('disabled');
+            setWeatherData(null);
+            return;
+        }
+
         setStatus('locating');
         setErrorMsg(null);
 
@@ -110,6 +124,15 @@ export function useAutoLocation(): UseAutoLocationResult {
 
     useEffect(() => {
         const init = async () => {
+            const settings = await getSettings();
+            setIsEnabled(settings.enableAutoLocation);
+
+            if (!settings.enableAutoLocation) {
+                setStatus('disabled');
+                setWeatherData(null);
+                return;
+            }
+
             if (initialized.current) return;
             initialized.current = true;
 
@@ -139,6 +162,32 @@ export function useAutoLocation(): UseAutoLocationResult {
 
         init();
     }, [fetchLocationWeather, loadCachedLocation]);
+
+    // Handle settings changes
+    useEffect(() => {
+        const handleSettingsChange = async () => {
+            const settings = await getSettings();
+            if (settings.enableAutoLocation !== isEnabled) {
+                setIsEnabled(settings.enableAutoLocation);
+                if (settings.enableAutoLocation) {
+                    setStatus('idle');
+                    fetchLocationWeather();
+                } else {
+                    setStatus('disabled');
+                    setWeatherData(null);
+                }
+            }
+        };
+
+        window.addEventListener('app-settings-changed', handleSettingsChange);
+        window.addEventListener('focus', handleSettingsChange);
+
+        return () => {
+            window.removeEventListener('app-settings-changed', handleSettingsChange);
+            window.removeEventListener('focus', handleSettingsChange);
+        };
+    }, [isEnabled, fetchLocationWeather]);
+
 
     return {
         weatherData,

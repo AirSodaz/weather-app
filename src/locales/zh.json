@@ -33,6 +33,8 @@
         "timeFormat": "时间格式",
         "timeFormat24": "24 小时制 (13:00)",
         "timeFormat12": "12 小时制 (1:00 PM)",
+        "autoLocation": "自动定位",
+        "autoLocationHelp": "自动检测您所在的城市并显示天气",
         "hardwareAcceleration": "硬件加速",
         "hardwareAccelerationHelp": "启用 GPU 加速以获得更流畅的动画效果"
     },
