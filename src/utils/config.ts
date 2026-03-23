@@ -47,6 +47,8 @@ export interface AppSettings {
     timeFormat: '24h' | '12h';
     /** Whether to enable hardware acceleration for animations. */
     enableHardwareAcceleration: boolean;
+    /** Whether automatic city detection is enabled. */
+    enableAutoLocation: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -67,7 +69,8 @@ const DEFAULT_SETTINGS: AppSettings = {
         { id: 'sunrise', visible: true }
     ],
     timeFormat: '24h',
-    enableHardwareAcceleration: true
+    enableHardwareAcceleration: true,
+    enableAutoLocation: true
 };
 
 // Caching mechanism to avoid frequent storage reads (which involve worker messaging)
@@ -148,4 +151,9 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
     cachedSettings = null; // Invalidate cache
     settingsPromise = null; // Invalidate current promise
     await storage.set('settings', settings);
+
+    // Dispatch a global event so hooks can react to settings changes immediately
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('app-settings-changed'));
+    }
 }

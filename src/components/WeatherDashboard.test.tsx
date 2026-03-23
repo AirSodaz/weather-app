@@ -25,6 +25,7 @@ vi.mock('../services/weatherApi', () => ({
 
 vi.mock('../utils/config', () => ({
     getSettings: vi.fn(),
+    getSettingsSync: vi.fn(),
 }));
 
 vi.mock('../contexts/I18nContext', () => ({
